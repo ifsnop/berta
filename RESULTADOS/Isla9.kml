@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+	
+	<Document>
+			
+	<name>LE_BEGAS</name>
+			
+	<Style id="transGreenPoly">
+		<LineStyle>
+			<width>1.5</width>
+		</LineStyle>
+		<PolyStyle>
+			<color>7d00ff00</color>
+		</PolyStyle>
+	</Style>
+	
+	<Placemark>
+			
+	<name>LE_BEGAS</name>
+			
+	<styleUrl>#transGreenPoly</styleUrl>
+		<MultiGeometry>
+			<Polygon>
+				<extrude>1</extrude>
+					<altitudeMode>Tierra</altitudeMode><outerBoundaryIs>
+		<LinearRing>
+			<coordinates>2.2948904272972,39.829694840147,304.80370641307
+2.2948432973653,39.821367237686,304.80370641307
+2.294796184277,39.813039635188,304.80370641307
+2.2947490880195,39.804712032653,304.80370641307
+2.3055394803098,39.796347380016,304.80370641307
+2.3163769400721,39.796309300814,304.80370641307
+2.3272143875431,39.796270192475,304.80370641307
+2.3380518223955,39.796230055004,304.80370641307
+2.3489429541893,39.80451645615,304.80370641307
+2.3381566087335,39.812885205116,304.80370641307
+2.3382090299929,39.821212780102,304.80370641307
+2.3382614699921,39.829540355043,304.80370641307
+2.3383139287393,39.837867929937,304.80370641307
+2.327521007769,39.846235685181,304.80370641307
+2.3166257760529,39.837947246358,304.80370641307
+2.3057816810632,39.837985359492,304.80370641307
+</coordinates>
+		</LinearRing>
+	 </outerBoundaryIs></Polygon></MultiGeometry></Placemark></Document></kml>

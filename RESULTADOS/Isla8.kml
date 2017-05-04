@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+	
+	<Document>
+			
+	<name>LE_BEGAS</name>
+			
+	<Style id="transGreenPoly">
+		<LineStyle>
+			<width>1.5</width>
+		</LineStyle>
+		<PolyStyle>
+			<color>7d00ff00</color>
+		</PolyStyle>
+	</Style>
+	
+	<Placemark>
+			
+	<name>LE_BEGAS</name>
+			
+	<styleUrl>#transGreenPoly</styleUrl>
+		<MultiGeometry>
+			<Polygon>
+				<extrude>1</extrude>
+					<altitudeMode>Tierra</altitudeMode><outerBoundaryIs>
+		<LinearRing>
+			<coordinates>1.9377661766335,41.504211806527,304.80370641307
+1.9377626069862,41.495884089069,304.80370641307
+1.9377590386508,41.48755637161,304.80370641307
+1.9377554715753,41.479228654152,304.80370641307
+</coordinates>
+		</LinearRing>
+	 </outerBoundaryIs></Polygon></MultiGeometry></Placemark></Document></kml>

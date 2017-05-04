@@ -1,0 +1,2 @@
+ValladolidLatitud=41.699614;
+ValladolidLongitud=-4.853574;
