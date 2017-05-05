@@ -12,8 +12,10 @@ function toString ($coordenadasG){
 	$size = count ($coordenadasG);
 
 	for ($i =0; $i< $size; $i++){
-		$cadena = $cadena . implode("," , $coordenadasG[$i]). PHP_EOL;
+		$cadena .= implode("," , $coordenadasG[$i]). PHP_EOL;
 	}
+	// cerramos el polígono, incluyendo de nuevo el primer punto de la lista
+	$cadena .= implode(",", $coordenadasG[0]) . PHP_EOL;
 
 	return $cadena;
 }
@@ -137,7 +139,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	
 		fwrite ($kml, $contenido);
 
- 	     for ($isla = 1; $isla < $numIslas; $isla++){
+ 	    /* for ($isla = 1; $isla < $numIslas; $isla++){
 	
 			$cadenaInner = toString($listaC[$isla]);
 		
@@ -149,7 +151,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 			
 				fwrite ($kml, $contenido2);
  	    }// for  
- 	    	$contenido3 = '</Polygon></MultiGeometry></Placemark></Document></kml>';
+ 	    */	$contenido3 = '</Polygon></MultiGeometry></Placemark></Document></kml>';
  	    	
 			fwrite ($kml, $contenido3);
 			if (rename ($nombreFich, $ruta."/".$radar['site']."_FL_" . $nivelVuelo . ".kml")){

@@ -160,21 +160,11 @@ $radar = cargarDatosTerreno('/home/eval/berta/le_begas.scr', $radioTerrestreAume
 calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado); // mete la lista de obstaculos ampliada para cada azimut
 //print_r($radar['listaAzimuths'][135]);
 generacionMallado($radar, $radioTerrestreAumentado, $malla);
-for($i=0;$i<count($malla);$i++) {
-	for($j=0;$j<count($malla);$j++) {
-		print $malla[$i][$j];
-	}
-	print PHP_EOL;
-}
+pintaMalla($malla);
 //print_r($malla);
 tratamientoMallado($malla, "HOLA_MUNDO.png"); // genera una imagen 
 contornos($malla, $mallaContornos); // genera una malla con los contornos 
-for($i=0;$i<count($mallaContornos);$i++) {
-	for($j=0;$j<count($mallaContornos);$j++) {
-		print $mallaContornos[$i][$j];
-	}
-	print PHP_EOL;
-}
+pintaMalla($mallaContornos);
 
 
 //tratamientoMallado($mallaContornos, "MUNDO_CONTORNOS.png"); // HASTA AQUI TODO GOOD  Genera la imagen de los contornos
@@ -182,7 +172,9 @@ $listaC = array();
 $numIslas = cuentaIslas($mallaContornos,$listaC); // cuenta el numero de contornos que hay y nos da sus coordenadas
 
 echo "numero de islas: " . $numIslas. PHP_EOL;
-//print_r($listaC);
+print_r($listaC[0]);
+$listaC[0] = ordenaLista($listaC[0]);
+
 
 //tratamientoMallado(, "CONTORNOS_OUTER.png");
 calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, $listaC); // calcula las coordenadas geograficas a partir de la lista de contornos
@@ -234,3 +226,64 @@ tratamientoMallado($N, "Cero.png");
 
 
 
+
+function ordenaLista($l) {
+print "AQUI" . PHP_EOL;
+print_r($l);
+    $n = array($l[0]);
+    
+    for($i = 1; $i < count($l); $i++) {
+        if ( isset($l[$i]['visitado']) ) {
+            continue;
+        }
+        $difFila = $n[count($n)-1]['fila'] - $l[$i]['fila'];
+        $difCol = $n[count($n)-1]['col'] - $l[$i]['col'];
+        $dist = sqrt($difFila*$difFila+$difCol*$difCol);
+        print "dist1:" . round($dist,1) . " pendientes:" . cuentaPendientes($l) . " nuevos:" . count($n) . PHP_EOL;
+        if ( $dist < 4.3 )  {
+            $n[] = $l[$i];
+            $l[$i]['visitado'] = true;
+        } else {
+            $minDist = 9999; $minIndex = -1;
+            for($j = 1;$j < count($l); $j++) {
+                if ( !isset($l[$j]['visitado']) ) {
+                    $difFila = $n[count($n)-1]['fila'] - $l[$j]['fila'];
+                    $difCol = $n[count($n)-1]['col'] - $l[$j]['col'];
+                    $dist = sqrt($difFila*$difFila+$difCol*$difCol);
+                    if ( $dist < $minDist ) {
+                        $minDist = $dist;
+                        $minIndex = $j;
+                    }
+                }
+            }
+            if ( $minDist < 4.3 ) {
+                print "dist2:" . round($minDist,1) . " pendientes:" . cuentaPendientes($l) . " nuevos:" . count($n) . PHP_EOL;
+                $n[] = $l[$minIndex];
+                $l[$minIndex]['visitado'] = true;
+                $i = $minIndex;
+                $encontrado = true;
+            }
+        }
+        print ">" . $i . PHP_EOL;
+    }
+    for($i=0;$i<count($n);$i++) {
+        if (isset($n[$i]['visitado'])) {
+            unset($n[$i]['visitado']);
+        }
+    }   
+    print_r($n);
+    return $n;
+
+}
+
+function cuentaPendientes($l) {
+    $j=0;
+    for($i=0;$i<count($l);$i++) {
+    
+        if ( !isset($l[$i]['visitado']) ) {
+            $j++;
+        }
+    }
+
+    return $j . "/" . count($l);
+}

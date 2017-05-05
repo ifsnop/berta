@@ -6,7 +6,7 @@ CONST CIEN_PIES = 100;
 CONST PASO_A_GRADOS = 180;
 // maxima distancia q puede haber entre dos puntos de un acimut para saber si es necesario interpolar
 CONST DISTANCIA_ENTRE_PUNTOS = 5; 
-CONST TAM_CELDA = 5; // paso de la malla en NM 0.5 , 0.11 es lo mas que peque�o q no peta
+CONST TAM_CELDA = 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que peque�o q no peta
 
 
 
@@ -53,6 +53,9 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
 	while ($i< $size && !$enc){
 		
 		if ($flm < $listaObstaculos[$i]['altura']){ // la primera vez que se cumple esto tenemos el primer punto sin cobertura 
+		        if ( $i == 0 ) {
+		            die("el primer obstáculo no tiene cobertura, no tenemos ultimo punto con cobertura, revisar para probar solución.");
+		        }
 			$enc = true;
 			$primerPtoSinCobertura = $listaObstaculos[$i];
 			$ultimoPtoCobertura = $listaObstaculos[$i-1];
@@ -252,11 +255,8 @@ function calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, &$angulos
  */
 function calculaCoordenadasGeograficas( $radar, $coordenadas, $distanciasCobertura, $flm, &$coordenadasGeograficas){
 	
-	// Determinacion del paso (debe ser coherente en todas partes)
-	if ($radar['totalAzimuths'] == TOTAL_AZIMUTHS)
-		$paso = 1;
-	else if ($radar['totalAzimuths'] == MAX_AZIMUTHS)
-		$paso = 0.5;
+	// Calcula el paso en función del número máximo de azimuth (puede ser desde 360 o 720)
+	$paso = 360.0 / $radar['totalAzimuths'];
 
 	// Recorrido de los acimuts 
  	for ($i =0; $i< $radar['totalAzimuths']; $i++){
@@ -846,6 +846,20 @@ function contornos($malla, &$mallaContornos){
 	
 	$mallaContornos = array();
 	$sizeMalla = count($malla);
+
+        // suavizado de malla para evitar casos que no se pueden resolver al calcular el borde xej: islas rodeadas
+/*	for( $i = 1; $i < $sizeMalla - 1; $i++ ){  // recorrre las columnas
+		for( $j = 1; $j < $sizeMalla - 1; $j++ ){ // recorre las filas 
+	            if ( $malla[$i][$j] == 0 &&
+	                $malla[$i+1][$j] == 1 &&
+	                $malla[$i-1][$j] == 1 &&
+    	                $malla[$i][$j+1] == 1 &&
+	                $malla[$i][$j-1] == 1) {
+	                $malla[$i][$j] = 1;
+	            }
+		}
+	}
+*/	pintaMalla($malla);
 	
 	for( $i = 0; $i < $sizeMalla; $i++ ){  // recorrre las columnas
 		for( $j = 0; $j < $sizeMalla; $j++ ){ // recorre las filas 
@@ -891,7 +905,7 @@ function dfs($mallaContornos, $col, $fila, &$visitados, &$listaPtos){
 			 
 	// recursion para todos los vecinos conectados
 	for ($k =0; $k < 8; $k++){
-		if ( isSafe($mallaContornos, $col + $colNbr[$k], $fila  + $rowNbr[$k], $visitados) )
+		if ( isSafe($mallaContornos, $col + $colNbr[$k], $fila + $rowNbr[$k], $visitados) )
 			dfs($mallaContornos, $col + $colNbr[$k], $fila + $rowNbr[$k], $visitados, $listaPtos);
 	}
 }
@@ -1000,3 +1014,15 @@ function calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, &
 }
 
 
+function pintaMalla($malla) {
+
+    for($i=0;$i<count($malla);$i++) {
+        for($j=0;$j<count($malla);$j++) {
+            print ($malla[$i][$j] == 1 ? "*" : " ");
+        }
+        print PHP_EOL;
+    }
+    print PHP_EOL;
+    return;
+
+}
