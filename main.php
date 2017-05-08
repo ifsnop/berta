@@ -163,18 +163,62 @@ generacionMallado($radar, $radioTerrestreAumentado, $malla);
 pintaMalla($malla);
 //print_r($malla);
 tratamientoMallado($malla, "HOLA_MUNDO.png"); // genera una imagen 
+
 contornos($malla, $mallaContornos); // genera una malla con los contornos 
+/*$invertida = array();
+for($i=0;$i<count($mallaContornos); $i++) {
+    $invertida[$i] = array();
+    for($j=0;$j<count($mallaContornos); $j++) {
+        $invertida[$i][$j] = ($mallaContornos[$i][$j] == 1 ? 0 : 1);
+    }
+}
+pintaMalla($invertida);
+$invertidaContornos = array();
+contornos($invertida, $invertidaContornos); // genera una malla con los contornos 
+for ($j=0; $j<count($invertidaContornos); $j++) {
+    $invertidaContornos[0][$j] = 0;
+    $invertidaContornos[count($invertidaContornos)-1][$j] = 0;
+    $invertidaContornos[$j][0] = 0;
+    $invertidaContornos[$j][count($invertidaContornos)-1] = 0;
+}
+
+pintaMalla($invertidaContornos);
+*/
 pintaMalla($mallaContornos);
+
+
+
 
 
 //tratamientoMallado($mallaContornos, "MUNDO_CONTORNOS.png"); // HASTA AQUI TODO GOOD  Genera la imagen de los contornos
 $listaC = array();
-$numIslas = cuentaIslas($mallaContornos,$listaC); // cuenta el numero de contornos que hay y nos da sus coordenadas
+$numIslas = cuentaIslas($mallaContornos, $listaC); // cuenta el numero de contornos que hay y nos da sus coordenadas
+// $numIslas = cuentaIslas($invertidaContornos, $listaC); // cuenta el numero de contornos que hay y nos da sus coordenadas
 
-echo "numero de islas: " . $numIslas. PHP_EOL;
-print_r($listaC[0]);
+//echo "numero de islas: " . $numIslas. PHP_EOL;
+//echo "cuenta de puntos en cada isla" . PHP_EOL;
+
+/* for($i=0;$i<count($listaC);$i++) {
+    print $i . "] " . count($listaC[$i]) . PHP_EOL;
+}
 $listaC[0] = ordenaLista($listaC[0]);
 
+$alfabeto = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz";
+
+$mapa = array();
+for($i=0;$i<count($mallaContornos);$i++) {
+    $mapa[$i] = array();
+    for($j=0;$j<count($mallaContornos);$j++) {
+        $mapa[$i][$j] = " ";
+    }
+}
+for($i=0; $i<count($listaC[0]); $i++) {
+    //print $listaC[0][$i]['fila'] . " " . $listaC[0][$i]['col'] . " " . $alfabeto[$i%strlen($alfabeto)] . PHP_EOL;
+    $mapa[$listaC[0][$i]['col']][$listaC[0][$i]['fila']] = $alfabeto[$i%strlen($alfabeto)];
+}
+pintaMallaAlfabeto($mapa);
+
+ */
 
 //tratamientoMallado(, "CONTORNOS_OUTER.png");
 calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, $listaC); // calcula las coordenadas geograficas a partir de la lista de contornos
@@ -227,9 +271,7 @@ tratamientoMallado($N, "Cero.png");
 
 
 
-function ordenaLista($l) {
-print "AQUI" . PHP_EOL;
-print_r($l);
+/* function ordenaLista($l) {
     $n = array($l[0]);
     
     for($i = 1; $i < count($l); $i++) {
@@ -240,7 +282,7 @@ print_r($l);
         $difCol = $n[count($n)-1]['col'] - $l[$i]['col'];
         $dist = sqrt($difFila*$difFila+$difCol*$difCol);
         print "dist1:" . round($dist,1) . " pendientes:" . cuentaPendientes($l) . " nuevos:" . count($n) . PHP_EOL;
-        if ( $dist < 4.3 )  {
+        if ( $dist < 3.7 )  {
             $n[] = $l[$i];
             $l[$i]['visitado'] = true;
         } else {
@@ -256,7 +298,7 @@ print_r($l);
                     }
                 }
             }
-            if ( $minDist < 4.3 ) {
+            if ( $minDist < 3.7 ) {
                 print "dist2:" . round($minDist,1) . " pendientes:" . cuentaPendientes($l) . " nuevos:" . count($n) . PHP_EOL;
                 $n[] = $l[$minIndex];
                 $l[$minIndex]['visitado'] = true;
@@ -271,7 +313,6 @@ print_r($l);
             unset($n[$i]['visitado']);
         }
     }   
-    print_r($n);
     return $n;
 
 }
@@ -287,3 +328,4 @@ function cuentaPendientes($l) {
 
     return $j . "/" . count($l);
 }
+ */

@@ -848,7 +848,7 @@ function contornos($malla, &$mallaContornos){
 	$sizeMalla = count($malla);
 
         // suavizado de malla para evitar casos que no se pueden resolver al calcular el borde xej: islas rodeadas
-/*	for( $i = 1; $i < $sizeMalla - 1; $i++ ){  // recorrre las columnas
+	for( $i = 1; $i < $sizeMalla - 1; $i++ ){  // recorrre las columnas
 		for( $j = 1; $j < $sizeMalla - 1; $j++ ){ // recorre las filas 
 	            if ( $malla[$i][$j] == 0 &&
 	                $malla[$i+1][$j] == 1 &&
@@ -859,7 +859,7 @@ function contornos($malla, &$mallaContornos){
 	            }
 		}
 	}
-*/	pintaMalla($malla);
+	pintaMalla($malla);
 	
 	for( $i = 0; $i < $sizeMalla; $i++ ){  // recorrre las columnas
 		for( $j = 0; $j < $sizeMalla; $j++ ){ // recorre las filas 
@@ -904,10 +904,17 @@ function dfs($mallaContornos, $col, $fila, &$visitados, &$listaPtos){
 	$listaPtos[] = array ('fila' => $fila, 'col' => $col, 'altura' => 0); // guardamos ese uno en la lista de puntos de esa isla
 			 
 	// recursion para todos los vecinos conectados
+	$veces = 0;
 	for ($k =0; $k < 8; $k++){
-		if ( isSafe($mallaContornos, $col + $colNbr[$k], $fila + $rowNbr[$k], $visitados) )
+		if ( isSafe($mallaContornos, $col + $colNbr[$k], $fila + $rowNbr[$k], $visitados) ) {
+		        $veces++;
 			dfs($mallaContornos, $col + $colNbr[$k], $fila + $rowNbr[$k], $visitados, $listaPtos);
+		}
 	}
+	if ( $veces == 1) {
+	
+	}
+	
 }
 			
 function cuentaIslas($mallaContornos, &$listaC){
@@ -1016,9 +1023,24 @@ function calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, &
 
 function pintaMalla($malla) {
 
+//    for($i=count($malla)-1;$i>=0;$i--) {
     for($i=0;$i<count($malla);$i++) {
         for($j=0;$j<count($malla);$j++) {
-            print ($malla[$i][$j] == 1 ? "*" : " ");
+            print ($malla[$j][$i] == 1 ? "*" : " ");
+        }
+        print PHP_EOL;
+    }
+    print PHP_EOL;
+    return;
+
+}
+
+function pintaMallaAlfabeto($malla) {
+
+//    for($i=count($malla)-1;$i>=0;$i--) {
+    for($i=0;$i<count($malla);$i++) {
+        for($j=0;$j<count($malla);$j++) {
+            print ($malla[$j][$i]);
         }
         print PHP_EOL;
     }
