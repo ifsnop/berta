@@ -14,8 +14,8 @@ function toString ($coordenadasG){
 	for ($i =0; $i< $size; $i++){
 		$cadena .= implode("," , $coordenadasG[$i]). PHP_EOL;
 	}
-	// cerramos el polÃ­gono, incluyendo de nuevo el primer punto de la lista
-	$cadena .= implode(",", $coordenadasG[0]) . PHP_EOL;
+	// cerramos el polígono, incluyendo de nuevo el primer punto de la lista
+	$cadena .= implode(",", $coordenadasG[0][0]) . PHP_EOL; // $cadena .= implode(",", $coordenadasG[0][0]) . PHP_EOL;
 
 	return $cadena;
 }
@@ -96,7 +96,9 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	$contenido = ""; $cadenaOuter = ""; $cadena = ""; $nombreFich = "" ; $cadenaInner = "";
 	
 	$numIslas = count($listaC);
-	$cadenaOuter = toString($listaC[0]); // la primera isla sera siempre el Outer Boundry (En este caso tenemos  6000 ptos aproximadamente)
+	//echo "numISlas: " . $numIslas. PHP_EOL;
+	$cadenaOuter = toString($listaC); // la primera islsa sera siempre el Outer Boundry (En este caso tenemos  6000 ptos aproximadamente) ($listaC[0])
+	//echo $cadenaOuter. PHP_EOL;
 	$nivelVuelo = (string)$fl;
 	$nombreFich = $ruta. $radar['site'] ."_FL_" . $nivelVuelo . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
@@ -139,9 +141,9 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	
 		fwrite ($kml, $contenido);
 
- 	    /* for ($isla = 1; $isla < $numIslas; $isla++){
+ 	     for ($isla = 1; $isla < $numIslas; $isla++){
 	
-			$cadenaInner = toString($listaC[$isla]);
+			$cadenaInner = toString($listaC[$isla]); // ($listaC)
 		
 			$contenido2 = '<innerBoundaryIs>
 			<LinearRing>
@@ -151,7 +153,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 			
 				fwrite ($kml, $contenido2);
  	    }// for  
- 	    */	$contenido3 = '</Polygon></MultiGeometry></Placemark></Document></kml>';
+ 	    	$contenido3 = '</Polygon></MultiGeometry></Placemark></Document></kml>';
  	    	
 			fwrite ($kml, $contenido3);
 			if (rename ($nombreFich, $ruta."/".$radar['site']."_FL_" . $nivelVuelo . ".kml")){

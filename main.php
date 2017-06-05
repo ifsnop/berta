@@ -146,25 +146,215 @@ $radar = cargarDatosTerreno('/home/eval/berta/le_begas.scr', $radioTerrestreAume
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/*    $mallaContornos = array(
- array(0,0,0,1,1,1),
- array(1,1,0,0,1,0),
- array(1,0,1,1,0,1),
- array(1,0,0,0,0,1),
- array(1,0,0,0,0,1),
- array(1,1,1,1,1,1),
- );
+/* 
+    $malla = array(
+array(0,0,0,0,0,0),
+array(0,1,0,0,0,0),
+array(0,0,0,0,0,0),
+array(0,0,0,0,0,0),
+array(0,0,0,0,1,0),
+array(0,0,0,0,0,0),
+
+ );  */
+  
+/*    $malla = array(
+  		array(0,0,0,0,0,0),
+  		array(0,0,1,1,0,0),
+  		array(0,1,1,1,1,0),
+  		array(0,1,1,1,1,0),
+  		array(0,0,1,1,0,0),
+  		array(0,0,0,0,0,0),
+  
+  );
+    */
+  
+/*   $malla = array(
+  		array(0,0,0,0,0,0),
+  		array(0,1,0,0,1,0),
+  		array(0,0,1,1,0,0),
+  		array(0,0,1,1,0,0),
+  		array(0,1,0,0,1,0),
+  		array(0,0,0,0,0,0),
+  
+  ); */
+
+
+
+/*    $malla = array(
+ array(0,0,0,0,0,0),
+ array(0,0,0,0,0,0),
+ array(0,0,0,0,0,0),
+ array(0,0,0,0,0,0),
+ array(0,0,0,0,1,1),
+ array(0,0,0,0,1,1),
+
+ ); */ 
+   
+  
+
+     $malla = array(
+		array(0,0,0,0,0,0,0,0,0,0),
+		array(0,1,1,1,1,0,0,0,0,0),
+		array(0,1,0,1,1,0,0,0,0,0),
+		array(0,1,0,0,1,0,0,0,0,0),
+		array(0,1,1,1,1,0,0,0,0,0),
+		array(0,0,0,0,0,0,0,0,0,0),
+		array(0,0,0,0,0,0,0,0,0,0),
+		array(0,0,0,0,0,0,0,1,1,1),
+		array(0,0,0,0,0,0,0,1,1,1),
+		array(0,0,0,0,0,0,0,1,1,1),
+
+); 
+   
+
+calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado); // mete la lista de obstaculos ampliada para cada azimut
+
+//generacionMallado($radar, $radioTerrestreAumentado, $malla);
+
+
+$mallaGrande = array();
+$mallaGrande = mallaMarco($malla); // tiene un marco de ceros abrazando  a la malla binaria original
+//print_r($listaContornos);
+
+
+
+//echo "tamaño de la lista de contornos : " . $n. PHP_EOL;
+
+determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
+
+//$n = sizeof($listaContornos);
+
+calculaCoordenadasGeograficasB($radar, $n, $flm, $coordenadas, $listaContornos); // calcula las coordenadas geograficas a partir de la lista de contornos
+
+//print_r($listaContornos);
+
+crearKmlB($listaContornos, $radar, $ruta, $fl, "Tierra");
+
+
+/// SAND BOX ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//$isla[0] = array('fila' => 4, 'col' => 4);
+//$isla[1] = array('fila' => 5, 'col' => 4);
+//$isla[2] = array('fila' => 6, 'col' => 4);
+//$isla[3] = array('fila' => 7, 'col' => 4);
+//$isla[4] = array('fila' => 7, 'col' => 4);
+//$isla[5] = array('fila' => 7, 'col' => 5);
+//$isla[6] = array('fila' => 7, 'col' => 6);
+//$isla[7] = array('fila' => 7, 'col' => 7);
+//$isla[8] = array('fila' => 6, 'col' => 7);
+//$isla[9] = array('fila' => 5, 'col' => 7);
+//$isla[10] = array('fila' => 4, 'col' => 7);
+//$isla[11] = array('fila' => 4, 'col' => 6);
+//$isla[12] = array('fila' => 4, 'col' => 5);
+//$isla[13] = array('fila' => 4, 'col' => 4);
+
+//$listaContornos[0] = $isla;
+
+
+/* function IsPointInPolygon($x, $y, $isla){  // GOOOOOOOOOOOD 
+	
+	$minX = buscaColMin($isla);
+	//echo "Xmin: " . $minX. PHP_EOL;
+	$minY = buscaFilaMin($isla);
+	//echo "Ymin: " . $minY. PHP_EOL;
+		
+	$maxX = buscaColMax($isla);
+	//echo "Xmax: " . $maxX. PHP_EOL;
+		
+	$maxY = BuscaFilaMax($isla);
+	//echo "Ymax: " . $maxY. PHP_EOL;
+
+	if ( $x < $minX || $x > $maxX || $y < $minY || $y > $maxY ){
+		return false;
+	}
+
+	$inside = false;
+	for ( $i = 0, $j = count($isla)-1 ; $i < count($isla); $j = $i++ )
+	{
+		if ( ( $isla[$i]['fila'] > $y ) != ( $isla[ $j ]['fila'] > $y ) &&
+				$x < ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) / ( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] )
+		{
+			$inside = !$inside;
+		}
+	}
+
+	return $inside;
+}
+
+
+
+if (IsPointInPolygon(4,5, $isla))
+	echo "DENTRO" . PHP_EOL;
+else 
+	echo "FUERA" . PHP_EOL;
+
+exit(); */
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+	
+/* $mallaContornos = array();
+// ponemos a cero toda la malla de contornos
+for ($i=0; $i< count($mallaGrande); $i++){
+	for($j=0; $j< count($mallaGrande); $j++){
+		$mallaContornos[$i][$j] = 0;
+	}
+}
+ */
+
+//tratamientoMallado($malla, "MALLA.png"); // genera una imagen de la malla grande
+
+//tratamientoMallado($mallaGrande, "MALLA_GRANDE.png");
+
+
+//echo "tam lista contronos de 0: " . $n . PHP_EOL;
+//print_r($listaContornos[0]);
+
+
+// metemos a pinchos los puntos de la listaContornos en mallaContornos
+/* for ($i=0; $i < count($listaContornos[0]); $i++){
+		$x = $listaContornos[0][$i]['col'];
+		$y = $listaContornos[0][$i]['fila'];
+		$mallaContornos[$y][$x] = 1;
+}
+ */
+//pintaMalla($mallaContornos);
+
+//tratamientoMallado($mallaContornos, "MALLA_CONTORNOS.png"); // genera una imagen con los contornos
+
+/* print PHP_EOL . "var cobertura=[" . PHP_EOL;
+for ($i=0; $i<count($malla); $i++) {
+	print "[" . implode(",", $malla[$i]) . "]," . PHP_EOL;
+}
+print "];";
+
  */
 
 
-calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado); // mete la lista de obstaculos ampliada para cada azimut
-//print_r($radar['listaAzimuths'][135]);
-generacionMallado($radar, $radioTerrestreAumentado, $malla);
-pintaMalla($malla);
-//print_r($malla);
-tratamientoMallado($malla, "HOLA_MUNDO.png"); // genera una imagen 
 
-contornos($malla, $mallaContornos); // genera una malla con los contornos 
+
+
+//pintaMalla($malla);
+//pintaMalla($mallaGrande);
+//print_r($malla);
+
+
+
+//print_r($listaContornos);
+//$v = array();
+//$v = matrixToVector($malla);
+
+//echo "tam M: " . count($malla). PHP_EOL;
+
+//echo "tam V: " . count($v). PHP_EOL;
+
+//exit();
+
+//tratamientoMallado($malla, "HOLA_MUNDO.png"); // genera una imagen 
+
+//contornos($malla, $mallaContornos); // genera una malla con los contornos 
 /*$invertida = array();
 for($i=0;$i<count($mallaContornos); $i++) {
     $invertida[$i] = array();
@@ -184,46 +374,44 @@ for ($j=0; $j<count($invertidaContornos); $j++) {
 
 pintaMalla($invertidaContornos);
 */
-pintaMalla($mallaContornos);
+//pintaMalla($mallaContornos);
 
 
 
 
 
-//tratamientoMallado($mallaContornos, "MUNDO_CONTORNOS.png"); // HASTA AQUI TODO GOOD  Genera la imagen de los contornos
-$listaC = array();
-$numIslas = cuentaIslas($mallaContornos, $listaC); // cuenta el numero de contornos que hay y nos da sus coordenadas
+
+//$listaC = array();
+//$numIslas = cuentaIslas($mallaContornos, $listaC); // cuenta el numero de contornos que hay y nos da sus coordenadas
 // $numIslas = cuentaIslas($invertidaContornos, $listaC); // cuenta el numero de contornos que hay y nos da sus coordenadas
 
 //echo "numero de islas: " . $numIslas. PHP_EOL;
 //echo "cuenta de puntos en cada isla" . PHP_EOL;
 
-/* for($i=0;$i<count($listaC);$i++) {
-    print $i . "] " . count($listaC[$i]) . PHP_EOL;
+/* for($i=0;$i<count($listaContornos);$i++) {
+    print $i . "] " . count($listaContornos[$i]) . PHP_EOL;
 }
-$listaC[0] = ordenaLista($listaC[0]);
+//$listaContornos[0] = ordenaLista($listaContornos[0]);
 
 $alfabeto = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz";
 
 $mapa = array();
-for($i=0;$i<count($mallaContornos);$i++) {
+for($i=0;$i<count($mallaGrande);$i++) {
     $mapa[$i] = array();
-    for($j=0;$j<count($mallaContornos);$j++) {
+    for($j=0;$j<count($mallaGrande);$j++) {
         $mapa[$i][$j] = " ";
     }
 }
-for($i=0; $i<count($listaC[0]); $i++) {
+for($i=0; $i<count($listaContornos); $i++) {
     //print $listaC[0][$i]['fila'] . " " . $listaC[0][$i]['col'] . " " . $alfabeto[$i%strlen($alfabeto)] . PHP_EOL;
-    $mapa[$listaC[0][$i]['col']][$listaC[0][$i]['fila']] = $alfabeto[$i%strlen($alfabeto)];
+    $mapa[$listaContornos[$i]['y']][$listaContornos[$i]['x']] = $alfabeto[$i%strlen($alfabeto)];
 }
+
 pintaMallaAlfabeto($mapa);
 
- */
+ 
 
 //tratamientoMallado(, "CONTORNOS_OUTER.png");
-calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, $listaC); // calcula las coordenadas geograficas a partir de la lista de contornos
-//print_r($listaC);
-crearKmlB($listaC, $radar, $ruta, $fl, "Tierra");
 
 
 /* 
@@ -329,3 +517,22 @@ function cuentaPendientes($l) {
     return $j . "/" . count($l);
 }
  */
+
+
+
+
+
+
+
+////////////////////////////////////////// RECORTE DE IMAGENES /////////////////////////////////////////
+
+/*   $img1 = new Imagick('HOLA_MUNDO.png');
+ $img2 = new Imagick('MUNDO_CONTORNOS.png');
+
+ $diff12 = $img1->compareImageChannels($img2,
+ Imagick::CHANNEL_ALL, Imagick::METRIC_MEANABSOLUTEERROR);
+
+ echo "EY OH " .PHP_EOL;
+ print_r($diff12); */
+ 
+//////////////////////////////////////////////////////////////////////////////////////////

@@ -8,7 +8,13 @@ CONST PASO_A_GRADOS = 180;
 CONST DISTANCIA_ENTRE_PUNTOS = 5; 
 CONST TAM_CELDA = 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no peta
 
-
+//// CONSTANTES PARA LA DETECCION DE CONTRONOS /////
+CONST NONE = 0;
+CONST UP = 1;
+CONST LEFT = 2;
+CONST DOWN = 3;
+CONST RIGHT = 4; 
+/////////////////////////////////////////////
 
 
 /**
@@ -384,21 +390,14 @@ function interpolarPtosTerreno($listaObstaculos, $radioTerrestreAumentado, $caso
  * @param int $flm
  */
 function miraSiHayCobertura(&$listaObstaculosAmpliada, $flm){
-	
-	$n = count($listaObstaculosAmpliada);
-	//echo "El tamanio de la lista de obstaculos ampliada es: " . $n . PHP_EOL; 
-	for ($i=0; $i<$n; $i++){
-		//echo "i: " . $i. PHP_EOL;
-		//echo "altura ".$listaObstaculosAmpliada[$i]['altura']. PHP_EOL;
-		//echo "angulo ".$listaObstaculosAmpliada[$i]['angulo']. PHP_EOL;
-		//echo "z ".$listaObstaculosAmpliada[$i]['estePtoTieneCobertura']. PHP_EOL. PHP_EOL;
+		
+	for ($i=0; $i<count($listaObstaculosAmpliada); $i++){
+
 		if ($listaObstaculosAmpliada[$i]['altura'] <  (double)$flm){ // doble < integer  
-			$listaObstaculosAmpliada[$i]['estePtoTieneCobertura'] = true; 
-			//echo "este pto tiene cob: ". $listaObstaculosAmpliada[$i]['estePtoTieneCobertura'].PHP_EOL;
+			$listaObstaculosAmpliada[$i]['estePtoTieneCobertura'] = true; 	
 		}
 		else{
 			$listaObstaculosAmpliada[$i]['estePtoTieneCobertura'] = false;
-			//echo "este pto tiene cob: ". $listaObstaculosAmpliada[$i]['estePtoTieneCobertura'].PHP_EOL;
 		}		
 	}
 }
@@ -421,9 +420,9 @@ function miraSiHayCobertura(&$listaObstaculosAmpliada, $flm){
 function calculador($radar,$listaObstaculos, $radioTerrestreAumentado, $flm, $obstaculoLimitante, &$gammaMax, &$theta0, &$earthToRadar, &$earthToEvalPoint, &$earthToFl, &$radarSupTierra){
 	
 	$radarSupTierra = $radar['towerHeight'] + $radar['terrainHeight'];  // distancia del radar a la superficie terrestre
-	//echo "Distacia Radar Sup terrestre: " . $radarSupTierra. PHP_EOL;
+
 	$earthToRadar = $radar['towerHeight'] + $radar['terrainHeight'] + $radioTerrestreAumentado;
-	//echo "EARTH TO RADAR: " . $earthToRadar. PHP_EOL;
+
 	$earthToEvalPoint = $radioTerrestreAumentado + $obstaculoLimitante;
 	$earthToFl = $radioTerrestreAumentado + $flm;
 	
@@ -434,7 +433,7 @@ function calculador($radar,$listaObstaculos, $radioTerrestreAumentado, $flm, $ob
 	$gammaMax = acos((pow($distanciaCobertura,2) +  pow($earthToRadar,2) - pow($earthToEvalPoint,2)) / (2 * $earthToRadar * $distanciaCobertura));
 	
 	$theta0 = $earthToRadar * sin($gammaMax) / $earthToFl;
-	//echo "THETA 0: " . $theta0. PHP_EOL;
+
 }
 
 
@@ -450,12 +449,10 @@ function calculador($radar,$listaObstaculos, $radioTerrestreAumentado, $flm, $ob
  * @param double $epsilon2
  * @param array $ptosCorte
  */
-
-
 function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreAumentado, &$epsilon1, &$epsilon2, &$ptosCorte){
 		
-	$epsilon1 =0;
-	$epsilon2=0;
+	$epsilon1 = 0;
+	$epsilon2 = 0;
 	$ptosCorte = array(); // array de dos posiciones
 	
 	$numerador = $earthToRadar * sin($gammaMax);
@@ -468,9 +465,6 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
 	
 	$epsilon1 = PI - $theta1 - $gammaMax;
 	$epsilon2 = PI - (PI-$theta1) - $gammaMax;
-	
-	//echo "EPSILON 1: ". $epsilon1. PHP_EOL;
-	//echo "EPSILON 2: ". $epsilon2. PHP_EOL;
 	
 	$ptosCorte[0] = $epsilon1 * $radioTerrestreAumentado;
 	$ptosCorte[1] = $epsilon2 * $radioTerrestreAumentado;	
@@ -646,30 +640,18 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 function buscaDistanciaMenor($listaObstaculos, $punto){
 	
 	$posPunto = 0;
-	$n = count ($listaObstaculos);
-	//echo "SIZE LISTA OBSTACULOS AMPLIADA: " . $n. PHP_EOL; // ESTA MOSTRANDO EL TAMAÑO DE LA LISTA DE OBSTACULOS AMPLIADA  (GOOD)
-	//echo "pto: " . $punto. PHP_EOL;
-	//echo "lista de obstaculos " . PHP_EOL;
-	//print_r($listaObstaculos);
+	
 	// miramos la diferencia con el primer punto para poder comparar 
     $min = abs($punto - $listaObstaculos[0]['angulo']);
-   // echo "PUNTO : " . $punto . PHP_EOL;
-   // echo "PRIMER OBSTACULO: " . $listaObstaculos[0]['angulo']. PHP_EOL;
-   
     
-	for ($i =0; $i< $n ; $i++){
-		//echo " MIN: ". $min . PHP_EOL;
-		//echo " VALOR ABSOLUTO DE LA DIFERENCIA: ". abs($punto - $listaObstaculos[$i]['angulo']). PHP_EOL;
+	for ($i =0; $i < count ($listaObstaculos) ; $i++){
+
 		if(abs($punto - $listaObstaculos[$i]['angulo']) < $min){
-		
 			// si la diferencia es mas pequeña que el min anterior actualizamos min 
 			$min = abs($punto - $listaObstaculos[$i]['angulo']);
-			//echo "MIN DENTRO DEL IF: " . $min . PHP_EOL;
 			$posPunto = $i; // me guardo el punto que tiene la distancia minima hasta el momento
-			//echo "i: " . $i. PHP_EOL;
 		}
 	}
-	//echo "POS PTO: " . $posPunto. PHP_EOL;
 	return $posPunto; //  devolvemos la posicion del punto xq lo que nos interesa luego es mirar si tiene cobertura
 }
 /**
@@ -734,7 +716,6 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 	
 	// pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
 	$tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
-	//$tamMalla = 4;
 	$xR= 0; // coordenada x del radar
 	$yR =0; // coordenada y del radar
 	$radioTerrestreAumentadoEnMillas  = $radioTerrestreAumentado / MILLA_NAUTICA_EN_METROS;
@@ -748,18 +729,13 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 	
 	for ($i =0; $i<$tamMalla; $i++){ // recorre las columnas de la malla 
 		for ($j=0; $j<$tamMalla; $j++){ // recorre las filas de la malla 
-			//echo PHP_EOL;
-			//echo "i: " . $i.PHP_EOL;
-			//echo "j: " . $j.PHP_EOL;
+		
 			// CALCULAMOS LAS COORDENADAS DE CADA CELDA
 			$x = ($i * TAM_CELDA) - (($tamMalla /2) * TAM_CELDA) + (TAM_CELDA/2);
 			$y = (($tamMalla /2) * TAM_CELDA) - ($j * TAM_CELDA) - (TAM_CELDA/2);
-			//echo "x: " . $x. PHP_EOL;
-			//echo "y: " . $y. PHP_EOL;
-			// CALCULAMOS EL AZIMUT DE CADA CELDA Y APROXIMAMOS
 		
+			// CALCULAMOS EL AZIMUT DE CADA CELDA Y APROXIMAMOS
 			$azimutTeorico = calculaAcimut($x, $y); // grados GOOD
-			//echo "azimut teorico: " . $azimutTeorico. PHP_EOL;
 			if ($radar['totalAzimuths'] == 720){
 				$azimutCelda = round($azimutTeorico*2) /2; // calculamos el azimut aproximado
 				if ($azimutCelda == 720)
@@ -770,26 +746,47 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 			   if ($azimutCelda == 360)
 			   		$azimutCelda = 359; 
 			}
-			//echo "azimut celda: " . $azimutCelda. PHP_EOL;
 			// al dividir entre el radio tenemos el angulo deseado
 			$distanciaCeldaAradar = (sqrt(pow(($xR- $x),2)+ pow(($yR - $y),2)) ) / $radioTerrestreAumentadoEnMillas;
-			//echo "distancia Celda Radar : " . $distanciaCeldaAradar. PHP_EOL;
-	
+			
 			// busca la posicion de la  distancia mas proxima en la lista de obstaculos del acimut aproximado (el menor)
 			$pos = buscaDistanciaMenor($radar['listaAzimuths'][$azimutCelda], $distanciaCeldaAradar); 
 				
 			if (($radar['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false){
-				$malla[$i][$j] = 0;
-				//echo "El pto aproximado no tiene cobertura". PHP_EOL;
+				$malla[$j][$i] = 0;
 			}
 			else{
-				$malla[$i][$j] = 1; // entiendase el valor 1 para representar el caso en el que  hay cobertura y 0 para lo contrario
-				//echo "El pto aproximado  tiene cobertura". PHP_EOL;
+				$malla[$j][$i] = 1; // entiendase el valor 1 para representar el caso en el que  hay cobertura y 0 para lo contrario
 			}	
-			//echo "Malla :" . $malla[$i][$j]. PHP_EOL;
 		}	
 	}
 }
+
+
+function mallaMarco($malla){
+	
+	$mallaMarco= array();
+	
+	// creamos una malla mayor y la inicializamos a 0
+	for($i =0; $i< count($malla)+2; $i++){
+		for ($j =0; $j< count($malla)+2; $j++){
+			$mallaMarco[$i][$j] = 0;
+		}
+	}
+	
+	// recorremos la malla y la copiamos en la malla de mayor tamaño 
+	for($i =0; $i< count($malla); $i++){
+		for ($j =0; $j< count($malla); $j++){
+			if ($malla[$i][$j] == 1){
+				$mallaMarco[$i+1][$j+1] = $malla[$i][$j];
+			}
+		}
+	}
+	return $mallaMarco;
+}
+
+
+
 /**
  * Genera una imagen en la que las zonas blancas tienen cobertura y las negras no a partir de la matriz binaria que se le pasa
  * @param unknown $malla
@@ -809,7 +806,7 @@ function tratamientoMallado($malla, $nombre){
  		echo "error definiendo color" . PHP_EOL;
  		return false;
  	}
-	 	
+ 		 	
  	for ($i=0; $i< $sizeMalla; $i++) { // recorremos la malla y coloreamos solo los pixeles que tengan cobertura
 		for($j=0; $j<$sizeMalla; $j++) {
 	 	
@@ -825,65 +822,526 @@ function tratamientoMallado($malla, $nombre){
 	imagedestroy( $im ); // liberamos memoria
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// DETECCION DE CONTORNOS ALGORITMO : MARCHING SQUARES 
 
 
-function esFrontera($malla, $i, $j) {
+function getFila($y, $malla){
+	
+	$rowData = array();
 
-	if ( $malla[$i-1][$j] == 1 && $malla[$i+1][$j] == 1 && $malla[$i][$j-1] == 1 && $malla[$i][$j+1] == 1 ) {
-		return true;
-	} else {
-		return false;
-	   }
+	for ($j=0; $j<count($malla); $j++){
+		$rowData[] = $malla[$y][$j];
+	
+	}
+ // echo "rowData: " .print_r($rowData) . PHP_EOL;
+ return $rowData;
 }
 
-/**
- * Generamos una matriz con los contornos que encontramos en la malla binaria
- * @param unknown $malla
- * @param unknown $nuevaMalla
- */
-
-function contornos($malla, &$mallaContornos){
+// copia una matriz en un vector
+function matrixToVector ($malla){
 	
-	$mallaContornos = array();
-	$sizeMalla = count($malla);
-
-        // suavizado de malla para evitar casos que no se pueden resolver al calcular el borde xej: islas rodeadas
-	for( $i = 1; $i < $sizeMalla - 1; $i++ ){  // recorrre las columnas
-		for( $j = 1; $j < $sizeMalla - 1; $j++ ){ // recorre las filas 
-	            if ( $malla[$i][$j] == 0 &&
-	                $malla[$i+1][$j] == 1 &&
-	                $malla[$i-1][$j] == 1 &&
-    	                $malla[$i][$j+1] == 1 &&
-	                $malla[$i][$j-1] == 1) {
-	                $malla[$i][$j] = 1;
-	            }
+	$vector = array();
+	
+	for ($i=0; $i< count($malla); $i++){
+		for ($j=0; $j< count($malla); $j++){
+			$vector[] = $malla[$i][$j];
 		}
 	}
-	pintaMalla($malla);
-	
-	for( $i = 0; $i < $sizeMalla; $i++ ){  // recorrre las columnas
-		for( $j = 0; $j < $sizeMalla; $j++ ){ // recorre las filas 
-	
-			if ( $i == 0 || $j == 0 || $i == ($sizeMalla - 1) || $j == ($sizeMalla - 1) ) {
-	
-				$mallaContornos[$i][$j] = $malla[$i][$j];// pone los bordes
-				continue;
-			}
-			if ( 1 == $malla[$i][$j] ) {
-				if ( esFrontera($malla, $i, $j) ) { // mira si sus 4 vecinos tienen cobertura
-					$mallaContornos[$i][$j] = 0; 
-				} else {
-					$mallaContornos[$i][$j] = 1; 
-				   }
-			 } else {
-				$mallaContornos[$i][$j] = 0;
-			   }
-		}// for interno
-	}// for externo
-	//print_r($mallaContornos);
+	return $vector;
 }
 
 
+ /**Busca el primer 1 en la malla para empezar a contornear
+ *
+ * @param matriz $malla
+ * @param int $x
+ * @param int $y
+ */
+
+function getFirstPoint($malla, &$x, &$y){
+	
+ 	$rowData = array();
+	$fila = 0;
+	$enc = false;
+	$salir = false;
+	
+	while ($fila < count($malla) && !$salir){
+		
+		 $rowData = getFila($fila, $malla); // no quedamos con la fila de la matriz
+		 //echo "Fila: " .$fila. PHP_EOL;
+		 //print_r($rowData);
+		 $j = 0;
+		 
+		 while ($j < count($rowData) && !$enc){
+		 	
+		 	//echo "j = " . $j . PHP_EOL;
+		 	//echo "rowData[j]: " . $rowData[$j]. PHP_EOL;
+		
+		
+		 	if ($rowData[$j] > 0){	
+		 		//echo "he encontrado una uno! ". PHP_EOL;
+		 		$enc = true;
+		 		$salir = true;
+		 		$x = $j;
+		 		//echo "x = j: " . $x. PHP_EOL;
+		 		$y = $fila;
+		 		//echo "y = fila: " . $y. PHP_EOL;
+		 		//$rowData[$j] ==0 ; // nos cargamos el primer uno para poder seguir mirando contornos 
+		 	}
+		  	else{
+		 		$j++;
+		 	} 
+		 }
+		$fila++;
+		//echo "Fila: " .$fila. PHP_EOL;
+	} 
+}	
+
+
+/**
+ * Busca unos en la matriz para poder detectar varios contornos si los hubiera
+ * @param unknown $malla
+ * @param unknown $x
+ * @param unknown $y
+ * @param unknown $mallaVisitados
+ */
+function dameUno($malla, &$x, &$y, $mallaVisitados){
+	
+	$enc = false;
+	$salir = false;
+	$fila =0;
+	
+	while ($fila < count($malla) && !$salir){
+		$col =0;
+		while ($col < count($malla)  && !$enc){
+			if ($malla[$fila][$col] > 0 && $mallaVisitados[$fila][$col] === false){
+				$enc = true;
+				$salir = true;
+				$x = $col;
+				$y= $fila ;
+				//echo "x: " . $col. " ";
+				//echo "y: " . $fila. PHP_EOL;
+				//$mallaVisitados[$i][$j] = true;
+			}
+			else{
+				$col++;
+			}
+		}
+		$fila++;
+	}
+}
+	
+// determines and sets the state of the 4 pixels that represnt our current state, and ses our current and previous directions
+function step($index, $vector, $tamMalla, &$nextStep, &$state){
+	
+	$previousStep = 0;
+	//$nextStep = 0 ;
+	
+	
+	// representa el marco de 4*4 
+	$upLeft = $vector[$index];    
+	$upRight = $vector[$index + 1];
+	$downLeft = $vector[$index + $tamMalla]; 
+	$downRight = $vector[$index + $tamMalla + 1] ; 
+	
+	// store our previous step
+	$previousStep = $nextStep;
+	//echo "PREVIO: " . $previousStep. PHP_EOL;
+	
+	
+	// determine which state we are in
+	
+	$state = 0;
+	if ($upLeft){
+		$state = $state|1;
+	}
+	if ($upRight){
+		$state = $state|2;
+	}
+	if ($downLeft){
+		$state = $state|4;
+	}
+	if ($downRight){
+		$state = $state|8;
+	}
+	
+	//echo "estado actualizado: ". $state . PHP_EOL;
+	//echo "ESTADO: " . $state. PHP_EOL;
+	
+	switch ($state){
+		case 1: $nextStep = UP; break;
+		case 2: $nextStep = RIGHT; break;
+		case 3: $nextStep = RIGHT; break;
+		case 4: $nextStep = LEFT; break;
+		case 5: $nextStep = UP; break;
+		case 6:
+			if ($previousStep == UP)
+				$nextStep = RIGHT;
+			else
+				$nextStep = LEFT;
+		break;
+	
+		case 7: $nextStep = RIGHT; break;
+		case 8: $nextStep = DOWN; break;
+	
+		case 9:
+			if ($previousStep == RIGHT)
+				$nextStep = DOWN;
+			else
+				$nextStep = UP;
+		break;
+	
+		case 10: $nextStep = DOWN; break;
+		case 11: $nextStep = DOWN; break;
+		case 12: $nextStep = LEFT; break;
+		case 13: $nextStep = UP; break;
+		case 14: $nextStep = LEFT; break;
+		default: $nextStep = NONE; break; // this should never happen
+	}	
+}
+	
+	
+/** Recorre la malla delineando el contorno desde el punto inicial que le entra por parametro.
+ * 
+ * @param        $radar
+ * @param int    $startX
+ * @param int    $startY
+ * @param matrix $malla
+ * @return $pointList, lista con los puntos del contorno
+ */		
+function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm){ // empezamos desde la primera posicion y recorremos la malla 
+	
+	// set up our return list
+	$pointList = array();
+
+	$x = $startX;
+	$y = $startY;
+	//echo "X: " . $x. PHP_EOL;
+	//echo "Y: " . $y. PHP_EOL;
+	
+	$sizeMalla = count ($malla);  
+	//echo "size malla: " . $sizeMalla. PHP_EOL;
+
+	// comprobamos que no nos salimos de la malla. NO DEBERIA SER NECESARIO
+	if ($startX < 0) $startX = 0;  if ($startY < 0) $startY = 0; if ($startX > $sizeMalla) $startX = $sizeMalla; if ($startY > $sizeMalla) $startY = $sizeMalla;
+	 
+
+
+	do{
+		// evaluate our state, and set up our next direction 
+		$index = ($y-1) * $sizeMalla + ($x-1); // indexa el vector
+		//$index = ($y) * $sizeMalla + ($x); // indexa el vector
+		
+		//echo "Index : " . $index.PHP_EOL;
+		
+		step($index, $vector, $sizeMalla, $nextStep, $state);
+		
+		//echo "SIG: " . $nextStep.PHP_EOL;
+		
+		// if the current point is within our image add it to the list of points
+		if ( ( ($x >= 0) && ($x < $sizeMalla) ) && ( ($y >= 0) && ($y < $sizeMalla) ) ){
+			
+			if($state == 1){
+					$pointList[] = array ('fila'=> $y, 'col' => $x, 'altura' =>$flm);
+					$pointList[] = array ('fila'=> $y-1, 'col' => $x, 'altura' =>$flm);
+					//$mallaVisitados[$x-1][$y-1] = true;
+			}
+			elseif($state == 2){
+					$pointList[] = array ('fila'=> $y, 'col' => $x-1, 'altura' =>$flm);
+					$pointList[] = array ('fila'=> $y, 'col' => $x, 'altura' =>$flm);
+					//$mallaVisitados[$x][$y-1] = true;
+			}
+			elseif($state == 3){
+					$pointList[] = array ('fila'=> $y, 'col' => $x, 'altura' =>$flm);
+					//$mallaVisitados[$x-1][$y-1] = true;
+					//$mallaVisitados[$x][$y-1] = true;
+			}
+			elseif($state == 4){
+					$pointList[] = array ('fila'=> $y-1, 'col' => $x, 'altura' =>$flm);
+					$pointList[] = array ('fila'=> $y-1, 'col' => $x-1, 'altura' =>$flm);
+					//$mallaVisitados[$x-1][$y] = true;
+			}
+			elseif($state == 5){
+					$pointList[] = array ('fila'=> $y-1, 'col' => $x, 'altura' =>$flm);
+					//$mallaVisitados[$x-1][$y] = true;
+					//$mallaVisitados[$x-1][$y-1] = true;
+			}
+			elseif($state == 8){
+					$pointList[] = array ('fila'=> $y-1, 'col' => $x-1, 'altura' =>$flm);
+					$pointList[] = array ('fila'=> $y, 'col' => $x-1, 'altura' =>$flm);
+					//$mallaVisitados[$x][$y] = true;
+			}
+			elseif($state == 10){
+					$pointList[] = array ('fila'=> $y, 'col' => $x-1, 'altura' =>$flm);
+					//$mallaVisitados[$x][$y] = true;
+					//$mallaVisitados[$x][$y-1] = true;
+			}
+			elseif($state == 12){
+					$pointList[] = array ('fila'=> $y-1, 'col' => $x-1, 'altura' =>$flm);
+					//$mallaVisitados[$x][$y] = true;
+					//$mallaVisitados[$x-1][$y] = true;
+			}
+		}
+		
+		switch ($nextStep){
+			case UP: $y --; break;
+			case LEFT: $x--; break;
+			case DOWN: $y++; break;
+			case RIGHT: $x++; break;
+			default : break;
+		}
+	 } while (($x != $startX || $y != $startY) && ($index < count($vector)));
+	
+	
+	$pointList[] = array ('fila' => $y-1 , 'col'=> $x-1, 'altura' => $flm); // para que el contorno sea cerrado
+	
+	return $pointList;
+	
+}
+
+
+
+/**
+ *  Determina y  establece el estado de 4 pixeles que representan nuestro estado actual y establece nuestra direccion actual y la siguiente
+  
+ * @param matriz binaria $malla donde queremos encontrar los contornos
+ * @return lista con los puntos del contorno.
+ */
+/*  function marchingSquares($radar, $malla, $flm, &$listaContornos){
+
+	$x =0;
+	$y=0;
+	$fila =0;
+	$col =0;
+	$contorno = array();
+	
+	$mallaVisitados = array();
+	// Inicializamos la malla de visitados
+	for ($i=0; $i< count($malla); $i++){
+		for($j=0; $j< count($malla); $j++){
+			$mallaVisitados[$i][$j] = false;
+		}
+	} 
+	
+	// recorremos la malla de coberturas 
+	for ($i=0; $i<count($malla); $i++){
+		for($j=0; $j<count($malla);$j++){
+			
+			// Vamos buscando unos en la matrix para detectar los distintos contornos
+			dameUno($malla, $x, $y, $mallaVisitados);
+			$fila = $y;
+			$col = $x;
+			
+			if ($mallaVisitados[$fila][$col] === false){ // si no hemos pasado por este 1 ...
+				
+				$vector = matrixToVector($malla);
+				// Return list of x and y positions
+				$contorno = walkPerimeter($radar,$x, $y, $malla, $vector, $flm); // rellenamos la malla de visitados con todos los 1 del contorno que estamos detectando
+				$listaContornos[] = $contorno;
+				$mallaVisitados[$fila][$col] = true;
+			}
+		}
+	}	
+}	
+  */	
+
+
+function buscaFilaMin($isla){
+	
+	$filaMin = 99999999999;
+	
+	for($i=0; $i< count($isla); $i++){
+		
+		if ($isla[$i]['fila'] < $filaMin){
+			$filaMin = $isla[$i]['fila'];
+		}
+	}
+	return $filaMin;
+}
+
+
+function buscaColMin($isla){
+
+	$colMin = 99999999999;
+
+	for($i=0; $i< count($isla); $i++){
+
+		if ($isla[$i]['col'] < $colMin){
+			$colMin = $isla[$i]['col'];
+		}
+	}
+	return $colMin;
+}
+
+
+function buscaColMax($isla){
+
+	$colMax = 0;
+
+	for($i=0; $i< count($isla); $i++){
+
+		if ($isla[$i]['col'] > $colMax){
+			$colMax = $isla[$i]['col'];
+		}
+	}
+	return $colMax;
+}
+
+
+function buscaFilaMax($isla){
+
+	$filaMax = 0;
+
+	for($i=0; $i< count($isla); $i++){
+
+		if ($isla[$i]['fila'] > $filaMax){
+			$filaMax = $isla[$i]['fila'];
+		}
+	}
+	return $filaMax;
+}
+
+
+function puntoEnPoligono($x, $y, $listaNL){
+	
+	$inside = false;
+	$resultados = array(); // alamcena true o false en funcion de si el punt oque se esta evaluando esta dentro o fuera de algun contorno
+	
+	if(empty($listaNl)){ // si aun no tenemos cotornos en neustra lista, obviamente el punto no puede estar dentro de ninguno
+		echo "LISTA VACIA !!! " . PHP_EOL;
+		return false;
+		break;
+	}
+	else{// si la lista de contornos no esta vacia, comprobamos el punto con todos los contornos que tenga nuestra lista
+		$isla =0; 
+		$enc = false;
+		
+		while($isla < count($listaNL) && !$enc){
+			
+			// Buscamos Xmin, Xmax, Ymin, Ymax
+			$minX = buscaColMin($listaNL[$isla]);
+			//echo "Xmin: " . $minX. PHP_EOL;
+			$minY = buscaFilaMin($listaNL[$isla]); 
+			//echo "Ymin: " . $minY. PHP_EOL;
+			
+			$maxX = buscaColMax($listaNL[$isla]);
+			//echo "Xmax: " . $maxX. PHP_EOL;
+			
+			$maxY = BuscaFilaMax($listaNL[$isla]);
+			//echo "Ymax: " . $maxY. PHP_EOL;
+			
+			if ($x < $minX || $x > $maxX || $y < $minY || $y > $maxY){
+				$inside = false;
+			}
+			else{
+				$j = count($listaNL[$isla])-1;
+				for($i =0 ; $i < count($listaNL[$isla]); $i++){ // for($i =0, $j = count($listaContornos[$isla])-1; $i < count($listaContornos[$isla]); $j= $i++){
+					//$j= $i++;
+					$j= $i;
+					if (($listaNL[$isla][$i]['fila'] > $y) != ($listaNL[$isla][$j]['fila'] > $y) && 
+					   ($x < ($listaNL[$isla][$j]['col'] - $listaNL[$isla][$j]['col']) * ($y - $listaNL[$isla][$i]['fila']) / ($listaNL[$isla][$j]['fila'] - $listaNL[$isla][$i]['fila'])
+					   		  + $listaNL[$isla][$i]['col'])){
+						$inside = !$inside; // true
+						$enc= true;
+						break; 
+					}
+				}// for
+			}//else
+			$isla++;
+		}
+	}
+}
+
+
+function determinaContornos($radar, $malla, $flm, &$listaContornos){
+	
+	$mallaNL = array();
+	$listaContornos = array();
+	
+	echo " COUNT MALLA : " . count($malla). PHP_EOL;
+	
+	// inicializamos la malla del siguiente nivel
+	for ($i=0; $i< count($malla); $i++){ //8
+		for($j=0; $j< count($malla); $j++){
+			$mallaNL[$i][$j] = $malla[$i][$j];
+		}
+	}
+	
+	for ($n =0 ; $n < 3; $n++){ // porque solo queremos analizar tres niveles de profundidad
+		
+	//Malla = MallaNL. Actualizamos la malla del siguiente nivel
+	
+		for ($i=0; $i< count($malla); $i++){ //8
+			for($j=0; $j< count($malla); $j++){
+				$malla[$i][$j] = $mallaNL[$i][$j];
+			}
+		}
+		$listaNL = array(); // creamos la lista del siguiente nivel
+		
+		for ($i=0; $i<count($malla); $i++){ // recorremos la malla para detectar los contornos y los donuts
+		
+			for($j=0; $j<count($malla); $j++){
+				// suponiendo dentro = true
+				if(puntoEnPoligono($i, $j, $listaNL)){ // el mundo seria mas facil si se le pasara la isla concreta, no el archipielago
+					// si esta dentro del poligono copiamos el valor invertido en la malla del siguiente nivel
+					if ($malla[$i][$j] == 1){
+					
+						$mallaNL[$i][$j] = 0;
+					}
+					else{
+						$mallaNL[$i][$j] = 1;
+					}
+				}
+				else{ // si el punto esta fuera del poligono copiamos el valor en la malla del siguiente nivel
+					// si el punto esta fuera y es un 1, significa que estamos ante un nuevo contorno
+					if ($malla[$i][$j] == 1){
+						$isla = marchingSquares($radar, $malla, $flm);// nos da el contorno de una isla 
+						$listaNL[] = $isla; // guardamos esa isla en la lista del nivel en el que estamos
+					}
+					else{// si es un cero copiamos el valor
+						$mallaNL[$i][$j] = $malla[$i][$j];
+					}
+				}
+			}
+			//LCT=LCT+LCN
+			for ($x=0; $x < count($listaNL); $x++){
+				
+				$listaContornos[] = $listaNL[$x]; // metemos cada isla del nivel en el que estamos en la lista de contornos generales 
+			} 
+		} // fin recorrido de la malla
+	}// fin del recorrido de los tres niveles de profundidad
+}
+
+
+// COPIA DE SEGURIDAD DEL MARCHING SQUARES ORIGINAL
+
+/**
+ *  Determina y  establece el estado de 4 pixeles que representan nuestro estado actual y establece nuestra direccion actual y la siguiente
+
+ * @param matriz binaria $malla donde queremos encontrar los contornos
+ * @return lista con los puntos del contorno.
+ */
+ function marchingSquares($radar, $malla, $flm){
+
+	$x =0;
+	$y=0;
+	$contorno = array();
+
+
+	// Find the starting point
+	getFirstPoint($malla, $x,$y);
+
+	$vector = matrixToVector($malla);
+
+	// Return list of x and y positions
+	$contorno = walkPerimeter($radar,$x, $y, $malla, $vector, $flm); // nos devuelve la isla
+	//print_r($contorno);
+	return $contorno;
+
+} 
+ 
+/* 
 function isSafe($mallaContornos, $col, $fila, $visitados){ // he cambiado el orden de las filas y las col en todos los sitios
 	
 	$n = count ($mallaContornos);  
@@ -948,7 +1406,7 @@ function cuentaIslas($mallaContornos, &$listaC){
 	}
 	//print_r($listaC);
 	return $numIslas; // el numero de islas debe coincidir con el numero de elementos que tiene la listaC
-}
+} */
  
 
 function calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, &$listaC){ // 
@@ -957,13 +1415,14 @@ function calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, &
 	$yR =0; 
 	// pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
 	$tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
-	
+	//$tamMalla = 6;
 	//echo "Num Islas: " . $numIslas. PHP_EOL;
 	
 	for($isla=0; $isla < $numIslas; $isla++){ // recorre la lista de islas
 		//echo "ISLA: " . $isla. PHP_EOL;
 		//echo PHP_EOL;
 		$n = count($listaC[$isla]);
+		//echo "N: " . $n. PHP_EOL;
 		//echo "ptos totales en la isla " . $isla. ": " . $n. PHP_EOL; 
 		for($i=0; $i < $n; $i++){ // recorre la lista de puntos
 			
@@ -972,8 +1431,8 @@ function calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, &
 			//echo "fila: " . $listaC[$isla][$i]['fila']. PHP_EOL;
 			//echo "col: " . $listaC[$isla][$i]['col']. PHP_EOL;
 			
-			 $x = ( ($listaC[$isla][$i]['col'] * TAM_CELDA) - (($tamMalla /2) * TAM_CELDA) + (TAM_CELDA/2) );  
-			 $y = ( ( ($tamMalla /2) * TAM_CELDA) - ($listaC[$isla][$i]['fila'] * TAM_CELDA) - (TAM_CELDA/2) );
+			 $x = ( (($listaC[$isla][$i]['col']-1) * TAM_CELDA) - (($tamMalla /2) * TAM_CELDA) + (TAM_CELDA/2) );  
+			 $y = ( ( ($tamMalla /2) * TAM_CELDA) - (($listaC[$isla][$i]['fila']-1) * TAM_CELDA) - (TAM_CELDA/2) );
 			
 			//$x = - (($tamMalla /2) * TAM_CELDA) + (TAM_CELDA/2);
 			//echo "X : " . $x. PHP_EOL;
@@ -1012,10 +1471,10 @@ function calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, &
 			
 			
 			 //echo PHP_EOL;
-			 //echo "LONGITUD: " .$listaC[$isla][$i]['fila'] . PHP_EOL;
-			 //echo "LATITUD: " .$listaC[$isla][$i]['col'] . PHP_EOL;
-			 //echo "ALTURA: " .$listaC[$isla][$i]['altura'] . PHP_EOL;
-			 //echo PHP_EOL;
+			// echo "LONGITUD: " .$listaC[$isla][$i]['fila'] . PHP_EOL;
+			// echo "LATITUD: " .$listaC[$isla][$i]['col'] . PHP_EOL;
+			// echo "ALTURA: " .$listaC[$isla][$i]['altura'] . PHP_EOL;
+			// echo PHP_EOL;
 		}
 	}
 }
@@ -1026,7 +1485,7 @@ function pintaMalla($malla) {
 //    for($i=count($malla)-1;$i>=0;$i--) {
     for($i=0;$i<count($malla);$i++) {
         for($j=0;$j<count($malla);$j++) {
-            print ($malla[$j][$i] == 1 ? "*" : " ");
+            print ($malla[$j][$i] == 1 ? "1" : "0");
         }
         print PHP_EOL;
     }
