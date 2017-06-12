@@ -12,13 +12,33 @@ function toString ($coordenadasG){
 	$size = count ($coordenadasG);
 
 	for ($i =0; $i< $size; $i++){
-		$cadena .= implode("," , $coordenadasG[$i]). PHP_EOL;
+		$cadena .= implode("," , $coordenadasG[$i]). PHP_EOL; // une elementos de un array en un string
 	}
 	// cerramos el polígono, incluyendo de nuevo el primer punto de la lista
-	$cadena .= implode(",", $coordenadasG[0][0]) . PHP_EOL; // $cadena .= implode(",", $coordenadasG[0][0]) . PHP_EOL;
+	$cadena .= implode(",", $coordenadasG[0]) . PHP_EOL; 
 
 	return $cadena;
 }
+
+//print_r($coordenadasG);
+
+function toStringB ($isla){
+	$cadena = "";
+
+	//for ($isla =0; $isla< count($listaC); $i++){ // recorremos el array que contiene las coordenadas geograficas calculadas
+		for ($pto=0; $pto< count($isla); $pto++){
+			$cadena .= implode("," , $isla[$pto]). PHP_EOL; // une elementos de un array en un string
+		}
+		
+	//}
+	// cerramos el polígono, incluyendo de nuevo el primer punto de la lista
+	//$cadena .= implode(",", $listaC[0][0]) . PHP_EOL; // isla 0 : punto 0 
+
+	return $cadena;
+}
+
+
+
 
 /**
  * Funcion para crear el fichero Kml con los resultados del calculo de la cobertura del radar 
@@ -97,7 +117,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	
 	$numIslas = count($listaC);
 	//echo "numISlas: " . $numIslas. PHP_EOL;
-	$cadenaOuter = toString($listaC); // la primera islsa sera siempre el Outer Boundry (En este caso tenemos  6000 ptos aproximadamente) ($listaC[0])
+	$cadenaOuter = toStringB($listaC[0]); // la primera isla sera siempre el Outer Boundry (En este caso tenemos  6000 ptos aproximadamente) ($listaC[0])
 	//echo $cadenaOuter. PHP_EOL;
 	$nivelVuelo = (string)$fl;
 	$nombreFich = $ruta. $radar['site'] ."_FL_" . $nivelVuelo . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
@@ -143,7 +163,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 
  	     for ($isla = 1; $isla < $numIslas; $isla++){
 	
-			$cadenaInner = toString($listaC[$isla]); // ($listaC)
+			$cadenaInner = toStringB($listaC[$isla]); // ($listaC)
 		
 			$contenido2 = '<innerBoundaryIs>
 			<LinearRing>

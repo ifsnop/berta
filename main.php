@@ -180,19 +180,19 @@ array(0,0,0,0,0,0),
 
 
 
-/*    $malla = array(
- array(0,0,0,0,0,0),
- array(0,0,0,0,0,0),
- array(0,0,0,0,0,0),
- array(0,0,0,0,0,0),
- array(0,0,0,0,1,1),
- array(0,0,0,0,1,1),
-
- ); */ 
-   
-  
-
      $malla = array(
+ array(1,1,0,0,0,0),
+ array(1,1,0,0,0,0),
+ array(0,0,0,0,0,0),
+ array(0,0,0,0,0,0),
+ array(0,0,0,0,1,1),
+ array(0,0,0,0,1,1),
+
+ );  
+    
+  
+/*
+      $malla = array(
 		array(0,0,0,0,0,0,0,0,0,0),
 		array(0,1,1,1,1,0,0,0,0,0),
 		array(0,1,0,1,1,0,0,0,0,0),
@@ -206,6 +206,7 @@ array(0,0,0,0,0,0),
 
 ); 
    
+*/
 
 calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado); // mete la lista de obstaculos ampliada para cada azimut
 
@@ -214,44 +215,91 @@ calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado); // mete la lista 
 
 $mallaGrande = array();
 $mallaGrande = mallaMarco($malla); // tiene un marco de ceros abrazando  a la malla binaria original
-//print_r($listaContornos);
 
 
+//$isla =marchingSquares($radar, $mallaGrande, $flm);
+//print_r($isla);
+//exit();
 
 //echo "tamaño de la lista de contornos : " . $n. PHP_EOL;
 
 determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
 
-//$n = sizeof($listaContornos);
-
-calculaCoordenadasGeograficasB($radar, $n, $flm, $coordenadas, $listaContornos); // calcula las coordenadas geograficas a partir de la lista de contornos
-
 //print_r($listaContornos);
 
-crearKmlB($listaContornos, $radar, $ruta, $fl, "Tierra");
+//exit();
+
+//calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos); // calcula las coordenadas geograficas a partir de la lista de contornos
+
+//print_r($listaContornos);
+//exit();
+
+//crearKmlB($listaContornos, $radar, $ruta, $fl, "Tierra");
 
 
 /// SAND BOX ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//$isla[0] = array('fila' => 4, 'col' => 4);
-//$isla[1] = array('fila' => 5, 'col' => 4);
-//$isla[2] = array('fila' => 6, 'col' => 4);
-//$isla[3] = array('fila' => 7, 'col' => 4);
-//$isla[4] = array('fila' => 7, 'col' => 4);
-//$isla[5] = array('fila' => 7, 'col' => 5);
-//$isla[6] = array('fila' => 7, 'col' => 6);
-//$isla[7] = array('fila' => 7, 'col' => 7);
-//$isla[8] = array('fila' => 6, 'col' => 7);
-//$isla[9] = array('fila' => 5, 'col' => 7);
-//$isla[10] = array('fila' => 4, 'col' => 7);
-//$isla[11] = array('fila' => 4, 'col' => 6);
-//$isla[12] = array('fila' => 4, 'col' => 5);
-//$isla[13] = array('fila' => 4, 'col' => 4);
-
-//$listaContornos[0] = $isla;
+/*   $isla = array();
+ $isla2 = array();
+ 
+$isla[0] = array('fila' => 0, 'col' => 0);     		$isla2[0] = array('fila' => 4, 'col' => 4);
+$isla[1] = array('fila' => 1, 'col' => 0);			$isla2[1] = array('fila' => 5, 'col' => 4);
+$isla[2] = array('fila' => 2, 'col' => 0);    		$isla2[2] = array('fila' => 6, 'col' => 4);
+$isla[3] = array('fila' => 3, 'col' => 0);    		$isla2[3] = array('fila' => 7, 'col' => 4);
+$isla[4] = array('fila' => 3, 'col' => 1);    		$isla2[4] = array('fila' => 7, 'col' => 5);
+$isla[5] = array('fila' => 3, 'col' => 2);   		$isla2[5] = array('fila' => 7, 'col' => 6);
+$isla[6] = array('fila' => 3, 'col' => 3);   		$isla2[6] = array('fila' => 7, 'col' => 7);
+$isla[7] = array('fila' => 2, 'col' => 3);    		$isla2[7] = array('fila' => 6, 'col' => 7);
+$isla[8] = array('fila' => 1, 'col' => 3);    		$isla2[8] = array('fila' => 5, 'col' => 7);
+$isla[9] = array('fila' => 0, 'col' => 3);    		$isla2[9] = array('fila' => 4, 'col' => 7);
+$isla[10] = array('fila' => 0, 'col' => 2);   		$isla2[10] = array('fila' => 4, 'col' => 6);
+$isla[11] = array('fila' => 0, 'col' => 1);   		$isla2[11] = array('fila' => 4, 'col' => 5);
 
 
-/* function IsPointInPolygon($x, $y, $isla){  // GOOOOOOOOOOOD 
+$lista = array();
+$lista[0] = $isla;
+$lista[1] = $isla2;  */
+
+  function puntoEnPoligono($x, $y, $isla){ // tiene que funcionar pasandole una lista con varias islas
+
+	$dentro = false;
+	
+	// si la lista esta vacia, esto te da 0 y considera que todos los puntos estan FUERA
+	//echo "COUNT(lista): " .count($lista). PHP_EOL;
+	
+	//for ($isla=0; $isla< count($lista); $isla++){ // necesitamos recorrer la lista para ver si el punto evaluado esta en alguna de las islas de la lista 
+			//echo "ISLA: " .$isla. PHP_EOL;
+				// Buscamos Xmin, Xmax, Ymin, Ymax
+				$minX = buscaColMin($isla); // se le pasaba la isla
+				//echo "Xmin: " . $minX. PHP_EOL;
+				
+				$minY = buscaFilaMin($isla);
+				//echo "Ymin: " . $minY. PHP_EOL;
+			
+				$maxX = buscaColMax($isla);
+				//echo "Xmax: " . $maxX. PHP_EOL;
+			
+				$maxY = BuscaFilaMax($isla);
+				//echo "Ymax: " . $maxY. PHP_EOL;
+			
+				if ($x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY)
+					 return false;
+					 //$dentro = false;
+				
+				//$inside = false;
+				for ( $i = 0, $j = count($isla)-1 ; $i < count($isla); $j = $i++ ){
+						if ( ( $isla[$i]['fila'] >= $y ) != ($isla[ $j ]['fila'] >= $y ) &&
+								$x <= ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) /
+								( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] ){
+									$dentro = !$dentro;	
+									
+						}
+				}
+				return $dentro;
+	//}
+	//return $dentro;
+} 
+
+/*  function IsPointInPolygon($x, $y, $isla){  // GOOOOOOOOOOOD 
 	
 	$minX = buscaColMin($isla);
 	//echo "Xmin: " . $minX. PHP_EOL;
@@ -264,31 +312,258 @@ crearKmlB($listaContornos, $radar, $ruta, $fl, "Tierra");
 	$maxY = BuscaFilaMax($isla);
 	//echo "Ymax: " . $maxY. PHP_EOL;
 
-	if ( $x < $minX || $x > $maxX || $y < $minY || $y > $maxY ){
+	if ( $x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY ){
 		return false;
 	}
 
 	$inside = false;
 	for ( $i = 0, $j = count($isla)-1 ; $i < count($isla); $j = $i++ )
 	{
-		if ( ( $isla[$i]['fila'] > $y ) != ( $isla[ $j ]['fila'] > $y ) &&
-				$x < ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) / ( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] )
-		{
+		if ( ( $isla[$i]['fila'] >= $y ) != ( $isla[ $j ]['fila'] >= $y ) &&
+				$x <= ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) /
+			( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] ){
 			$inside = !$inside;
 		}
 	}
-
 	return $inside;
 }
+ */
 
+ // PRIMERA ISLA : 
+/*  echo "PRIMERA ISLA" .PHP_EOL;
 
-
-if (IsPointInPolygon(4,5, $isla))
+echo "(0,0)";
+if (puntoEnPoligono(0,0, $lista)) // se le pasaba la isla 
 	echo "DENTRO" . PHP_EOL;
 else 
+	echo "FUERA" . PHP_EOL;										
+
+echo "(1,0)";
+if (puntoEnPoligono(1,0, $lista))
+ 	echo "DENTRO" . PHP_EOL;
+else
 	echo "FUERA" . PHP_EOL;
 
-exit(); */
+echo "(2,0)";
+if (puntoEnPoligono(2,0, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+echo "(3,0)";
+if (puntoEnPoligono(3,0, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(3,1)";
+if (puntoEnPoligono(3,1, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(3,2)";
+if (puntoEnPoligono(3,2, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(3,3)";
+if (puntoEnPoligono(3,3, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+echo "(2,3)";
+if (puntoEnPoligono(2,3, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(1,3)";
+if (puntoEnPoligono(1,3, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(0,3)";
+if (puntoEnPoligono(0,3, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(0,2)";
+if (puntoEnPoligono(0,2, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(0,1)";
+if (puntoEnPoligono(0,1, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+echo PHP_EOL;
+
+// DENTRO
+
+echo "(1,1)";
+if (puntoEnPoligono(1,1, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+echo "(2,1)";
+if (puntoEnPoligono(2,1, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+echo "(2,2)";
+if (puntoEnPoligono(2,2, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(1,2)";
+if (puntoEnPoligono(1,2, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+ 
+
+echo PHP_EOL;
+echo PHP_EOL;
+echo PHP_EOL;
+
+// SEGUNDA ISLA: 	
+echo "SEGUNDA ISLA" . PHP_EOL;
+
+// FUERA 		
+echo "(4,4)";
+if (puntoEnPoligono(4,4, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+ 	
+echo "(5,4)";
+if (puntoEnPoligono(5,4, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(6,4)";
+if (puntoEnPoligono(6,4, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+echo "(7,4)";
+if (puntoEnPoligono(7,4, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(7,5)";
+if (puntoEnPoligono(7,5, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(7,6)";
+if (puntoEnPoligono(7,6, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(7,7)";
+if (puntoEnPoligono(7,7, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(6,7)";
+if (puntoEnPoligono(6,7, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(5,7)";
+if (puntoEnPoligono(5,7, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(4,7)";
+if (puntoEnPoligono(4,7, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(4,6)";
+if (puntoEnPoligono(4,6, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(4,5)";
+if (puntoEnPoligono(4,5, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+echo PHP_EOL;
+
+// DENTRO
+	
+echo "(5,5)";
+if (puntoEnPoligono(5,5, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(5,6)";
+if (puntoEnPoligono(5,6, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+	
+echo "(6,5)";
+if (puntoEnPoligono(6,5, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL; 
+
+	
+echo "(6,6)";
+if (puntoEnPoligono(6,6, $lista))
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+ */
+	
+exit();   
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

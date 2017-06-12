@@ -1150,8 +1150,11 @@ function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm){ // empe
 function buscaFilaMin($isla){
 	
 	$filaMin = 99999999999;
+	//echo "count(isla) : " . count($isla). PHP_EOL;
 	
 	for($i=0; $i< count($isla); $i++){
+		
+		//echo "i: " . $i . PHP_EOL;
 		
 		if ($isla[$i]['fila'] < $filaMin){
 			$filaMin = $isla[$i]['fila'];
@@ -1203,115 +1206,232 @@ function buscaFilaMax($isla){
 }
 
 
-function puntoEnPoligono($x, $y, $listaNL){
+// SE LE ESTA PASANDO UNA SOLA ISLA ; FUNCIONABA EN EL MAIN
+/* function puntoEnPoligono($x, $y, $isla){
+
+	$inside = false;
+	$resultados = array(); // alamcena true o false en funcion de si el punt oque se esta evaluando esta dentro o fuera de algun contorno
+
+	if(empty($isla)){ // si aun no tenemos cotornos en neustra lista, obviamente el punto no puede estar dentro de ninguno
+		//echo "LISTA VACIA !!! " . PHP_EOL;
+		return $inside;
+	}
+	else{// si la lista de contornos no esta vacia, comprobamos el punto con todos los contornos que tenga nuestra lista
+	
+		// Buscamos Xmin, Xmax, Ymin, Ymax
+		$minX = buscaColMin($isla); // se le pasaba la isla
+		//echo "Xmin: " . $minX. PHP_EOL;
+		$minY = buscaFilaMin($isla);
+		//echo "Ymin: " . $minY. PHP_EOL;
+
+		$maxX = buscaColMax($isla);
+		//echo "Xmax: " . $maxX. PHP_EOL;
+
+		$maxY = BuscaFilaMax($isla);
+		//echo "Ymax: " . $maxY. PHP_EOL;
+
+		if ($x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY){
+			return false;
+		}
+			
+		$inside = false;
+		for ( $i = 0, $j = count($isla)-1 ; $i < count($isla); $j = $i++ ){
+			if ( ( $isla[$i]['fila'] >= $y ) != ( $isla[ $j ]['fila'] >= $y ) &&
+					$x <= ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) /
+					( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] ){
+						$inside = !$inside;
+			}
+		}
+		return $inside;
+	}
+} */
+
+
+// ERA LA IDEA ORIGINAL DE PASARLE UNA LISTA 
+/*  function puntoEnPoligono($x, $y, $lista){
 	
 	$inside = false;
 	$resultados = array(); // alamcena true o false en funcion de si el punt oque se esta evaluando esta dentro o fuera de algun contorno
 	
-	if(empty($listaNl)){ // si aun no tenemos cotornos en neustra lista, obviamente el punto no puede estar dentro de ninguno
-		echo "LISTA VACIA !!! " . PHP_EOL;
-		return false;
-		break;
+	if(empty($lista)){ // si aun no tenemos cotornos en neustra lista, obviamente el punto no puede estar dentro de ninguno
+		//echo "LISTA VACIA !!! " . PHP_EOL;
+		return $inside;
 	}
 	else{// si la lista de contornos no esta vacia, comprobamos el punto con todos los contornos que tenga nuestra lista
 		$isla =0; 
 		$enc = false;
 		
-		while($isla < count($listaNL) && !$enc){
+		while($isla < count($lista) && !$enc){
 			
 			// Buscamos Xmin, Xmax, Ymin, Ymax
-			$minX = buscaColMin($listaNL[$isla]);
+			$minX = buscaColMin($lista[$isla]);
 			//echo "Xmin: " . $minX. PHP_EOL;
-			$minY = buscaFilaMin($listaNL[$isla]); 
+			$minY = buscaFilaMin($lista[$isla]); 
 			//echo "Ymin: " . $minY. PHP_EOL;
 			
-			$maxX = buscaColMax($listaNL[$isla]);
+			$maxX = buscaColMax($lista[$isla]);
 			//echo "Xmax: " . $maxX. PHP_EOL;
 			
-			$maxY = BuscaFilaMax($listaNL[$isla]);
+			$maxY = BuscaFilaMax($lista[$isla]);
 			//echo "Ymax: " . $maxY. PHP_EOL;
 			
-			if ($x < $minX || $x > $maxX || $y < $minY || $y > $maxY){
-				$inside = false;
+			if ($x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY){
+				return false;
 			}
 			else{
-				$j = count($listaNL[$isla])-1;
-				for($i =0 ; $i < count($listaNL[$isla]); $i++){ // for($i =0, $j = count($listaContornos[$isla])-1; $i < count($listaContornos[$isla]); $j= $i++){
-					//$j= $i++;
-					$j= $i;
-					if (($listaNL[$isla][$i]['fila'] > $y) != ($listaNL[$isla][$j]['fila'] > $y) && 
-					   ($x < ($listaNL[$isla][$j]['col'] - $listaNL[$isla][$j]['col']) * ($y - $listaNL[$isla][$i]['fila']) / ($listaNL[$isla][$j]['fila'] - $listaNL[$isla][$i]['fila'])
-					   		  + $listaNL[$isla][$i]['col'])){
-						$inside = !$inside; // true
-						$enc= true;
-						break; 
+				for($i =0, $j = count($isla)-1; $i < count($isla); $j= $i++){
+			
+					if ( ( $isla[$i]['fila'] >= $y ) != ( $isla[ $j ]['fila'] >= $y ) &&
+							$x <= ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) /
+							( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] ){
+								$inside = !$inside;
+								$enc= true;
+								break;
 					}
 				}// for
-			}//else
+			}
 			$isla++;
-		}
+		}//while
+			
 	}
-}
-
-
-function determinaContornos($radar, $malla, $flm, &$listaContornos){
 	
+	return $inside;
+} */
+ 
+
+ function determinaContornos($radar, $malla, $flm, &$listaContornos){
+	
+	$lista = array(); // creamos la lista del siguiente nivel, vacio en este momento
 	$mallaNL = array();
-	$listaContornos = array();
-	
-	echo " COUNT MALLA : " . count($malla). PHP_EOL;
+	$listaContornos = array(); // creamos el array vacio
 	
 	// inicializamos la malla del siguiente nivel
-	for ($i=0; $i< count($malla); $i++){ //8
+	for ($i=0; $i< count($malla); $i++){ 
 		for($j=0; $j< count($malla); $j++){
 			$mallaNL[$i][$j] = $malla[$i][$j];
 		}
 	}
 	
-	for ($n =0 ; $n < 3; $n++){ // porque solo queremos analizar tres niveles de profundidad
-		
-	//Malla = MallaNL. Actualizamos la malla del siguiente nivel
-	
-		for ($i=0; $i< count($malla); $i++){ //8
+	for ($nivel =0 ; $nivel < 3; $nivel++){ // porque solo queremos analizar tres niveles de profundidad
+		echo "NiVEL: " . $nivel. PHP_EOL;
+	// Actualizamos la malla del siguiente nivel
+		 for ($i=0; $i< count($malla); $i++){ // NO TIENE SENTIDO EN EL NIVEL 0
+			for($j=0; $j< count($malla); $j++){
+				$malla[$i][$j] = $mallaNL[$i][$j];
+			}
+		 } 
+		//echo "mallaNL (actualizada para la siguiente vuelta)" . PHP_EOL;
+		//pintaMalla($mallaNL); // la malla no se actualiza nunca 
+		$isla = array();
+		$lista = array(); // creamos la lista del siguiente nivel, vacio en este momento
+		echo " creamos la lista vacia " . PHP_EOL;
+		for ($i=0; $i<count($malla); $i++){ // ($i=0; $i<count($malla); $i++) | ($i=0; $i < 4; $i++)
+			echo "i: " .$i. PHP_EOL;
+			for($j=0; $j<count($malla); $j++){ // ($j=0; $j<count($malla); $j++) |  ($j=0; $j < 4; $j++)
+			//echo "RECORREMOS LA MALLA" . PHP_EOL;
+				echo"j: " .$j.PHP_EOL;
+					//echo "COUNT (ISLA): " .count($isla). PHP_EOL;
+				  for($isla=0; $isla<=count($lista); $isla++){
+				  	echo "ISLA: " .$isla. PHP_EOL;
+					if(puntoEnPoligono($i, $j, $lista[$isla])){ // SI LE PASAMOS UNA ISLA FUNCIONA (MAIN)
+						echo " HOLA ! " . PHP_EOL; // esto no se ha impreso nunca
+						if ($malla[$i][$j] == 1){
+					
+							$mallaNL[$i][$j] = 0;
+						}
+						elseif($malla[$i][$j] == 0) {
+							$mallaNL[$i][$j] = 1;
+						}
+					}
+					else{ // si el punto esta fuera del poligono copiamos el valor en la malla del siguiente nivel
+						// si el punto esta fuera y es un 1, significa que estamos ante un nuevo contorno
+						if ($malla[$i][$j] == 1){
+							$isla = marchingSquares($radar, $mallaNL, $flm);// nos da el contorno de una isla 
+							$lista[] = $isla; // si esto esta aquí , la lista contiene 20 veces el mismo contorno
+							$mallaNL[$i][$j]=0;
+							print_r($lista);
+							//echo " HEMOS METIDO LA ISLA". PHP_EOL;
+						}
+						else{// si es un cero copiamos el valor
+							$mallaNL[$i][$j] = $malla[$i][$j];
+						}
+					}// else ptoEnPoligono
+				  }// for islas
+			}// for interno 
+		} // for externo
+		for ($isla=0; $isla < count($lista); $isla++){
+			$listaContornos[] = $lista[0]; // metemos cada isla del nivel en el que estamos en la lista de contornos generales
+		}
+		//$listaNL = array();// reseteamos la lista para el siguiente nivel
+	}// fin del  nivel de profundidad
+}
+ 
+
+
+/* function determinaContornos($radar, $malla, $flm, &$listaContornos){
+
+	$lista = array(); // creamos la lista del siguiente nivel, vacio en este momento
+	$mallaNL = array();
+	$listaContornos = array(); // creamos el array vacio
+
+	// inicializamos la malla del siguiente nivel
+	for ($i=0; $i< count($malla); $i++){
+		for($j=0; $j< count($malla); $j++){
+			$mallaNL[$i][$j] = $malla[$i][$j];
+		}
+	}
+	//echo "mallaNL (al inicio): " . PHP_EOL;
+	//pintaMalla($mallaNL);
+
+	for ($nivel =0 ; $nivel < 1; $nivel++){ // porque solo queremos analizar tres niveles de profundidad
+		echo "NiVEL: " . $nivel. PHP_EOL;
+		//Malla = MallaNL. Actualizamos la malla del siguiente nivel
+		for ($i=0; $i< count($malla); $i++){ // NO TIENE SENTIDO EN EL NIVEL 0
 			for($j=0; $j< count($malla); $j++){
 				$malla[$i][$j] = $mallaNL[$i][$j];
 			}
 		}
-		$listaNL = array(); // creamos la lista del siguiente nivel
-		
-		for ($i=0; $i<count($malla); $i++){ // recorremos la malla para detectar los contornos y los donuts
-		
+		//echo "mallaNL (actualizada para la siguiente vuelta)" . PHP_EOL;
+		pintaMalla($mallaNL); // la malla no se actualiza nunca
+
+		$lista = array(); // creamos la lista del siguiente nivel, vacio en este momento
+
+		for ($i=0; $i<count($malla); $i++){ // recorremos la malla
+
 			for($j=0; $j<count($malla); $j++){
-				// suponiendo dentro = true
-				if(puntoEnPoligono($i, $j, $listaNL)){ // el mundo seria mas facil si se le pasara la isla concreta, no el archipielago
-					// si esta dentro del poligono copiamos el valor invertido en la malla del siguiente nivel
-					if ($malla[$i][$j] == 1){
-					
+
+				if($malla[$i][$j] == 1){
+					echo " ES UN 1 " . PHP_EOL;
+					if (puntoEnPoligono($i, $j, $lista)){
+						echo "esta en un contorno " . PHP_EOL;
+						prit_r($lista);
 						$mallaNL[$i][$j] = 0;
 					}
-					else{
+					else{ //si es un uno pero no esta en el poligono, es un contorno nuevo
+						echo "no esta en ningun contorno--> ES un nuevo contorno " . PHP_EOL;
+						$isla = marchingSquares($radar, $mallaNL, $flm);// nos da el contorno de una isla
+						$lista[] = $isla; // si esto esta aquí , la lista contiene 20 veces el mismo contorno
+						$listaContornos[] = $isla;
+						$mallaNL[$i][$j]=0;
+					}
+				}	
+				elseif($malla[$i][$j] == 0){
+					if (puntoEnPoligono($i, $j, $lista)){
+						echo " Es un 0 " . PHP_EOL; // esto no se ha impreso nunca
 						$mallaNL[$i][$j] = 1;
 					}
+					else// si es un cero y no esta en el poligono, copiamos el valor
+						$mallaNL[$i][$j] = $malla[$i][$j];	
 				}
-				else{ // si el punto esta fuera del poligono copiamos el valor en la malla del siguiente nivel
-					// si el punto esta fuera y es un 1, significa que estamos ante un nuevo contorno
-					if ($malla[$i][$j] == 1){
-						$isla = marchingSquares($radar, $malla, $flm);// nos da el contorno de una isla 
-						$listaNL[] = $isla; // guardamos esa isla en la lista del nivel en el que estamos
-					}
-					else{// si es un cero copiamos el valor
-						$mallaNL[$i][$j] = $malla[$i][$j];
-					}
-				}
-			}
-			//LCT=LCT+LCN
-			for ($x=0; $x < count($listaNL); $x++){
-				
-				$listaContornos[] = $listaNL[$x]; // metemos cada isla del nivel en el que estamos en la lista de contornos generales 
-			} 
-		} // fin recorrido de la malla
-	}// fin del recorrido de los tres niveles de profundidad
+		} // for interno
+			//for ($isla=0; $isla < count($lista); $isla++)
+				//$listaContornos[] = $lista[0]; // metemos cada isla del nivel en el que estamos en la lista de contornos generales
+			
+		}// for externo
+ }// fin del  nivel de profundidad
 }
+
+ */
 
 
 // COPIA DE SEGURIDAD DEL MARCHING SQUARES ORIGINAL
@@ -1409,7 +1529,7 @@ function cuentaIslas($mallaContornos, &$listaC){
 } */
  
 
-function calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, &$listaC){ // 
+function calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, &$listaC){ // 
 	
 	$xR =0;
 	$yR =0; 
@@ -1418,13 +1538,14 @@ function calculaCoordenadasGeograficasB($radar, $numIslas, $flm, $coordenadas, &
 	//$tamMalla = 6;
 	//echo "Num Islas: " . $numIslas. PHP_EOL;
 	
-	for($isla=0; $isla < $numIslas; $isla++){ // recorre la lista de islas
+	for($isla=0; $isla < count($listaC); $isla++){ // recorre la lista de islas/ contornos
 		//echo "ISLA: " . $isla. PHP_EOL;
 		//echo PHP_EOL;
 		$n = count($listaC[$isla]);
 		//echo "N: " . $n. PHP_EOL;
 		//echo "ptos totales en la isla " . $isla. ": " . $n. PHP_EOL; 
-		for($i=0; $i < $n; $i++){ // recorre la lista de puntos
+		
+		for($i=0; $i < $n; $i++){ // recorre la lista de puntos del contorno
 			
 			//echo "pto: " . $i. PHP_EOL;
 			//echo PHP_EOL;
