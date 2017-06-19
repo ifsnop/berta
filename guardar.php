@@ -4,8 +4,9 @@ CONST PERMISOS = 0700;
 
 /**
  * Funcion que da formato al array de coordenadas para poderlas escribir en el fichero
- * @param array $resultado, contiene las coordenadas Geograficas 
- * @return string $cadena
+ * 
+ * ENTRADA: array $resultado, contiene las coordenadas Geograficas 
+ * SALIDA: string $cadena
  */
 function toString ($coordenadasG){
 	$cadena = "";
@@ -22,6 +23,13 @@ function toString ($coordenadasG){
 
 //print_r($coordenadasG);
 
+
+/**
+ * Funcion que da formato al array de coordenadas para poderlas escribir en el fichero
+ * 
+ * ENTRADA: array $isla
+ * SALIDA string $cadena
+  */
 function toStringB ($isla){
 	$cadena = "";
 
@@ -38,14 +46,13 @@ function toStringB ($isla){
 }
 
 
-
-
 /**
- * Funcion para crear el fichero Kml con los resultados del calculo de la cobertura del radar 
- * @param string $coordenadasG
- * @param array $radar
- * @param string $ruta
- * @param integer $fl
+ * Funcion para crear el fichero Kml con los resultados del calculo de la cobertura del radar (CASO A: fl por encima del radar)
+ *  
+ * ENTRADA: string $coordenadasG
+ * ENTRADA: array $radar
+ * ENTRADA: string $ruta
+ * ENTRADA integer $fl
  */
 function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
 	
@@ -109,7 +116,15 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
 }
 	
 
+/**
+ * Funcion para crear el fichero Kml con los resultados del calculo de la cobertura del radar (CASO B: fl por debajo del radar)
 
+ * ENTRADA: array $listaC
+ * ENTRADA: array $radar
+ * ENTRADA: string $ruta
+ * ENTRADA: int $fl
+ * ENTRADA: string $altMode
+ */
 function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){ 
  
 	$rgb = "7d00ff00";
@@ -161,7 +176,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	
 		fwrite ($kml, $contenido);
 
- 	     for ($isla = 1; $isla < $numIslas; $isla++){
+ 	     for ($isla = 1; $isla <$numIslas; $isla++){ // ($isla = 1; $isla < $numIslas; $isla++)
 	
 			$cadenaInner = toStringB($listaC[$isla]); // ($listaC)
 		
@@ -194,9 +209,12 @@ clearstatcache();
 
 /**
  * Funcion que crea una carpeta con los resultados para cada radar 
- * @param array $radar 
+ * 
+ * ENTRADA: array $radar
+ * ENTRADA: string $ruta
+ * SALIDA:  boolean, para comprobar si el la función ha tenido o no exito
  */
-function crearCarpetaResultados($radar, $ruta, $resultado){
+function crearCarpetaResultados($radar, $ruta){
 	
 	//$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
 	

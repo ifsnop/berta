@@ -4,9 +4,8 @@ CONST FRONTERA_LATITUD = 90; // latitud complementaria
 CONST PIE_EN_METROS =  3.2808;
 CONST CIEN_PIES = 100;
 CONST PASO_A_GRADOS = 180;
-// maxima distancia q puede haber entre dos puntos de un acimut para saber si es necesario interpolar
-CONST DISTANCIA_ENTRE_PUNTOS = 5; 
-CONST TAM_CELDA = 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no peta
+CONST DISTANCIA_ENTRE_PUNTOS = 5; // maxima distancia q puede haber entre dos puntos de un acimut para saber si es necesario interpolar 
+CONST TAM_CELDA = 2.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no peta
 
 //// CONSTANTES PARA LA DETECCION DE CONTRONOS /////
 CONST NONE = 0;
@@ -19,8 +18,9 @@ CONST RIGHT = 4;
 
 /**
  * Funion para convertir el nivel de vuelo dado en metros
- * @param double $num dado en cientos de pies 
- * @return number
+ * 
+ * ENTRADA: double $num dado en cientos de pies 
+ * SAIDA:   number
  */
 function fLtoMeters ($num){
 	
@@ -29,8 +29,9 @@ function fLtoMeters ($num){
 
 /**
  * Funcion para convertir el parametro dado en millas nauticas a metros
- * @param double $num
- * @return number
+ * 
+ * ENTRADA: double $num
+ * SALIDA:  $num
  */
 function NMtoMeters ($num){
 	
@@ -40,15 +41,14 @@ function NMtoMeters ($num){
 
  /**
   * Funcion que permite buscar los puntos limitantes necesarios para poder calcular la cobertura.
-  * Entrada:
-  * @param array $listaObstaculos
-  * @param int $flm
-  * Salida:
-  * @param double $alturaPrimerPtoSinCob
-  * @param double $anguloPrimerPtoSinCob
-  * @param unknown $alturaUltimoPtoCob
-  * @param unknown $anguloUltimoPtoCob
-  * @return boolean Devuelve true si encontrado o false en caso contrario
+  * 
+  * ENRADA: array $listaObstaculos
+  * ENRADA: int $flm
+  * ENTRADA/SALIDA: double $alturaPrimerPtoSinCob
+  * ENTRADA/SALIDA: double $anguloPrimerPtoSinCob
+  * ENTRADA/SALIDA: double $alturaUltimoPtoCob
+  * ENTRADA/SALIDA: double $anguloUltimoPtoCob
+  * SALIDA: boolean Devuelve true si encontrado o false en caso contrario
   */ 
 function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob, &$anguloPrimerPtoSinCob, &$alturaUltimoPtoCob, &$anguloUltimoPtoCob){
 	
@@ -60,7 +60,7 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
 		
 		if ($flm < $listaObstaculos[$i]['altura']){ // la primera vez que se cumple esto tenemos el primer punto sin cobertura 
 		        if ( $i == 0 ) {
-		            die("el primer obstÃ¡culo no tiene cobertura, no tenemos ultimo punto con cobertura, revisar para probar soluciÃ³n.");
+		            die("el primer obstaculo no tiene cobertura, no tenemos ultimo punto con cobertura, revisar para probar solucion.");
 		        }
 			$enc = true;
 			$primerPtoSinCobertura = $listaObstaculos[$i];
@@ -80,11 +80,12 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
 
  
 /**
- * Funcion  auxiliar para calcular AlphRange
- * @param unknown $radar
- * @param unknown $radioTerrestreAumentado
- * @param unknown $flm
- * @return number
+ * Funcion para calcular el angulo de maxima cobertura  (AlphRange)
+ * 
+ * ENTRADA: array $radar
+ * ENTRADA: double $radioTerrestreAumentado
+ * ENTRADA: double $flm
+ * SALIDA:  $anguloMaxCob
  */
 function calculaAnguloMaximaCobertura($radar, $radioTerrestreAumentado, $flm){
 	
@@ -178,13 +179,14 @@ function calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, &$angulos
 }// fin function
  */
 
-/** CASO 1
+/** CASO A
  *  Funcion que calcula las distancias a las que hay cobertura y los angulos de apantallamiento cuando el FL esta por encima del radar
- * @param array $radar
- * @param int $flm
- * @param doble $radioTerrestreAumentado
- * @param array $angulosApantallamiento
- * @param array $distanciasCobertura
+ *  
+ * ENTRADA: array $radar
+ * ENTRADA: int $flm
+ * ENTRADA: doble $radioTerrestreAumentado
+ * ENTRADA/SALIDA: array $angulosApantallamiento
+ * ENTRADA/SALIDA: array $distanciasCobertura
  */
 function calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, &$angulosApantallamiento, &$distanciasCobertura ){
 		
@@ -253,11 +255,11 @@ function calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, &$angulos
  * Funcion que calcula las coordenadas geograficas de cobertura de un fichero kml para un determinado
  * radar a partir de las coordenadas, el nivel de vuelo y el array de distancias de cobertura.
  * 
- * Entradas: 	$radar (estructura de datos)
- * 				$coordenadas (grados decimales)
- * 				$flm (metros)
- * 				$distanciasCobertura (millas nauticas)
- * Salida: 		$resultadosCoordenadas (estructura de datos)
+ * ENTRADA: array $radar 
+ * ENTRADA:	array $coordenadas (grados decimales)
+ * ENTRADA:	int	  $flm (metros)
+ * ENTRADA:	array $distanciasCobertura (millas nauticas)
+ * ENTRADA/SALIDA: 	array	$resultadosCoordenadas 
  */
 function calculaCoordenadasGeograficas( $radar, $coordenadas, $distanciasCobertura, $flm, &$coordenadasGeograficas){
 	
@@ -298,8 +300,9 @@ function calculaCoordenadasGeograficas( $radar, $coordenadas, $distanciasCobertu
 /**
  * Funcion auxiliar que permite al usuario ajustar la distancia maxima permitda entre los puntos de un obstaculo para determinar la precision de la 
  * representacion
- * @param unknown $radioTerrestreAumentado
- * @return number
+ * 
+ * ENTRADA: number $radioTerrestreAumentado
+ * SALIDA:  number $anguloMaximo
  */
 function calculoAnguloMaximoEntrePtos($radioTerrestreAumentado){
 	
@@ -324,10 +327,11 @@ function calculoAnguloMaximoEntrePtos($radioTerrestreAumentado){
 
 /**
  * Funcion que dada la lista de obstaculos y el radio terrestre interpola segun el caso en el que se encuentre y nos devuelve la lista de obstaculos ampliada
- * @param unknown $listaObstaculos (representa un rango de interpolacion)
- * @param unknown $radioTerrestreAumentado
- * @param unknown $casos
- * @return unknown[]
+ * 
+ * ENTRADA: array $listaObstaculos (representa un rango de interpolacion)
+ * ENTRADA: float $radioTerrestreAumentado
+ * ENTRADA: int $casos
+ * SALIDA:  array $listaObstaculosAmpliada
  */
 function interpolarPtosTerreno($listaObstaculos, $radioTerrestreAumentado, $casos){
 
@@ -381,13 +385,15 @@ function interpolarPtosTerreno($listaObstaculos, $radioTerrestreAumentado, $caso
 		}//if
 	}// for externo
 	$listaObstaculosAmpliada[] = $listaObstaculos[$n-1];
+	
 	return $listaObstaculosAmpliada;
 }
 
 /**
- * Funcion que modifica el parametro nuevo dependiendo de si se cumple la condicion que determina si hay o no cobertura
- * @param array $listaObstaculosAmpliada
- * @param int $flm
+ * Funcion que actualiza el parametro 'estePtoTieneCobertura'  dependiendo de si se cumple la condicion que determina si hay o no cobertura
+ * 
+ * ENTRADA: int $flm
+ * ENTRADA/SALIDA:  array $listaObstaculosAmpliada
  */
 function miraSiHayCobertura(&$listaObstaculosAmpliada, $flm){
 		
@@ -404,18 +410,17 @@ function miraSiHayCobertura(&$listaObstaculosAmpliada, $flm){
 
 /**
  * Funcion auxiliar que calcula una serie de parametros necesarios en otras funciones
- * Entrada:
- * @param aray $radar
- * @param array $listaObstaculos
- * @param double $radioTerrestreAumentado
- * @param int $flm
- * @param double $obstaculoLimitante
- * Salida:
- * @param double $gammaMax
- * @param double $theta0
- * @param double $earthToRadar
- * @param double $earthToEvalPoint
- * @param double $earthToFl
+ *
+ * ENRADA: aray $radar
+ * ENRADA: array $listaObstaculos
+ * ENRADA: double $radioTerrestreAumentado
+ * ENRADA: int $flm
+ * ENRADA: double $obstaculoLimitante
+ * ENRADA/SALIDA: double $gammaMax
+ * ENRADA/SALIDA: double $theta0
+ * ENRADA/SALIDA: double $earthToRadar
+ * ENRADA/SALIDA: double $earthToEvalPoint
+ * ENRADA/SALIDA: double $earthToFl
  */
 function calculador($radar,$listaObstaculos, $radioTerrestreAumentado, $flm, $obstaculoLimitante, &$gammaMax, &$theta0, &$earthToRadar, &$earthToEvalPoint, &$earthToFl, &$radarSupTierra){
 	
@@ -439,15 +444,14 @@ function calculador($radar,$listaObstaculos, $radioTerrestreAumentado, $flm, $ob
 
 /**
  * Funcion auxiliar para obtener los angulos epsilon1 y epsilon2 que nos permiten calcular los puntos de corte
- * Entrada: 
- * @param double $earthToRadar
- * @param double $gammaMax
- * @param double $earthToFl
- * @param double $radioTerrestreAumentado
- * Salida:
- * @param double $epsilon1
- * @param double $epsilon2
- * @param array $ptosCorte
+ *  
+ * ENTRADA: double $earthToRadar
+ * ENTRADA: double $gammaMax
+ * ENTRADA: double $earthToFl
+ * ENTRADA: double $radioTerrestreAumentado
+ * ENTRADA/SALIDA: double $epsilon1
+ * ENTRADA/SALIDA: double $epsilon2
+ * ENTRADA/SALIDA: array $ptosCorte
  */
 function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreAumentado, &$epsilon1, &$epsilon2, &$ptosCorte){
 		
@@ -471,12 +475,12 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
 }
 
 
-/** CASO 2 
+/** CASO B 
  * Funcion que calcula las coberturas cuando el nivel de vuelo FL, esta por debajo del radar
- * @param array $radar
- * @param double $flm
- * @param double $radioTerrestreAumentado
- * @param double $anguloMaxCob
+ * 
+ * ENTRADA: double $flm
+ * ENTRADA: double $radioTerrestreAumentado
+ * ENTRADA/SALIDA: array $radar
  */
 			
 function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
@@ -487,15 +491,12 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 	$ptosNuevos = array();
 	$ptoExtra = array( 'angulo' => 0, 'altura' => 0, 'estePtoTieneCobertura' => false);// inicializamos 
 	$ptoMaxCob = array('angulo'=> $anguloMaxCob, 'altura'=> 0,'estePtoTieneCobertura'=> true);
-	//echo "ANGULO MAX COB:" . $anguloMaxCob. PHP_EOL;
+	
 	$x = rad2deg($X); // pequeña distancia que se le suma al angulo de cada punto [0.1 NM] para añadir un ptoExtra y poder aproximar el mallado
-	//echo " ESTO ES LO QUE QUIERO VERRRRRR  :" . $x. PHP_EOL;
+	
 	for ($i=0; $i < $radar['totalAzimuths']; $i++){ // recorremos todos los azimuts ($i=0; $i < $radar['totalAzimuths']; $i++) 
 	 	
-	 	//echo "   AZIMUT ". $i. PHP_EOL;
-	 	//echo " LISTA ANTES DE INTERPOLAR: " . count($radar['listaAzimuths'][$i]). PHP_EOL;
 	 	$listaObstaculosAmpliada = interpolarPtosTerreno($radar['listaAzimuths'][$i], $radioTerrestreAumentado, 1); //interpolamos puntos terreno
-	 	//echo " LISTA DESPUES DE METER LOS PTOS TERRENO: " . count($listaObstaculosAmpliada).PHP_EOL; 
 	 	miraSiHayCobertura($listaObstaculosAmpliada, $flm);
 	 	
 	 	// se calcula el punto limitante
@@ -504,138 +505,101 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 	 	$obstaculoLimitante = $radar['listaAzimuths'][$i][$numPtosAzimut-1]['altura'];
 	 	$anguloLimitante = $radar['listaAzimuths'][$i][$numPtosAzimut-1]['angulo'];
 	 	$ptoLimitante = array ('angulo'=>$anguloLimitante, 'altura'=>$obstaculoLimitante, 'estePtoTieneCobertura' =>true);
-	 	//echo "OBSTACULO LIMITANTE: " . $obstaculoLimitante. PHP_EOL;
 	 	calculador($radar, $listaObstaculosAmpliada, $radioTerrestreAumentado, $flm, $obstaculoLimitante, $gammaMax, $theta0, $earthToRadar, $earthToEvalPoint, $earthToFl,$radarSupTierra);
 	 	
 	 	// CASO A
 	 	if(($obstaculoLimitante < $flm) && ($obstaculoLimitante < $radarSupTierra)){
-	 		
-	 		//echo "ESTAMOS EN EL CASO A" .PHP_EOL;
-	 		//echo PHP_EOL;
+	 	
 	 			if ((abs($theta0)) <= 1){
-	 				//echo "THETA 0 <= 1". PHP_EOL;
+	 				
 	 				obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreAumentado, $epsilon1, $epsilon2, $ptosCorte);
 	 				$ptoUno = array('angulo' => $epsilon1, 'altura'=> 0, 'estePtoTieneCobertura'=> true);  
-	 				//echo "ANGULO MAX COB : " . $anguloMaxCob. PHP_EOL;
-	 				//echo "EPSILON 1: " . $epsilon1. PHP_EOL;
+
 	 				if ($epsilon1 < $anguloMaxCob){
 	 					$rangoLuz =  array ($ptoLimitante, $ptoUno); //  se interpola desde el ultimo punto del terreno hasta el punto 1
 	 					$ptosLuz = interpolarPtosTerreno($rangoLuz, $radioTerrestreAumentado, 3);// devuelve una lista con los puntos nuevos que se han interpolado
 	 					$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, $ptosLuz);
-	 					//echo " LISTA DESPUES DE METER LOS PTOS LUZ: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 					$ptoExtra = array ('angulo' => ($epsilon1 + $x), 'altura' => 0, 'estePtoTieneCobertura' => false);
 	 					$listaObstaculosAmpliada= array_merge($listaObstaculosAmpliada,array($ptoExtra));
-	 					//echo " LISTA DESPUES DE METER LOS PTO EXTRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 				}
 	 				else{
-	 					//echo "ESTAMOS EN EL ELSE DEL CASO A". PHP_EOL;
 	 					$rangoLuz =  array ($ptoLimitante, $ptoMaxCob); 
 	 					$ptosLuz = interpolarPtosTerreno($rangoLuz, $radioTerrestreAumentado, 3);
 	 					$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, $ptosLuz);
-	 					//echo " LISTA DESPUES DE METER LOS PTOS LUZ: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 					$ptoExtra = array ('angulo' => ($anguloMaxCob + $x), 'altura' => 0, 'estePtoTieneCobertura' => false);
 	 					$listaObstaculosAmpliada= array_merge($listaObstaculosAmpliada,array($ptoExtra));
-	 					//echo " LISTA DESPUES DE METER LOS PTO EXTRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 				}
 	 			}
 	 			
 	 	elseif (abs($theta0) > 1){
-	 		//echo "THETA 0 > 1 del caso A". PHP_EOL;
-	 		//echo PHP_EOL;
 	 		$ptoExtra = array ('angulo' => ($anguloLimitante + $x), 'altura' => 0, 'estePtoTieneCobertura' => false);
 	 		$listaObstaculosAmpliada= array_merge($listaObstaculosAmpliada,array($ptoExtra));
-	 		//echo " LISTA DESPUES DE METER LOS PTO EXTRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 	}
 	  }// fin if caso A
 	  
 	   // CASO B
 	  elseif (($obstaculoLimitante > $flm) && ($radarSupTierra > $obstaculoLimitante)){
-	 			//echo "ESTAMOS EN EL CASO B" .PHP_EOL;
+	 			
 	 			if ((abs($theta0)) <= 1){
-	 				//echo "THETA 0 <= 1". PHP_EOL;
-	 				// calcular epsilon 1 y 2
 	 				obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreAumentado, $epsilon1, $epsilon2, $ptosCorte);
 	 				$ptoUno = array ('angulo'=> $epsilon1,'altura'=> 0, 'estePtoTieneCobertura'=> true); // epsilon1
 	 				$ptoDos = array ('angulo'=> $epsilon2,'altura'=> 0, 'estePtoTieneCobertura'=> true);// epsilon2
 	 				// B.1
 	 				if(($epsilon1 < $anguloMaxCob) && ($epsilon2 <$anguloMaxCob)){
-	 					//echo "ESTAMOS EN EL CASO B.1" .PHP_EOL;
+	 					
 	 					// rango sombra
 	 					$rangoSombra = array ($ptoLimitante, $ptoDos);
-	 					//print_r($rangoSombra);
 	 					$ptosSombra = interpolarPtosTerreno($rangoSombra, $radioTerrestreAumentado, 2);
 	 					$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, $ptosSombra);
-	 					//echo " LISTA DESPUES DE METER LOS PTOS SOMBRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 					// Rango Luz.  Se itnerpola desde el punto 2 al punto 1
 	 					$rangoLuz =  array ($ptoDos, $ptoUno); 
-	 					//print_r($rangoLuz);
 	 					$ptosLuz = interpolarPtosTerreno($rangoLuz, $radioTerrestreAumentado, 3);
 	 					$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, $ptosLuz);
-	 					//echo " LISTA DESPUES DE METER LOS PTOS LUZ: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 					$ptoExtra = array ('angulo' => ($epsilon1 + $x), 'altura' => 0, 'estePtoTieneCobertura' => false); 
 	 					$listaObstaculosAmpliada= array_merge($listaObstaculosAmpliada,array($ptoExtra));
-	 					//echo " LISTA DESPUES DE METER LOS PTO EXTRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 			   } // if B.1
 	 			   
 	 			//B.2	 
 	 			elseif (($epsilon1 > $anguloMaxCob) && ($epsilon2 < $anguloMaxCob)){
 	 					$ptoDos = array ('angulo' => $epsilon2, 'altura' => 0,  'estePtoTieneCobertura'=> true);// epsilon2 
-	 					//echo "ESTAMOS EN EL CASO B.2" .PHP_EOL;
-	 					//echo PHP_EOL;
 	 					// rango sombra
 	 					$rangoSombra = array ($ptoLimitante, $ptoDos);
-	 					//print_r($rangoSombra);
 	 					$ptosSombra = interpolarPtosTerreno($rangoSombra, $radioTerrestreAumentado, 2);
 	 					$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, $ptosSombra);
-	 					//echo " LISTA DESPUES DE METER LOS PTOS SOMBRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 					// Rango Luz. Se interpola desde el punto 2 al angulo de maxima cobertura (AlphRange)
 	 					$rangoLuz =  array ($ptoDos, $ptoMaxCob); 
-	 					//print_r($rangoLuz);
 	 					$ptosLuz = interpolarPtosTerreno($rangoLuz, $radioTerrestreAumentado, 3);
 	 					$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, $ptosLuz);
-	 					//echo " LISTA DESPUES DE METER LOS PTOS LUZ: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 					$ptoExtra = array ('angulo' => ($anguloMaxCob + $x), 'altura' => 0, 'estePtoTieneCobertura' => false); 
 	 					$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada,array($ptoExtra));
-	 					//echo " LISTA DESPUES DE METER LOS PTO EXTRA: " . count($listaObstaculosAmpliada).PHP_EOL;
-	 					
 	 			} // fin caso B.2
 	 			
 	 			// caso B.3
 	 			elseif((($epsilon1 > $anguloMaxCob) && ($epsilon2 > $anguloMaxCob))){
-	 					//echo "ESTAMOS EN EL CASO B.3" .PHP_EOL;
-	 					//echo PHP_EOL;
 	 					$ptoExtra = array ('angulo' => ($anguloLimitante + $x), 'altura' => 0, 'estePtoTieneCobertura' => false);
 	 					$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada,array($ptoExtra));
-	 					//echo " LISTA DESPUES DE METER LOS PTO EXTRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 			}
 	  }
 	 	 elseif (abs($theta0) > 1){
-	 		//echo "THETA 0 > 1 del caso B". PHP_EOL;
-	 		//echo PHP_EOL;
 	 		$ptoExtra = array ('angulo' => ($anguloLimitante + $x), 'altura' => 0, 'estePtoTieneCobertura' => false); 
 	 		$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada,array($ptoExtra));
-	 		//echo " LISTA DESPUES DE METER LOS PTO EXTRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 	 }// Fin CASO B
 	 	 
-	 	 }	// CASO C
+	 	 }// CASO C
 	 		elseif(($obstaculoLimitante > $flm) && ($radarSupTierra < $obstaculoLimitante)){
-	 			//echo "ESTAMOS EN EL CASO C" .PHP_EOL;
-	 			//echo PHP_EOL;
 	 			$ptoExtra = array ('angulo' => ($anguloLimitante + $x), 'altura' => 0, 'estePtoTieneCobertura' => false); 
 	 			$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada,array($ptoExtra));
-	 			//echo " LISTA DESPUES DE METER LOS PTO EXTRA: " . count($listaObstaculosAmpliada).PHP_EOL;
 	 		}
-	 		//echo "AZIMUT = " . $i. PHP_EOL;
-	 		//echo  "antes de la ampliacion " .count($radar['listaAzimuths'][$i]). PHP_EOL;
 	 		$radar['listaAzimuths'][$i] = $listaObstaculosAmpliada; // metemos la lista de obstaculos nueva en la estructura 
-	 		//echo  "despues de la ampliacion " . count($radar['listaAzimuths'][$i]). PHP_EOL;
 	}//for				 
 }
 				
 /**
  * Funcion que busca el punto más próximo al punto dado dentro de una lista de obstaculos comparando los angulos y devuelve la posicion de ese punto
- * Entradas: $lista obstaculos, $punto
- * Salidas: $posPunto
+ * 
+ * ENTRADA: array $lista obstaculos
+ * ENTRADA: array $punto
+ * SALIDA:  int   $posPunto
  */
 function buscaDistanciaMenor($listaObstaculos, $punto){
 	
@@ -656,8 +620,10 @@ function buscaDistanciaMenor($listaObstaculos, $punto){
 }
 /**
  * Dadas las coordenadas del pto central de una casilla, nos devuelve el acimut de la misma
- * @param float $x
- * @param float  $y
+ * 
+ * ENTRADA: float $x
+ * ENTRADA: float  $y
+ * SALIDA:  int $acimutCelda
  */
 function calculaAcimut($x, $y){
 	
@@ -707,10 +673,9 @@ function calculaAcimut($x, $y){
  * Funcion que crea una malla de tamaño el doble del alcance del radar y la rellena con 0 o 1 en función de si el punto al que se aproxima el acimut de cada 
  * celda de la malla tiene o no cobertura.
  * 
- * @param  $radar
- * @param  $radioTerrestreAumentado
- * 
- * Devuelve la malla
+ * ENTRADA: array  $radar
+ * ENTRADA: float  $radioTerrestreAumentado
+ * ENTRADA/SALIDA: array $malla
  */
 function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 	
@@ -762,7 +727,11 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 	}
 }
 
-
+/**
+ * Funcion que crea una matriz con la matriz que le entra como parametro de entrada y la bordea con 0's 
+ * ENTRADA: array $malla
+ * SALIDA: array $mallaMarco
+ */
 function mallaMarco($malla){
 	
 	$mallaMarco= array();
@@ -789,9 +758,10 @@ function mallaMarco($malla){
 
 /**
  * Genera una imagen en la que las zonas blancas tienen cobertura y las negras no a partir de la matriz binaria que se le pasa
- * @param unknown $malla
- * @param unknown $nombre
- * @return boolean
+ * 
+ * ENTRADA: array $malla
+ * ENTRADA string  $nombre
+ * SALIDA: boolean, que nos ayuda a ver si la funcion ha tenido exito o no 
  */
 function tratamientoMallado($malla, $nombre){
 	 
@@ -822,10 +792,19 @@ function tratamientoMallado($malla, $nombre){
 	imagedestroy( $im ); // liberamos memoria
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// DETECCION DE CONTORNOS ALGORITMO : MARCHING SQUARES 
 
 
+
+
+/////////////////////////////////////////////// DETECCION DE CONTORNOS (MARCHING SQUARES) ////////////////////////////////////////////////////////////// 
+
+/**
+ * Funcion que dada una malla y la posición de una fila, nos devuelve la fila en un array
+ * 
+ * ENTRADA int $y
+ * ENTRADA aray $malla
+ * SALIDA: array $rowData
+ */
 function getFila($y, $malla){
 	
 	$rowData = array();
@@ -838,7 +817,12 @@ function getFila($y, $malla){
  return $rowData;
 }
 
-// copia una matriz en un vector
+/**
+ * Funcion que copia una matriz en un vector
+ * 
+ * ENTRADA: array $malla
+ * SALIDA: array  $vector
+ */
 function matrixToVector ($malla){
 	
 	$vector = array();
@@ -854,11 +838,10 @@ function matrixToVector ($malla){
 
  /**Busca el primer 1 en la malla para empezar a contornear
  *
- * @param matriz $malla
- * @param int $x
- * @param int $y
+ * ENTRADA: matriz $malla
+ * ENTRADA/SALIDA: int $x
+ * ENTRADA/SALIDA: int $y
  */
-
 function getFirstPoint($malla, &$x, &$y){
 	
  	$rowData = array();
@@ -869,42 +852,32 @@ function getFirstPoint($malla, &$x, &$y){
 	while ($fila < count($malla) && !$salir){
 		
 		 $rowData = getFila($fila, $malla); // no quedamos con la fila de la matriz
-		 //echo "Fila: " .$fila. PHP_EOL;
-		 //print_r($rowData);
 		 $j = 0;
 		 
 		 while ($j < count($rowData) && !$enc){
 		 	
-		 	//echo "j = " . $j . PHP_EOL;
-		 	//echo "rowData[j]: " . $rowData[$j]. PHP_EOL;
-		
-		
 		 	if ($rowData[$j] > 0){	
-		 		//echo "he encontrado una uno! ". PHP_EOL;
 		 		$enc = true;
 		 		$salir = true;
 		 		$x = $j;
-		 		//echo "x = j: " . $x. PHP_EOL;
 		 		$y = $fila;
-		 		//echo "y = fila: " . $y. PHP_EOL;
-		 		//$rowData[$j] ==0 ; // nos cargamos el primer uno para poder seguir mirando contornos 
 		 	}
 		  	else{
 		 		$j++;
 		 	} 
 		 }
 		$fila++;
-		//echo "Fila: " .$fila. PHP_EOL;
 	} 
 }	
 
 
 /**
  * Busca unos en la matriz para poder detectar varios contornos si los hubiera
- * @param unknown $malla
- * @param unknown $x
- * @param unknown $y
- * @param unknown $mallaVisitados
+ * 
+ * ENTRADA:  array $malla
+ * ENTRADA/SALIDA: int $x
+ * ENTRADA/SALIDA: int $y
+ * ENTRADA/SALIDA: array $mallaVisitados
  */
 function dameUno($malla, &$x, &$y, $mallaVisitados){
 	
@@ -920,9 +893,6 @@ function dameUno($malla, &$x, &$y, $mallaVisitados){
 				$salir = true;
 				$x = $col;
 				$y= $fila ;
-				//echo "x: " . $col. " ";
-				//echo "y: " . $fila. PHP_EOL;
-				//$mallaVisitados[$i][$j] = true;
 			}
 			else{
 				$col++;
@@ -932,12 +902,19 @@ function dameUno($malla, &$x, &$y, $mallaVisitados){
 	}
 }
 	
-// determines and sets the state of the 4 pixels that represnt our current state, and ses our current and previous directions
+
+/**
+ * Funcion que deternina y establece un conjunto de 4 pixels que representan nuestro estado actual, para deerminar nuestra direccion actual y la siguiente
+ * 
+ * ENTRADA: int $index
+ * ENTRADA: array $vector
+ * ENTRADA: int $tamMalla
+ * ENTRADA/SALIDA: int $nextStep
+ * ENTRADA/SALIDA: int $state
+ */
 function step($index, $vector, $tamMalla, &$nextStep, &$state){
 	
 	$previousStep = 0;
-	//$nextStep = 0 ;
-	
 	
 	// representa el marco de 4*4 
 	$upLeft = $vector[$index];    
@@ -947,11 +924,8 @@ function step($index, $vector, $tamMalla, &$nextStep, &$state){
 	
 	// store our previous step
 	$previousStep = $nextStep;
-	//echo "PREVIO: " . $previousStep. PHP_EOL;
-	
 	
 	// determine which state we are in
-	
 	$state = 0;
 	if ($upLeft){
 		$state = $state|1;
@@ -965,9 +939,6 @@ function step($index, $vector, $tamMalla, &$nextStep, &$state){
 	if ($downRight){
 		$state = $state|8;
 	}
-	
-	//echo "estado actualizado: ". $state . PHP_EOL;
-	//echo "ESTADO: " . $state. PHP_EOL;
 	
 	switch ($state){
 		case 1: $nextStep = UP; break;
@@ -1004,11 +975,13 @@ function step($index, $vector, $tamMalla, &$nextStep, &$state){
 	
 /** Recorre la malla delineando el contorno desde el punto inicial que le entra por parametro.
  * 
- * @param        $radar
- * @param int    $startX
- * @param int    $startY
- * @param matrix $malla
- * @return $pointList, lista con los puntos del contorno
+ * ENTRADA: array $radar
+ * ENTRADA: int      $startX
+ * ENTRADA: int      $startY
+ * ENTRADA: array    $vector
+ * ENTRADA: int      $flm
+ * ENTRADA: matrix   $malla
+ * SALIDA:  array    $pointList, lista con los puntos del contorno
  */		
 function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm){ // empezamos desde la primera posicion y recorremos la malla 
 	
@@ -1017,27 +990,17 @@ function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm){ // empe
 
 	$x = $startX;
 	$y = $startY;
-	//echo "X: " . $x. PHP_EOL;
-	//echo "Y: " . $y. PHP_EOL;
 	
 	$sizeMalla = count ($malla);  
-	//echo "size malla: " . $sizeMalla. PHP_EOL;
-
+	
 	// comprobamos que no nos salimos de la malla. NO DEBERIA SER NECESARIO
 	if ($startX < 0) $startX = 0;  if ($startY < 0) $startY = 0; if ($startX > $sizeMalla) $startX = $sizeMalla; if ($startY > $sizeMalla) $startY = $sizeMalla;
 	 
-
-
 	do{
 		// evaluate our state, and set up our next direction 
 		$index = ($y-1) * $sizeMalla + ($x-1); // indexa el vector
-		//$index = ($y) * $sizeMalla + ($x); // indexa el vector
-		
-		//echo "Index : " . $index.PHP_EOL;
 		
 		step($index, $vector, $sizeMalla, $nextStep, $state);
-		
-		//echo "SIG: " . $nextStep.PHP_EOL;
 		
 		// if the current point is within our image add it to the list of points
 		if ( ( ($x >= 0) && ($x < $sizeMalla) ) && ( ($y >= 0) && ($y < $sizeMalla) ) ){
@@ -1045,42 +1008,30 @@ function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm){ // empe
 			if($state == 1){
 					$pointList[] = array ('fila'=> $y, 'col' => $x, 'altura' =>$flm);
 					$pointList[] = array ('fila'=> $y-1, 'col' => $x, 'altura' =>$flm);
-					//$mallaVisitados[$x-1][$y-1] = true;
 			}
 			elseif($state == 2){
 					$pointList[] = array ('fila'=> $y, 'col' => $x-1, 'altura' =>$flm);
 					$pointList[] = array ('fila'=> $y, 'col' => $x, 'altura' =>$flm);
-					//$mallaVisitados[$x][$y-1] = true;
 			}
 			elseif($state == 3){
 					$pointList[] = array ('fila'=> $y, 'col' => $x, 'altura' =>$flm);
-					//$mallaVisitados[$x-1][$y-1] = true;
-					//$mallaVisitados[$x][$y-1] = true;
 			}
 			elseif($state == 4){
 					$pointList[] = array ('fila'=> $y-1, 'col' => $x, 'altura' =>$flm);
 					$pointList[] = array ('fila'=> $y-1, 'col' => $x-1, 'altura' =>$flm);
-					//$mallaVisitados[$x-1][$y] = true;
 			}
 			elseif($state == 5){
 					$pointList[] = array ('fila'=> $y-1, 'col' => $x, 'altura' =>$flm);
-					//$mallaVisitados[$x-1][$y] = true;
-					//$mallaVisitados[$x-1][$y-1] = true;
 			}
 			elseif($state == 8){
 					$pointList[] = array ('fila'=> $y-1, 'col' => $x-1, 'altura' =>$flm);
 					$pointList[] = array ('fila'=> $y, 'col' => $x-1, 'altura' =>$flm);
-					//$mallaVisitados[$x][$y] = true;
 			}
 			elseif($state == 10){
 					$pointList[] = array ('fila'=> $y, 'col' => $x-1, 'altura' =>$flm);
-					//$mallaVisitados[$x][$y] = true;
-					//$mallaVisitados[$x][$y-1] = true;
 			}
 			elseif($state == 12){
 					$pointList[] = array ('fila'=> $y-1, 'col' => $x-1, 'altura' =>$flm);
-					//$mallaVisitados[$x][$y] = true;
-					//$mallaVisitados[$x-1][$y] = true;
 			}
 		}
 		
@@ -1100,62 +1051,18 @@ function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm){ // empe
 	
 }
 
-
-
 /**
- *  Determina y  establece el estado de 4 pixeles que representan nuestro estado actual y establece nuestra direccion actual y la siguiente
-  
- * @param matriz binaria $malla donde queremos encontrar los contornos
- * @return lista con los puntos del contorno.
+ * Funcion que determina cual es el menor punto de una fila 
+ * 
+ * ENTRADA: array $isla
+ * SALIDA:  int $filaMin
  */
-/*  function marchingSquares($radar, $malla, $flm, &$listaContornos){
-
-	$x =0;
-	$y=0;
-	$fila =0;
-	$col =0;
-	$contorno = array();
-	
-	$mallaVisitados = array();
-	// Inicializamos la malla de visitados
-	for ($i=0; $i< count($malla); $i++){
-		for($j=0; $j< count($malla); $j++){
-			$mallaVisitados[$i][$j] = false;
-		}
-	} 
-	
-	// recorremos la malla de coberturas 
-	for ($i=0; $i<count($malla); $i++){
-		for($j=0; $j<count($malla);$j++){
-			
-			// Vamos buscando unos en la matrix para detectar los distintos contornos
-			dameUno($malla, $x, $y, $mallaVisitados);
-			$fila = $y;
-			$col = $x;
-			
-			if ($mallaVisitados[$fila][$col] === false){ // si no hemos pasado por este 1 ...
-				
-				$vector = matrixToVector($malla);
-				// Return list of x and y positions
-				$contorno = walkPerimeter($radar,$x, $y, $malla, $vector, $flm); // rellenamos la malla de visitados con todos los 1 del contorno que estamos detectando
-				$listaContornos[] = $contorno;
-				$mallaVisitados[$fila][$col] = true;
-			}
-		}
-	}	
-}	
-  */	
-
-
 function buscaFilaMin($isla){
 	
 	$filaMin = 99999999999;
-	//echo "count(isla) : " . count($isla). PHP_EOL;
-	
+
 	for($i=0; $i< count($isla); $i++){
-		
-		//echo "i: " . $i . PHP_EOL;
-		
+				
 		if ($isla[$i]['fila'] < $filaMin){
 			$filaMin = $isla[$i]['fila'];
 		}
@@ -1163,7 +1070,12 @@ function buscaFilaMin($isla){
 	return $filaMin;
 }
 
-
+/**
+ * Funcion que determina cual es el menor punto de una columna 
+ * 
+ * ENTRADA: array $isla
+ * SALIDA:  int   $colMin
+ */
 function buscaColMin($isla){
 
 	$colMin = 99999999999;
@@ -1177,7 +1089,12 @@ function buscaColMin($isla){
 	return $colMin;
 }
 
-
+/**
+ * Funcion que determina cual es el mayor punto de una columna
+ *
+ * ENTRADA: array $isla
+ * SALIDA:  int   $colMax
+ */
 function buscaColMax($isla){
 
 	$colMax = 0;
@@ -1191,7 +1108,12 @@ function buscaColMax($isla){
 	return $colMax;
 }
 
-
+/**
+ * Funcion que determina cual es el mayor punto de una fila
+ *
+ * ENTRADA: array $isla
+ * SALIDA:  int $filaMax
+ */
 function buscaFilaMax($isla){
 
 	$filaMax = 0;
@@ -1205,103 +1127,262 @@ function buscaFilaMax($isla){
 	return $filaMax;
 }
 
+/**
+ * Funcion que determina si un punto dado se encuentra dentro de una lista de punto que represetna un poligono
+ * 
+ * ENTRADA: int $x
+ * ENTRADA: int $y
+ * ENTRADA: array $isla
+ * SALIDA:  boolena $dentro
+ */
+function puntoEnPoligono($x, $y, $isla){
 
-// SE LE ESTA PASANDO UNA SOLA ISLA ; FUNCIONABA EN EL MAIN
-/* function puntoEnPoligono($x, $y, $isla){
+	$dentro = false;
 
-	$inside = false;
-	$resultados = array(); // alamcena true o false en funcion de si el punt oque se esta evaluando esta dentro o fuera de algun contorno
+	// Buscamos Xmin, Xmax, Ymin, Ymax
+	$minX = buscaColMin($isla); // se le pasaba la isla
+	//echo "Xmin: " . $minX. PHP_EOL;
 
-	if(empty($isla)){ // si aun no tenemos cotornos en neustra lista, obviamente el punto no puede estar dentro de ninguno
-		//echo "LISTA VACIA !!! " . PHP_EOL;
-		return $inside;
-	}
-	else{// si la lista de contornos no esta vacia, comprobamos el punto con todos los contornos que tenga nuestra lista
-	
-		// Buscamos Xmin, Xmax, Ymin, Ymax
-		$minX = buscaColMin($isla); // se le pasaba la isla
-		//echo "Xmin: " . $minX. PHP_EOL;
-		$minY = buscaFilaMin($isla);
-		//echo "Ymin: " . $minY. PHP_EOL;
+	$minY = buscaFilaMin($isla);
+	//echo "Ymin: " . $minY. PHP_EOL;
+		
+	$maxX = buscaColMax($isla);
+	//echo "Xmax: " . $maxX. PHP_EOL;
+		
+	$maxY = BuscaFilaMax($isla);
+	//echo "Ymax: " . $maxY. PHP_EOL;
+		
+	if ($x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY)
+		return false;
 
-		$maxX = buscaColMax($isla);
-		//echo "Xmax: " . $maxX. PHP_EOL;
-
-		$maxY = BuscaFilaMax($isla);
-		//echo "Ymax: " . $maxY. PHP_EOL;
-
-		if ($x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY){
-			return false;
-		}
-			
-		$inside = false;
 		for ( $i = 0, $j = count($isla)-1 ; $i < count($isla); $j = $i++ ){
-			if ( ( $isla[$i]['fila'] >= $y ) != ( $isla[ $j ]['fila'] >= $y ) &&
+			if ( ( $isla[$i]['fila'] >= $y ) != ($isla[ $j ]['fila'] >= $y ) &&
 					$x <= ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) /
 					( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] ){
-						$inside = !$inside;
+						$dentro = !$dentro;
+							
 			}
 		}
-		return $inside;
-	}
-} */
+		return $dentro;
+}
 
+function puntoEnPoligono2($x, $y, $isla){
 
-// ERA LA IDEA ORIGINAL DE PASARLE UNA LISTA 
-/*  function puntoEnPoligono($x, $y, $lista){
+	$point = array('col'=>$x,'fila'=>$y);
+
+	$pointLocation = new pointLocation();
 	
-	$inside = false;
-	$resultados = array(); // alamcena true o false en funcion de si el punt oque se esta evaluando esta dentro o fuera de algun contorno
+	$ret = $pointLocation->pointInPolygon($point, $isla);
 	
-	if(empty($lista)){ // si aun no tenemos cotornos en neustra lista, obviamente el punto no puede estar dentro de ninguno
-		//echo "LISTA VACIA !!! " . PHP_EOL;
-		return $inside;
+	if ( "inside" == $ret)
+		return true;
+	else return false;
+
+}
+
+class pointLocation
+{
+
+	public function __construct(){
 	}
-	else{// si la lista de contornos no esta vacia, comprobamos el punto con todos los contornos que tenga nuestra lista
-		$isla =0; 
-		$enc = false;
+
+	var $pointOnVertex = true; // Check if the point sits exactly on one of the vertices
+	 
+
+	public function pointInPolygon($point, $polygon, $pointOnVertex = true) {
+
+		$this->pointOnVertex = $pointOnVertex;
+
+		// Transform string coordinates into arrays with x and y values
+		//$point = $this->pointStringToCoordinates($point);
+		//$vertices = array();
+		//foreach ($polygon as $vertex) {
+		//	$vertices[] = $this->pointStringToCoordinates($vertex);
+		//}
+
+		$vertices = $polygon;
 		
-		while($isla < count($lista) && !$enc){
-			
-			// Buscamos Xmin, Xmax, Ymin, Ymax
-			$minX = buscaColMin($lista[$isla]);
-			//echo "Xmin: " . $minX. PHP_EOL;
-			$minY = buscaFilaMin($lista[$isla]); 
-			//echo "Ymin: " . $minY. PHP_EOL;
-			
-			$maxX = buscaColMax($lista[$isla]);
-			//echo "Xmax: " . $maxX. PHP_EOL;
-			
-			$maxY = BuscaFilaMax($lista[$isla]);
-			//echo "Ymax: " . $maxY. PHP_EOL;
-			
-			if ($x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY){
-				return false;
-			}
-			else{
-				for($i =0, $j = count($isla)-1; $i < count($isla); $j= $i++){
-			
-					if ( ( $isla[$i]['fila'] >= $y ) != ( $isla[ $j ]['fila'] >= $y ) &&
-							$x <= ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) /
-							( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] ){
-								$inside = !$inside;
-								$enc= true;
-								break;
-					}
-				}// for
-			}
-			$isla++;
-		}//while
-			
-	}
-	
-	return $inside;
-} */
- 
+		// Check if the point sits exactly on a vertex
+		if ($this->pointOnVertex == true and $this->pointOnVertex($point, $vertices) == true) {
+			return "vertex";
+		}
 
+		// Check if the point is inside the polygon or on the boundary
+		$intersections = 0;
+		$vertices_count = count($vertices);
+
+		for ($i=1; $i < $vertices_count; $i++) {
+			$vertex1 = $vertices[$i-1];
+			$vertex2 = $vertices[$i];
+			
+			if ($vertex1['fila'] == $vertex2['fila'] and $vertex1['fila'] == $point['fila'] and $point['col'] > min($vertex1['col'], $vertex2['col']) and $point['col'] < max($vertex1['col'], $vertex2['col'])) { // Check if point is on an horizontal polygon boundary
+				return "boundary";
+			}
+			if ($point['fila'] > min($vertex1['fila'], $vertex2['fila']) and $point['fila'] <= max($vertex1['fila'], $vertex2['fila']) and $point['col'] <= max($vertex1['col'], $vertex2['col']) and $vertex1['fila'] != $vertex2['fila']) {
+				$xinters = ($point['fila'] - $vertex1['fila']) * ($vertex2['col'] - $vertex1['col']) / ($vertex2['fila'] - $vertex1['fila']) + $vertex1['col'];
+				if ($xinters == $point['col']) { // Check if point is on the polygon boundary (other than horizontal)
+					return "boundary";
+				}
+				if ($vertex1['col'] == $vertex2['col'] || $point['col'] <= $xinters) {
+					$intersections++;
+				}
+			}
+		}
+		// If the number of edges we passed through is even, then it's in the polygon.
+		if ($intersections % 2 != 0) {
+			return "inside";
+		} else {
+			return "outside";
+		}
+	}
+
+	protected function pointOnVertex($point, $vertices) {
+		foreach($vertices as $vertex) {
+			if ($point == $vertex) {
+				return true;
+			}
+		}
+
+	}
+
+	protected function pointStringToCoordinates($pointString) {
+		$coordinates = explode(" ", $pointString);
+		return array("x" => $coordinates[0], "y" => $coordinates[1]);
+	}
+
+
+}
+
+
+/**
+ * Funcion que determina los contornos de cobertura que hay en una matriz
+ * 
+ * ENTRADA: array $radar
+ * ENTRADA: array $malla
+ * ENTRADA: int $flm
+ * ENTRADA/SALIDA: array $listaContornos
+ */
  function determinaContornos($radar, $malla, $flm, &$listaContornos){
 	
-	$lista = array(); // creamos la lista del siguiente nivel, vacio en este momento
+	$mallaNL = array();
+	$listaContornos = array(); // creamos el array vacio
+	
+	
+	// inicializamos la malla del siguiente nivel
+	for ($i=0; $i< count($malla); $i++){ 
+		for($j=0; $j< count($malla); $j++){
+			$mallaNL[$i][$j] = $malla[$i][$j];
+		}
+	}
+	
+	for ($nivel = 0 ; $nivel < 1; $nivel++){ // porque solo queremos analizar tres niveles de profundidad
+	echo "NiVEL: " . $nivel. PHP_EOL;
+		
+	// Actualizamos la malla del siguiente nivel
+	
+		 for ($i=0; $i< count($malla); $i++){ // NO TIENE SENTIDO EN EL NIVEL 0
+			for($j=0; $j< count($malla); $j++){
+				$malla[$i][$j] = $mallaNL[$i][$j];
+			}
+		 } 
+
+		//pintaMalla($mallaNL); 
+
+		$lista = array(); // creamos la lista
+	
+		for ($i=0; $i<count($malla); $i++){ 
+			//echo "i: " .$i;
+			for($j=0; $j<count($malla); $j++){
+				//echo "i: " .$i. PHP_EOL;
+				$puntoEnPoligono = false;
+				
+				for( $isla=0; $isla<count($lista); $isla++ ) { // recorre la lista de islas de ese nivel
+					print $isla . "] " . count($lista[$isla]) . " ";
+					if ( $isla!= 0) 
+						continue;
+					
+					//print_r($lista[$isla]);
+					//echo  "r: ". $r = puntoEnPoligono(5, 5, $isla). PHP_EOL;
+					//print_r($isla);
+					if ( puntoEnPoligono($i, $j, $lista[$isla]) ) { 
+						
+						$puntoEnPoligono = true;
+						if ( $malla[$i][$j] == 1 ) {
+							$mallaNL[$i][$j] = 0;
+						} else { 
+							$mallaNL[$i][$j] = 1;
+						}
+					}
+				}
+				print PHP_EOL;
+				//print_r($lista);
+				 // si el punto esta fuera del poligono copiamos el valor en la malla del siguiente nivel
+				 // si el punto esta fuera y es un 1, significa que estamos ante un nuevo contorno
+				//echo "malla: " . $malla[$i][$i]. PHP_EOL;
+				
+				if ( !$puntoEnPoligono ) {
+					if ( $malla[$i][$j] == 1 ) {
+						$contorno = marchingSquares($radar, $mallaNL, $flm, $i,$j); // nos da el contorno de una isla 
+						// buscar repetidos 
+						//echo "count(contorno)".count($contorno). PHP_EOL;
+						$lista[] = $contorno; // si esto esta aquí , la lista contiene 20 veces el mismo contorno
+						//if ($i == 5 && $j == 5){
+							//echo " i=5, j=5 " .PHP_EOL;
+							//echo "CONTORNO: ". print_r($contorno). PHP_EOL;
+						//}
+						//echo " count (lista): " . count($lista). PHP_EOL;
+						$mallaNL[$i][$j]=0;
+						//print_r($lista);
+					} else { // si es un cero copiamos el valor
+						$mallaNL[$i][$j] = $malla[$i][$j];
+					} 
+				}
+			}// for interno 
+		} // for externo
+		// copiamos los contornos detectados en cada nivel en la lista de contornos totales
+		for ($isla=0; $isla < count($lista); $isla++){
+			$listaContornos[] = $lista[$isla];
+		}
+		
+		//////////////////////////////////////////////////////////// metemos la lista en una malla///////////////////////////////////////
+		$mallaContornos = array();
+		for($a=0; $a< count($malla); $a++){
+			for($b =0; $b < count($malla); $b++){
+				$mallaContornos[$a][$b] =0;
+			}
+		}
+		
+		
+		/* echo "count(contorno)".count($contorno). PHP_EOL;
+		for ($z=0; $z < count($lista[0]); $z++){ // recorremos los puntos del primer contorno
+			echo "z: " . $z. PHP_EOL;
+			$mallaContornos[$lista[0][$z]['fila']][$lista[0][$z]['col']] = 1 ;
+		} */
+		///////////////////////////////////////////////////////////////////////////////////////////////////////
+		if ($nivel ==0){
+			tratamientoMallado($malla, "MALLA1.png");// genera una imagen de la malla grande
+			tratamientoMallado($mallaContornos, "MallaContornos1.png"); 
+		}
+		if ($nivel ==1) {
+			tratamientoMallado($malla, "MALLA2.png");
+		
+		}
+		if($nivel ==2)
+			tratamientoMallado($malla, "MALLA3.png");
+	}// fin del  nivel de profundidad
+	//print_r($listaContornos);
+}
+
+/**
+ * Funcion que determina los contornos de cobertura que hay en una matriz
+ * 
+ * ENTRADA: array $radar
+ * ENTRADA: array $malla
+ * ENTRADA: int $flm
+ * ENTRADA/SALIDA: array $listaContornos
+ */
+ function determinaContornosPablo($radar, $malla, $flm, &$listaContornos){
+	
 	$mallaNL = array();
 	$listaContornos = array(); // creamos el array vacio
 	
@@ -1312,145 +1393,127 @@ function buscaFilaMax($isla){
 		}
 	}
 	
-	for ($nivel =0 ; $nivel < 3; $nivel++){ // porque solo queremos analizar tres niveles de profundidad
+	for ($nivel = 0 ; $nivel < 1; $nivel++){ // porque solo queremos analizar tres niveles de profundidad
 		echo "NiVEL: " . $nivel. PHP_EOL;
-	// Actualizamos la malla del siguiente nivel
-		 for ($i=0; $i< count($malla); $i++){ // NO TIENE SENTIDO EN EL NIVEL 0
+		
+		// Actualizamos la malla del siguiente nivel
+	
+		 for ($i=0; $i< count($malla); $i++){
 			for($j=0; $j< count($malla); $j++){
 				$malla[$i][$j] = $mallaNL[$i][$j];
 			}
 		 } 
-		//echo "mallaNL (actualizada para la siguiente vuelta)" . PHP_EOL;
-		//pintaMalla($mallaNL); // la malla no se actualiza nunca 
-		$isla = array();
-		$lista = array(); // creamos la lista del siguiente nivel, vacio en este momento
-		echo " creamos la lista vacia " . PHP_EOL;
-		for ($i=0; $i<count($malla); $i++){ // ($i=0; $i<count($malla); $i++) | ($i=0; $i < 4; $i++)
-			echo "i: " .$i. PHP_EOL;
-			for($j=0; $j<count($malla); $j++){ // ($j=0; $j<count($malla); $j++) |  ($j=0; $j < 4; $j++)
-			//echo "RECORREMOS LA MALLA" . PHP_EOL;
-				echo"j: " .$j.PHP_EOL;
-					//echo "COUNT (ISLA): " .count($isla). PHP_EOL;
-				  for($isla=0; $isla<=count($lista); $isla++){
-				  	echo "ISLA: " .$isla. PHP_EOL;
-					if(puntoEnPoligono($i, $j, $lista[$isla])){ // SI LE PASAMOS UNA ISLA FUNCIONA (MAIN)
-						echo " HOLA ! " . PHP_EOL; // esto no se ha impreso nunca
-						if ($malla[$i][$j] == 1){
+
+		 for ($i=0; $i< count($malla); $i++){ 
+			for($j=0; $j< count($malla); $j++){
+				$mallaNL[$i][$j] = 0;
+			}
+		 }
+
+		//pintaMalla($mallaNL); 
+
+		$lista = array(); // creamos la lista
+	
+		for ($i=0; $i<count($malla); $i++){ 
+			//echo "i: " .$i;
+			for($j=0; $j<count($malla); $j++){
+				//echo "i: " .$i. PHP_EOL;
+				$puntoEnPoligono = false;
+				
+				for( $isla=0; $isla<count($lista); $isla++ ) { // recorre la lista de islas de ese nivel
+					//print $isla . "] " . count($lista[$isla]) . " ";
+					//if ( $isla!= 0) 
+						//continue;
 					
+					//print_r($lista[$isla]);
+					//echo  "r: ". $r = puntoEnPoligono(5, 5, $isla). PHP_EOL;
+					//print_r($isla);
+					if ( puntoEnPoligono($i, $j, $lista[$isla]) ) { 
+						
+						$puntoEnPoligono = true;
+						if ( $malla[$i][$j] == 1 ) {
 							$mallaNL[$i][$j] = 0;
-						}
-						elseif($malla[$i][$j] == 0) {
+						} else { 
 							$mallaNL[$i][$j] = 1;
 						}
 					}
-					else{ // si el punto esta fuera del poligono copiamos el valor en la malla del siguiente nivel
-						// si el punto esta fuera y es un 1, significa que estamos ante un nuevo contorno
-						if ($malla[$i][$j] == 1){
-							$isla = marchingSquares($radar, $mallaNL, $flm);// nos da el contorno de una isla 
-							$lista[] = $isla; // si esto esta aquí , la lista contiene 20 veces el mismo contorno
-							$mallaNL[$i][$j]=0;
-							print_r($lista);
-							//echo " HEMOS METIDO LA ISLA". PHP_EOL;
-						}
-						else{// si es un cero copiamos el valor
-							$mallaNL[$i][$j] = $malla[$i][$j];
-						}
-					}// else ptoEnPoligono
-				  }// for islas
+				}
+				print PHP_EOL;
+				//print_r($lista);
+				 // si el punto esta fuera del poligono copiamos el valor en la malla del siguiente nivel
+				 // si el punto esta fuera y es un 1, significa que estamos ante un nuevo contorno
+				//echo "malla: " . $malla[$i][$i]. PHP_EOL;
+				
+				if ( !$puntoEnPoligono ) {
+					if ( $malla[$i][$j] == 1 ) {
+						$contorno = marchingSquares($radar, $mallaNL, $flm, $i,$j); // nos da el contorno de una isla 
+						// buscar repetidos 
+						//echo "count(contorno)".count($contorno). PHP_EOL;
+						$lista[] = $contorno; // si esto esta aquí , la lista contiene 20 veces el mismo contorno
+						//if ($i == 5 && $j == 5){
+							//echo " i=5, j=5 " .PHP_EOL;
+							//echo "CONTORNO: ". print_r($contorno). PHP_EOL;
+						//}
+						//echo " count (lista): " . count($lista). PHP_EOL;
+						$mallaNL[$i][$j]=0;
+						//print_r($lista);
+					} else { // si es un cero copiamos el valor
+						$mallaNL[$i][$j] = $malla[$i][$j];
+					} 
+				}
 			}// for interno 
 		} // for externo
+		// copiamos los contornos detectados en cada nivel en la lista de contornos totales
 		for ($isla=0; $isla < count($lista); $isla++){
-			$listaContornos[] = $lista[0]; // metemos cada isla del nivel en el que estamos en la lista de contornos generales
+			$listaContornos[] = $lista[$isla];
 		}
-		//$listaNL = array();// reseteamos la lista para el siguiente nivel
-	}// fin del  nivel de profundidad
-}
- 
-
-
-/* function determinaContornos($radar, $malla, $flm, &$listaContornos){
-
-	$lista = array(); // creamos la lista del siguiente nivel, vacio en este momento
-	$mallaNL = array();
-	$listaContornos = array(); // creamos el array vacio
-
-	// inicializamos la malla del siguiente nivel
-	for ($i=0; $i< count($malla); $i++){
-		for($j=0; $j< count($malla); $j++){
-			$mallaNL[$i][$j] = $malla[$i][$j];
-		}
-	}
-	//echo "mallaNL (al inicio): " . PHP_EOL;
-	//pintaMalla($mallaNL);
-
-	for ($nivel =0 ; $nivel < 1; $nivel++){ // porque solo queremos analizar tres niveles de profundidad
-		echo "NiVEL: " . $nivel. PHP_EOL;
-		//Malla = MallaNL. Actualizamos la malla del siguiente nivel
-		for ($i=0; $i< count($malla); $i++){ // NO TIENE SENTIDO EN EL NIVEL 0
-			for($j=0; $j< count($malla); $j++){
-				$malla[$i][$j] = $mallaNL[$i][$j];
+		
+		//////////////////////////////////////////////////////////// metemos la lista en una malla///////////////////////////////////////
+		$mallaContornos = array();
+		for($a=0; $a< count($malla); $a++){
+			for($b =0; $b < count($malla); $b++){
+				$mallaContornos[$a][$b] =0;
 			}
 		}
-		//echo "mallaNL (actualizada para la siguiente vuelta)" . PHP_EOL;
-		pintaMalla($mallaNL); // la malla no se actualiza nunca
-
-		$lista = array(); // creamos la lista del siguiente nivel, vacio en este momento
-
-		for ($i=0; $i<count($malla); $i++){ // recorremos la malla
-
-			for($j=0; $j<count($malla); $j++){
-
-				if($malla[$i][$j] == 1){
-					echo " ES UN 1 " . PHP_EOL;
-					if (puntoEnPoligono($i, $j, $lista)){
-						echo "esta en un contorno " . PHP_EOL;
-						prit_r($lista);
-						$mallaNL[$i][$j] = 0;
-					}
-					else{ //si es un uno pero no esta en el poligono, es un contorno nuevo
-						echo "no esta en ningun contorno--> ES un nuevo contorno " . PHP_EOL;
-						$isla = marchingSquares($radar, $mallaNL, $flm);// nos da el contorno de una isla
-						$lista[] = $isla; // si esto esta aquí , la lista contiene 20 veces el mismo contorno
-						$listaContornos[] = $isla;
-						$mallaNL[$i][$j]=0;
-					}
-				}	
-				elseif($malla[$i][$j] == 0){
-					if (puntoEnPoligono($i, $j, $lista)){
-						echo " Es un 0 " . PHP_EOL; // esto no se ha impreso nunca
-						$mallaNL[$i][$j] = 1;
-					}
-					else// si es un cero y no esta en el poligono, copiamos el valor
-						$mallaNL[$i][$j] = $malla[$i][$j];	
-				}
-		} // for interno
-			//for ($isla=0; $isla < count($lista); $isla++)
-				//$listaContornos[] = $lista[0]; // metemos cada isla del nivel en el que estamos en la lista de contornos generales
-			
-		}// for externo
- }// fin del  nivel de profundidad
+		
+		
+		/* echo "count(contorno)".count($contorno). PHP_EOL;
+		for ($z=0; $z < count($lista[0]); $z++){ // recorremos los puntos del primer contorno
+			echo "z: " . $z. PHP_EOL;
+			$mallaContornos[$lista[0][$z]['fila']][$lista[0][$z]['col']] = 1 ;
+		} */
+		///////////////////////////////////////////////////////////////////////////////////////////////////////
+		if ($nivel ==0){
+			tratamientoMallado($malla, "MALLA1.png");// genera una imagen de la malla grande
+			tratamientoMallado($mallaContornos, "MallaContornos1.png"); 
+		}
+		if ($nivel ==1) {
+			tratamientoMallado($malla, "MALLA2.png");
+		
+		}
+		if($nivel ==2)
+			tratamientoMallado($malla, "MALLA3.png");
+	}// fin del  nivel de profundidad
+	//print_r($listaContornos);
 }
 
- */
-
-
-// COPIA DE SEGURIDAD DEL MARCHING SQUARES ORIGINAL
 
 /**
  *  Determina y  establece el estado de 4 pixeles que representan nuestro estado actual y establece nuestra direccion actual y la siguiente
-
- * @param matriz binaria $malla donde queremos encontrar los contornos
- * @return lista con los puntos del contorno.
+ * ENTRADA: array $radar
+ * ENTRADA: array $malla, donde queremos encontrar los contornos
+ * ENTRADA: int $flm
+ * SALIDA: array $contorno
  */
- function marchingSquares($radar, $malla, $flm){
+ function marchingSquares($radar, $malla, $flm, $x,$y){ // 
 
-	$x =0;
-	$y=0;
+	//$x =0; //
+	//$y=0; // 
 	$contorno = array();
 
 
 	// Find the starting point
-	getFirstPoint($malla, $x,$y);
+	//getFirstPoint($malla, $x,$y); // 
 
 	$vector = matrixToVector($malla);
 
@@ -1461,110 +1524,35 @@ function buscaFilaMax($isla){
 
 } 
  
-/* 
-function isSafe($mallaContornos, $col, $fila, $visitados){ // he cambiado el orden de las filas y las col en todos los sitios
-	
-	$n = count ($mallaContornos);  
-	
-	if( (($col >= 0) && ($col < $n)) && (($fila >= 0) &&  ($fila < $n))  &&  ($mallaContornos[$col][$fila] == 1 && $visitados[$col][$fila] === false)) 
-		return true;
-	else 
-		return false;
-	
-}
-
-function dfs($mallaContornos, $col, $fila, &$visitados, &$listaPtos){
-		
-	$colNbr =  array (0, 1, 1, 1, 0, -1, -1, -1);  // i
-	$rowNbr =  array (1, 1, 0, -1, -1, -1, 0, 1);  // j
-	
-	$visitados[$col][$fila] = true; // marcamos la casilla como visitada
-	$listaPtos[] = array ('fila' => $fila, 'col' => $col, 'altura' => 0); // guardamos ese uno en la lista de puntos de esa isla
-			 
-	// recursion para todos los vecinos conectados
-	$veces = 0;
-	for ($k =0; $k < 8; $k++){
-		if ( isSafe($mallaContornos, $col + $colNbr[$k], $fila + $rowNbr[$k], $visitados) ) {
-		        $veces++;
-			dfs($mallaContornos, $col + $colNbr[$k], $fila + $rowNbr[$k], $visitados, $listaPtos);
-		}
-	}
-	if ( $veces == 1) {
-	
-	}
-	
-}
-			
-function cuentaIslas($mallaContornos, &$listaC){
-
-	$visitados = array();	
-	$tamMalla = count ($mallaContornos);
-	
-	// inicializamos a false la malla de visitados
-	
-	for($i=0; $i<$tamMalla; $i++) { // recorre las columnas 
-		$visitados[$i] = array();
-		for($j=0; $j<$tamMalla; $j++) { // recorre las filas 
-			$visitados[$i][$j] = false;
-		}
-	}
-	
-	$numIslas = 0;
-	
-	// recorremos la malla que tiene los contornos 
-	
-	for ($i=0; $i < $tamMalla; $i++){   // recorre las columnas
-		for ($j =0; $j < $tamMalla; $j++){  // recorre las filas 
-			
-			if ($mallaContornos[$i][$j] == 1 && $visitados[$i][$j] === false){  
-				$listaPtos = array();
-				dfs($mallaContornos,$i, $j, $visitados, $listaPtos); 
-				$listaC[$numIslas] = $listaPtos;
-				$numIslas++;
-			}	
-		}
-	}
-	//print_r($listaC);
-	return $numIslas; // el numero de islas debe coincidir con el numero de elementos que tiene la listaC
-} */
- 
-
-function calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, &$listaC){ // 
+/**
+ * Funcion que calcula las coordenadas geograficas para el caso B (fl debajo del radar)
+ * 
+ * ENTRADA: array    $radar
+ * ENTRADA: int      $flm
+ * ENTRADA: array    $coordenadas
+ * ENTRDA/SALIDA: array $listaC
+ */
+function calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, &$listaC){ 
 	
 	$xR =0;
 	$yR =0; 
 	// pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
 	$tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
-	//$tamMalla = 6;
-	//echo "Num Islas: " . $numIslas. PHP_EOL;
 	
 	for($isla=0; $isla < count($listaC); $isla++){ // recorre la lista de islas/ contornos
-		//echo "ISLA: " . $isla. PHP_EOL;
-		//echo PHP_EOL;
+
 		$n = count($listaC[$isla]);
-		//echo "N: " . $n. PHP_EOL;
-		//echo "ptos totales en la isla " . $isla. ": " . $n. PHP_EOL; 
 		
 		for($i=0; $i < $n; $i++){ // recorre la lista de puntos del contorno
-			
-			//echo "pto: " . $i. PHP_EOL;
-			//echo PHP_EOL;
-			//echo "fila: " . $listaC[$isla][$i]['fila']. PHP_EOL;
-			//echo "col: " . $listaC[$isla][$i]['col']. PHP_EOL;
-			
+						
 			 $x = ( (($listaC[$isla][$i]['col']-1) * TAM_CELDA) - (($tamMalla /2) * TAM_CELDA) + (TAM_CELDA/2) );  
 			 $y = ( ( ($tamMalla /2) * TAM_CELDA) - (($listaC[$isla][$i]['fila']-1) * TAM_CELDA) - (TAM_CELDA/2) );
-			
-			//$x = - (($tamMalla /2) * TAM_CELDA) + (TAM_CELDA/2);
-			//echo "X : " . $x. PHP_EOL;
-			//$y = ( ($tamMalla /2) * TAM_CELDA) - (TAM_CELDA/2);
-			//echo "Y : " . $y. PHP_EOL;
+
 			// CALCULO DE LA DISTANCIA
 			$distanciaCeldaAradar = (sqrt(pow(($xR- $x),2)+ pow(($yR - $y),2)) );
-			//echo "distancia: " . $distanciaCeldaAradar. PHP_EOL;
+			
 			// CALCULO DEL ACIMUT
 			$azimutTeorico = calculaAcimut($x, $y);
-			//echo "Azimut Teorico: " . $azimutTeorico. PHP_EOL;
 			
 			// CALCULO DE LA LATITUD
 			$anguloCentral = ($distanciaCeldaAradar * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
@@ -1589,21 +1577,18 @@ function calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, &$listaC){ /
 				$listaC[$isla][$i]['fila'] = $coordenadas['longitud'] - $p; 			
 			$listaC[$isla][$i]['col'] = FRONTERA_LATITUD - $r; 
 			$listaC[$isla][$i]['altura'] = $flm;
-			
-			
-			 //echo PHP_EOL;
-			// echo "LONGITUD: " .$listaC[$isla][$i]['fila'] . PHP_EOL;
-			// echo "LATITUD: " .$listaC[$isla][$i]['col'] . PHP_EOL;
-			// echo "ALTURA: " .$listaC[$isla][$i]['altura'] . PHP_EOL;
-			// echo PHP_EOL;
+
 		}
 	}
 }
 
-
+/**
+ * Funcion auxiliar para representar por pantalla una matrix
+ * 
+ * ENTRADA: array $malla
+ */
 function pintaMalla($malla) {
 
-//    for($i=count($malla)-1;$i>=0;$i--) {
     for($i=0;$i<count($malla);$i++) {
         for($j=0;$j<count($malla);$j++) {
             print ($malla[$j][$i] == 1 ? "1" : "0");
@@ -1615,9 +1600,13 @@ function pintaMalla($malla) {
 
 }
 
+/**
+ * Funcion auxiliar para reprensentar por pantalla una matriz con las letras del alfabeto
+ * 
+ * ENTRADA: array $malla
+ */
 function pintaMallaAlfabeto($malla) {
 
-//    for($i=count($malla)-1;$i>=0;$i--) {
     for($i=0;$i<count($malla);$i++) {
         for($j=0;$j<count($malla);$j++) {
             print ($malla[$j][$i]);

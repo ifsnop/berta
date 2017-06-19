@@ -178,18 +178,18 @@ array(0,0,0,0,0,0),
   
   ); */
 
+/*
 
-
-     $malla = array(
- array(1,1,0,0,0,0),
- array(1,1,0,0,0,0),
- array(0,0,0,0,0,0),
+    $malla = array(
+ array(1,1,1,0,0,0),
+ array(1,0,1,0,0,0),
+ array(1,1,1,0,0,0),
  array(0,0,0,0,0,0),
  array(0,0,0,0,1,1),
  array(0,0,0,0,1,1),
 
  );  
-    
+     */
   
 /*
       $malla = array(
@@ -208,9 +208,44 @@ array(0,0,0,0,0,0),
    
 */
 
+
+
+/* 
+$malla = array(
+array(0,0,0,0,0,0),
+array(0,0,0,0,0,0),
+array(0,1,1,1,0,0),
+array(0,0,1,1,0,0),
+array(0,1,1,1,0,0),
+array(0,0,0,0,0,0),
+
+); */
+
+$isla3 = array();
+$isla3[0] = array('fila' =>2, 'col'=>1);
+$isla3[1] = array('fila' =>3, 'col'=>1);
+$isla3[2] = array('fila' =>4, 'col'=>1);
+$isla3[3] = array('fila' =>4, 'col'=>2);
+$isla3[4] = array('fila' =>5, 'col'=>1);
+$isla3[5] = array('fila' =>6, 'col'=>1);
+$isla3[6] = array('fila' =>6, 'col'=>2);
+$isla3[7] = array('fila' =>6, 'col'=>3);
+$isla3[8] = array('fila' =>6, 'col'=>4);
+$isla3[9] = array('fila' =>6, 'col'=>5);
+$isla3[10] = array('fila' =>5, 'col'=>5);
+$isla3[11] = array('fila' =>4, 'col'=>5);
+$isla3[12] = array('fila' =>3, 'col'=>5);
+$isla3[13] = array('fila' =>2, 'col'=>5);
+$isla3[14] = array('fila' =>2, 'col'=>4);
+$isla3[15] = array('fila' =>2, 'col'=>3);
+$isla3[16] = array('fila' =>2, 'col'=>2);
+$isla3[17] = array('fila' =>2, 'col'=>1);
+
+
+
 calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado); // mete la lista de obstaculos ampliada para cada azimut
 
-//generacionMallado($radar, $radioTerrestreAumentado, $malla);
+generacionMallado($radar, $radioTerrestreAumentado, $malla);
 
 
 $mallaGrande = array();
@@ -224,10 +259,11 @@ $mallaGrande = mallaMarco($malla); // tiene un marco de ceros abrazando  a la ma
 //echo "tamaño de la lista de contornos : " . $n. PHP_EOL;
 
 determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
-
+exit();
 //print_r($listaContornos);
 
-//exit();
+//tratamientoMallado($mallaGrande, "MALLA_GRANDE.png");
+
 
 //calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos); // calcula las coordenadas geograficas a partir de la lista de contornos
 
@@ -237,8 +273,9 @@ determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
 //crearKmlB($listaContornos, $radar, $ruta, $fl, "Tierra");
 
 
+
 /// SAND BOX ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*   $isla = array();
+/*    $isla = array();
  $isla2 = array();
  
 $isla[0] = array('fila' => 0, 'col' => 0);     		$isla2[0] = array('fila' => 4, 'col' => 4);
@@ -257,80 +294,173 @@ $isla[11] = array('fila' => 0, 'col' => 1);   		$isla2[11] = array('fila' => 4, 
 
 $lista = array();
 $lista[0] = $isla;
-$lista[1] = $isla2;  */
+$lista[1] = $isla2;   */
 
-  function puntoEnPoligono($x, $y, $isla){ // tiene que funcionar pasandole una lista con varias islas
 
-	$dentro = false;
+// FUERA
+/* 
+echo "(2,1)";
+if (puntoEnPoligono(2, 1, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+
+
+echo "(3,1)";
+if (puntoEnPoligono(3, 1, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
 	
-	// si la lista esta vacia, esto te da 0 y considera que todos los puntos estan FUERA
-	//echo "COUNT(lista): " .count($lista). PHP_EOL;
 	
-	//for ($isla=0; $isla< count($lista); $isla++){ // necesitamos recorrer la lista para ver si el punto evaluado esta en alguna de las islas de la lista 
-			//echo "ISLA: " .$isla. PHP_EOL;
-				// Buscamos Xmin, Xmax, Ymin, Ymax
-				$minX = buscaColMin($isla); // se le pasaba la isla
-				//echo "Xmin: " . $minX. PHP_EOL;
+echo "(4,1)";
+if (puntoEnPoligono(4, 1, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+		
+		
+echo "(4,2)";
+if (puntoEnPoligono(4, 2, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+			
+			
+echo "(5,1)";
+if (puntoEnPoligono(5, 1, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
 				
-				$minY = buscaFilaMin($isla);
-				//echo "Ymin: " . $minY. PHP_EOL;
-			
-				$maxX = buscaColMax($isla);
-				//echo "Xmax: " . $maxX. PHP_EOL;
-			
-				$maxY = BuscaFilaMax($isla);
-				//echo "Ymax: " . $maxY. PHP_EOL;
-			
-				if ($x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY)
-					 return false;
-					 //$dentro = false;
 				
-				//$inside = false;
-				for ( $i = 0, $j = count($isla)-1 ; $i < count($isla); $j = $i++ ){
-						if ( ( $isla[$i]['fila'] >= $y ) != ($isla[ $j ]['fila'] >= $y ) &&
-								$x <= ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) /
-								( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] ){
-									$dentro = !$dentro;	
+echo "(6,1)";
+if (puntoEnPoligono(6, 1, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+					
+echo "(6,2)";
+if (puntoEnPoligono(6, 2, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+						
+echo "(6,3)" ;
+if (puntoEnPoligono(6, 3, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+							
+echo "(6,4)" ;
+if (puntoEnPoligono(6, 4, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+								
+echo "(6,5)" ;
+if (puntoEnPoligono(6, 5, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
 									
-						}
-				}
-				return $dentro;
-	//}
-	//return $dentro;
-} 
+echo "(5,5)" ;
+if (puntoEnPoligono(5, 5, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+										
+echo "(4,5)" ;
+if (puntoEnPoligono(4, 5, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+											
+echo "(3,5)" ;
+if (puntoEnPoligono(3, 5, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+									
+echo "(2,5)" ;
+if (puntoEnPoligono(2, 5, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+													
+echo "(2,4)" ;
+if (puntoEnPoligono(2, 4, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+														
+echo "(2,3)" ;
+if (puntoEnPoligono(2, 3, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+															
+echo "(2,2)" ;
+if (puntoEnPoligono(2, 2, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+						
 
-/*  function IsPointInPolygon($x, $y, $isla){  // GOOOOOOOOOOOD 
+// DENTRO
+
+echo "(3,2)" ;
+if (puntoEnPoligono(3, 2, $isla3))
+echo "DENTRO";
+else echo "FUERA" . PHP_EOL;
+
+
+echo "(3,3)" ;
+if (puntoEnPoligono(3, 3, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
 	
-	$minX = buscaColMin($isla);
-	//echo "Xmin: " . $minX. PHP_EOL;
-	$minY = buscaFilaMin($isla);
-	//echo "Ymin: " . $minY. PHP_EOL;
+echo "(3,4)" ;
+if (puntoEnPoligono(3, 4, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
 		
-	$maxX = buscaColMax($isla);
-	//echo "Xmax: " . $maxX. PHP_EOL;
-		
-	$maxY = BuscaFilaMax($isla);
-	//echo "Ymax: " . $maxY. PHP_EOL;
+echo "(4,4)" ;
+if (puntoEnPoligono(4, 4, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+			
+echo "(4,3)" ;
+if (puntoEnPoligono(4, 3, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+				
+echo "(5,2)" ;
+if (puntoEnPoligono(5, 2, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+					
+echo "(5,3)" ;
+if (puntoEnPoligono(5, 3, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
+						
+echo "(5,4)" ;
+if (puntoEnPoligono(5, 4, $isla3))
+echo "DENTRO". PHP_EOL;
+else echo "FUERA" . PHP_EOL;
 
-	if ( $x <= $minX || $x >= $maxX || $y <= $minY || $y >= $maxY ){
-		return false;
-	}
 
-	$inside = false;
-	for ( $i = 0, $j = count($isla)-1 ; $i < count($isla); $j = $i++ )
-	{
-		if ( ( $isla[$i]['fila'] >= $y ) != ( $isla[ $j ]['fila'] >= $y ) &&
-				$x <= ( $isla[ $j ]['col'] - $isla[ $i ]['col'] ) * ( $y - $isla[ $i ]['fila'] ) /
-			( $isla[ $j ]['fila'] - $isla[ $i ]['fila'] ) + $isla[ $i ]['col'] ){
-			$inside = !$inside;
-		}
-	}
-	return $inside;
-}
+exit();
+
  */
 
- // PRIMERA ISLA : 
-/*  echo "PRIMERA ISLA" .PHP_EOL;
+
+/*
+if (puntoEnPoligono(5, 5, $isla)) // DEBERIA DAR FUERA !  GOOOD 
+	echo "DENTRO" . PHP_EOL;
+else 
+	echo "FUERA" . PHP_EOL;
+
+	
+if (puntoEnPoligono(4, 4, $isla)) // FUERA
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+		
+			
+if (puntoEnPoligono(4, 4, $isla2)) // FUERA 
+	echo "DENTRO" . PHP_EOL;
+else
+	echo "FUERA" . PHP_EOL;
+
+ */
+
+/*  // PRIMERA ISLA : 
+  echo "PRIMERA ISLA" .PHP_EOL;
 
 echo "(0,0)";
 if (puntoEnPoligono(0,0, $lista)) // se le pasaba la isla 
@@ -561,16 +691,16 @@ if (puntoEnPoligono(6,6, $lista))
 	echo "DENTRO" . PHP_EOL;
 else
 	echo "FUERA" . PHP_EOL;
- */
-	
-exit();   
+ 
+ */	
+//exit();   
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
 	
-/* $mallaContornos = array();
+/*  $mallaContornos = array();
 // ponemos a cero toda la malla de contornos
 for ($i=0; $i< count($mallaGrande); $i++){
 	for($j=0; $j< count($mallaGrande); $j++){
@@ -581,7 +711,7 @@ for ($i=0; $i< count($mallaGrande); $i++){
 
 //tratamientoMallado($malla, "MALLA.png"); // genera una imagen de la malla grande
 
-//tratamientoMallado($mallaGrande, "MALLA_GRANDE.png");
+
 
 
 //echo "tam lista contronos de 0: " . $n . PHP_EOL;
