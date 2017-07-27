@@ -6,12 +6,7 @@ $path = "/home/eval/%rassv6%/spain.tsk/radar_data.rbk";
 $radars = getRadars($path, $parse_all = true);
 print_r($radars['espineiras']['screening']);
 
-
-
-
 exit;
-
-
 
 /**
  * Utilizando la lógica del SASS-C, busca un fichero recording_details.par y
@@ -27,6 +22,7 @@ exit;
  * @return array Listado de radares configurado
  */
 function getRadars($eval_dir, $parse_all = false) {
+	
     $radars = array();
 
     if ( false === $parse_all) {

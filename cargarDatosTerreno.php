@@ -10,6 +10,7 @@
 
 /**
  * Esta funcion se encarga de abrir el fichero de terrenos y leer la informacion para almacenarla en memoria.
+ * 
  * @return array $radar con la informacion del radar leido de fichero
  */
 function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
@@ -19,7 +20,6 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 		print "error, no ha sido posible leer el fichero" . PHP_EOL;
 		exit;
 	}
-	
 	// TRATAMIENTO DE LA INFORMACION CAPTURADA (Primera parte del fichero)
 	$radar= array(
 		'site'     			=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
@@ -31,8 +31,8 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 		'totalAzimuths' 	=> (integer) trim($contenidoFichero[6]),
 		'listaAzimuths' 	=> array(),
 	);
-		
-		
+	
+	
 	//TRATAMIENTO DE LOS DATOS DE LOS AZIMUTHS (Segunda parte del fichero)
 	
 	$lineaActual = 7; // primera línea donde comienzan los AZIMUT
@@ -69,10 +69,10 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 	} // end for exterior
 	
 	// Camprobacion extra para algunos valores
-	if ($radar['k-factor'] <=0)
+	if ($radar['k-factor'] <= 0)
 		$radioTerrestreAumentado= (4/3) * RADIO_TERRESTRE;
 		else
-			$radioTerrestreAumentado= $radar['k-factor']* RADIO_TERRESTRE;
+			$radioTerrestreAumentado= $radar['k-factor'] * RADIO_TERRESTRE;
 	
 	
 	if ($radar['range']<=0){
@@ -85,4 +85,4 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 			
 	return $radar;	
 	
-}// end function cargarDatosTerreno
+}

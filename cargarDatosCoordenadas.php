@@ -1,10 +1,12 @@
 <?php
+
+
 /**
- * Le entra como parametros el nombre del radar con el que queremos trabajar ($name)
- * y la informacion de todos los radares y nos devuelve las coordeadas y el screening concretos para el radar seleccionado
- * @param array $infoCoral
- * @param string $name nombre del  lugar donde esta el radar 
- * @return array $coordenadas, array con la informacion que necesitamos para generar los kml del radar con el que estamos trabajando
+ * Carga la intofrmacion del radar con el que vamos a trabajar desde Coral
+ * 
+ * @param array $infoCoral (ENTRADA)
+ * @param string $name, nombre del lugar donde esta el radar (ENTRADA)
+ * @return $coordenadas[] array con la informacion que necesitamos para generar los kml del radar con el que estamos trabajando (SALIDA)
  */
 function cargarDatosCoordenadas($infoCoral, $name){
 	
@@ -15,7 +17,6 @@ function cargarDatosCoordenadas($infoCoral, $name){
 			'latitud'   => $infoCoral[$name]['lat'],
 			'screening' => $infoCoral[$name]['screening']
 	);
-
 	return $coordenadas;
 }
 
@@ -63,27 +64,25 @@ function getRadars($eval_dir, $parse_all = false) {
 				if ( 0 == count($radar_rbk_file) ) {
 					print "error couldn't find ${name}.rdb inside $eval_dir" . PHP_EOL;
 					exit;
+				}
+				$radar_rbk_file = $radar_rbk_file[0];
+		 		$eval_dir . "/radar_data.rbk/" . $name . ".rdb";
+				$radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, $sassc_id) );
+			}
 		}
-		$radar_rbk_file = $radar_rbk_file[0];
-		 $eval_dir . "/radar_data.rbk/" . $name . ".rdb";
-		$radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, $sassc_id) );
-
-	}
-}
-} else {
+	}else {
 	exec("/usr/bin/find -L $eval_dir -name \"*.rdb\" 2> /dev/null", $radar_rbk_files);
 	if ( 0 == count($radar_rbk_files) ) {
 
 		print "error couldn't find ${name}.rdb inside $eval_dir" . PHP_EOL;
 		exit;
-}
-foreach($radar_rbk_files as $radar_rbk_file) {
-	$pathinfo = pathinfo($radar_rbk_file);
-	$name = $pathinfo['filename'];
-	$radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, -1) );
-}
-
-}
+	}
+	foreach($radar_rbk_files as $radar_rbk_file) {
+		$pathinfo = pathinfo($radar_rbk_file);
+		$name = $pathinfo['filename'];
+		$radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, -1) );
+	}
+  }
 return $radars;
 }
 
@@ -151,14 +150,4 @@ function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
 }
 
 
-
-
-
-
-// [$nombreRadar][Ruta al fichero de terrenos]
-
-//print_r($infoCoral['valladolid']['screening']); // muestra la ruta donde esta el screening
-//print_r($infoCoral['valladolid']['lat']); // muesta la latitud
-//print_r($infoCoral['valladolid']['lon']); //  muestra la longitud
-//print_r($infoCoral);
 
