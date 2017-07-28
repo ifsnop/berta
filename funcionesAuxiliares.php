@@ -72,9 +72,13 @@ function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono,
 		
 	}while ($flMin > $flMax);
 	
-	echo "Indica el paso:  ";
-	fscanf (STDIN, "%d\n", $paso); 
-	
+	if ( $flMin == $flMax ) {
+	    $paso = 100;
+	} else {
+            echo "Indica el paso:  ";
+    	    fscanf (STDIN, "%d\n", $paso); 
+        }
+
 	do{ 
 		mostrarAltitudMode();
 		echo "Indica el modo de altitud: ";
@@ -82,7 +86,8 @@ function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono,
 		
 	}while ($altitudeMode < 0 || $altitudeMode > 4);
 	
-	echo "Indica si quieres la opcion poligono: (s/n) " .PHP_EOL;
+	$poligono = FALSE;
+/*	echo "Indica si quieres la opcion poligono: (s/n) " .PHP_EOL;
 	$line = trim(fgets(STDIN));
 	$line = strtolower($line);
 	
@@ -91,7 +96,8 @@ function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono,
 	else 
 		$poligono = TRUE;
 	
-    echo "Indica con que radares quieres trabajar:  ";
+*/
+    echo "Indica con que radares quieres trabajar (separados por espacios): ";
     $linea = strtolower(trim(fgets(STDIN)));
     $lugares = explode(" ", $linea);
 }

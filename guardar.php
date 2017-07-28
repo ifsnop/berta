@@ -52,12 +52,15 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
 	$cadena = ""; 
 	$cadena = toString($coordenadasG);
 	$rgb = "7d00ff00"; 
+	$nivelVuelo = (string)$fl;
+	$radarWithFL = $radar['site']."_FL" .  str_pad($nivelVuelo,3,"0", STR_PAD_LEFT);
+	$nombreFich = $ruta . $radarWithFL . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
 	$contenido = "";
 	$contenido = '<?xml version="1.0" encoding="UTF-8"?>'.
 			'<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
 		<Document>
-			<name>' . $radar['site'] . '</name>'.
+			<name>' . $radarWithFL . '</name>'.
 			'<Style id="transGreenPoly">
 			 	 <LineStyle>
 					<width>1.5</width>
@@ -68,7 +71,7 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
 		  	</Style>'.
 	
 			'<Placemark>
-				<name>' .  $radar['site'] . '</name>'.
+				<name>' .  $radarWithFL . '</name>'.
 					'<styleUrl>#transGreenPoly</styleUrl>
 				<Polygon>
 					<extrude>1</extrude>
@@ -84,9 +87,6 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
 	</kml>';
 	
 	
-	$nombreFich = "" ; 
-	$nivelVuelo = (string)$fl;
-	$nombreFich = $ruta. $radar['site'] ."_FL_" . $nivelVuelo . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
 	echo "NOMBRE FICH: " . $nombreFich. PHP_EOL;
 	$kml = fopen($nombreFich, 'w+'); 
@@ -95,7 +95,7 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
 
 		fwrite ($kml, $contenido);
 		fclose($kml);
-		if (rename ($nombreFich, $ruta."/".$radar['site']."_FL_" . str_pad($nivelVuelo,3,"0", STR_PAD_LEFT) . ".kml"))
+		if (rename ($nombreFich, $ruta . "/" . $radarWithFL . ".kml"))
 			echo "KML GENERADO CORRECTAMENTE". PHP_EOL;
 		else 
 			echo "Error al cambiar la extension del fichero, por favor compruebe la carpeta resultados."  . PHP_EOL;
@@ -123,7 +123,8 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	$numIslas = count($listaC);
 	$cadenaOuter = toStringB($listaC[0]);
 	$nivelVuelo = (string)$fl;
-	$nombreFich = $ruta. $radar['site'] ."_FL_" . $nivelVuelo . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
+	$radarWithFL = $radar['site']."_FL" .  str_pad($nivelVuelo,3,"0", STR_PAD_LEFT);
+	$nombreFich = $ruta . $radarWithFL . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
 	echo "NOMBRE FICH: " . $nombreFich. PHP_EOL;
 	$kml = fopen($nombreFich, 'w+');
@@ -133,7 +134,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	
 	<Document>
 			
-	<name>' . $radar['site'] . '</name>
+	<name>' . $radarWithFL . '</name>
 			
 	<Style id="transGreenPoly">
 		<LineStyle>
@@ -146,7 +147,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	
 	<Placemark>
 			
-	<name>' .  $radar['site'] . '</name>
+	<name>' .  $radarWithFL . '</name>
 			
 	<styleUrl>#transGreenPoly</styleUrl>
 		<MultiGeometry>
@@ -179,7 +180,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
  	    	$contenido3 = '</Polygon></MultiGeometry></Placemark></Document></kml>';
  	    	
 			fwrite ($kml, $contenido3);
-			if (rename ($nombreFich, $ruta."/".$radar['site']."_FL_" .  str_pad($nivelVuelo,3,"0", STR_PAD_LEFT) . ".kml")){
+			if (rename ($nombreFich, $ruta . "/" . $radarWithFL . ".kml")){
 				echo "KML GENERADO CORRECTAMENTE". PHP_EOL;
 			}
 			else{

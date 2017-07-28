@@ -76,9 +76,9 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 	
 	
 	if ($radar['range']<=0){
-		 echo ' Introduce el alcance del radar (NM): ';
-				fscanf(STDIN, "%d/n", $rango);
-				$radar['range']= $rango * MILLA_NAUTICA_EN_METROS;
+	     echo 'Introduce el alcance del radar (NM): ';
+	    fscanf(STDIN, "%d/n", $rango);
+            $radar['range']= $rango * MILLA_NAUTICA_EN_METROS;
 	}
 	 else
 		$radar['range']=$radar['range'] * MILLA_NAUTICA_EN_METROS;

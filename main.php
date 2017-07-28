@@ -24,7 +24,7 @@ CONST MAX_AZIMUTHS = 720;
  function programaPrincipal(){
  	
  	$path = "/home/eval/%rassv6%/spain.tsk";
- 	$ruta = "./RESULTADOS/";
+ 	$rutaResultados = "./RESULTADOS/";
 	
 	$op = 0;
 	$fl = 0;
@@ -59,21 +59,22 @@ do{
 			// recoremos todas las localizaciones que nos ha dado el usuario
                         foreach($lugares as $lugar) {
 				$coordenadas = cargarDatosCoordenadas($infoCoral, $lugar);
-				$radar = cargarDatosTerreno($coordenadas['screening'], $radioTerrestreAumentado);
-				$hA = $radar['towerHeight'] + $radar['terrainHeight'];
-                                $ruta .= $radar['site'] . "/";
+				$radarOriginal = cargarDatosTerreno($coordenadas['screening'], $radioTerrestreAumentado);
+				$hA = $radarOriginal['towerHeight'] + $radarOriginal['terrainHeight'];
+                                $ruta = $rutaResultados . $radarOriginal['site'] . "/";
                                 if ( !is_dir( $ruta ) ) {
-                                    crearCarpetaResultados($radar, $ruta);
+                                    crearCarpetaResultados($radarOriginal, $ruta);
+                                    clearstatcache();
                                 }
-				for ($fl = $flMin; $fl <= $flMax; $fl = $fl+$paso){
+				for ($fl = $flMin; $fl <= $flMax; $fl += $paso){
+				    $radar = $radarOriginal;
 				    $flm = fltoMeters($fl); 
 				    // DISTINCION DE CASOS 
-				    // CASO A 
-                                    if ($flm >= $hA){ // CASO A
+                                    if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
 					calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, $angulosApantallamiento, $distanciasCobertura);
 					calculaCoordenadasGeograficas($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
 					crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode);
-				    } else{ // CASO B
+				    } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 				        calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado);
                                         generacionMallado($radar, $radioTerrestreAumentado, $malla);
 	                                $mallaGrande = mallaMarco($malla);
