@@ -24,7 +24,7 @@ CONST MAX_AZIMUTHS = 720;
  function programaPrincipal(){
  	
  	$path = "/home/eval/%rassv6%/spain.tsk";
- 	$ruta = "/home/eval/berta/RESULTADOS";
+ 	$ruta = "./RESULTADOS/";
 	
 	$op = 0;
 	$fl = 0;
@@ -39,7 +39,6 @@ CONST MAX_AZIMUTHS = 720;
 	$angulosApantallamiento = array();
 	$distanciasCobertura = array();
 	$coordenadasGeograficas = array();
-	$listaC = array();
 	
 	// Definicion de la estructura de datos que guarda las coordenadas del kml.
 	$coordenadasGeograficas = array ( array('longitud' => 0, 'latitud' => 0, 'altura' => 0) );
@@ -56,66 +55,36 @@ do{
 			pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
 	
 			$altMode = altitudeModetoString($altitudeMode);
-			// para cada nivel de vuelo se debe generar un KML
-			$ruta = "/home/eval/berta/RESULTADOS" . "/". $radar['site'] . "/";
-				
 			$infoCoral = getRadars($path, $parse_all = true);
-			$tope = count ($lugares);
 			// recoremos todas las localizaciones que nos ha dado el usuario
-			for ($i = 0; $i < $tope; $i++){
-				$coordenadas = cargarDatosCoordenadas($infoCoral, $lugares[$i]);
+                        foreach($lugares as $lugar) {
+				$coordenadas = cargarDatosCoordenadas($infoCoral, $lugar);
 				$radar = cargarDatosTerreno($coordenadas['screening'], $radioTerrestreAumentado);
 				$hA = $radar['towerHeight'] + $radar['terrainHeight'];
-				
+                                $ruta .= $radar['site'] . "/";
+                                if ( !is_dir( $ruta ) ) {
+                                    crearCarpetaResultados($radar, $ruta);
+                                }
 				for ($fl = $flMin; $fl <= $flMax; $fl = $fl+$paso){
-					
 				    $flm = fltoMeters($fl); 
-				    
 				    // DISTINCION DE CASOS 
-				    
 				    // CASO A 
-					if ($flm >= $hA){
-						calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, $angulosApantallamiento, $distanciasCobertura);
-						calculaCoordenadasGeograficas($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
-					}		
-					else{ // CASO B 
-						calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado);
-						generacionMallado($radar, $radioTerrestreAumentado, $malla);
-						$mallaGrande = array();
-						$mallaGrande = mallaMarco($malla);
-						determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
-						calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos);
-					}
-		
-					if (is_dir($ruta)){ // si la carpeta Resultados ya existe
-						if (opendir($ruta)){
-							//$ruta = "/home/eval/berta/RESULTADOS" . "/". $radar['site'] . "/"; // modificamos la ruta para crear una carpeta dentro de la carpeta resultados con el nombre del radar
-							 if ($flm >= $hA){
-								crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode);
-								clearstatcache();
-							 }
-							 else{
-							 	crearKmlB($coordenadasGeograficas, $radar, $ruta, $fl, $altMode);
-							 	clearstatcache();
-							 }
-						}
-					}else // si la carpeta Resultados  no existe ....
-						if(crearCarpetaResultados($radar, $ruta, $coordenadasGeograficas)){ // /home/eval/berta/RESULTADOS/LE_VALLADOLID
-							//$ruta = $ruta ."/". $radar['site'] . "/";
-							if ($flm >= $hA){
-								crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode);
-								clearstatcache();
-							}
-							else{// CASO B
-							crearKmlB($listaC, $radar, $ruta, $fl, $altMode);
-							clearstatcache();
-						}
-					}
+                                    if ($flm >= $hA){ // CASO A
+					calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, $angulosApantallamiento, $distanciasCobertura);
+					calculaCoordenadasGeograficas($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
+					crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode);
+				    } else{ // CASO B
+				        calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado);
+                                        generacionMallado($radar, $radioTerrestreAumentado, $malla);
+	                                $mallaGrande = mallaMarco($malla);
+					determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
+					calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos);
+					crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode);
+                                    }
+				    clearstatcache();
 				}// for interno
-			}// for externo
+			}// foreach
 			break;
 		}// switch
 	}while ($op != 0);
-} 
- 
-
+}

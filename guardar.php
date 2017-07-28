@@ -1,6 +1,6 @@
 <?php
 
-CONST PERMISOS = 0700;
+CONST PERMISOS = 0775;
 
 /**
  * Funcion que da formato al array de coordenadas para poderlas escribir en el fihero (CASO A: fl por encima del radar)
@@ -95,7 +95,7 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
 
 		fwrite ($kml, $contenido);
 		fclose($kml);
-		if (rename ($nombreFich, $ruta."/".$radar['site']."_FL_" . $nivelVuelo . ".kml"))
+		if (rename ($nombreFich, $ruta."/".$radar['site']."_FL_" . str_pad($nivelVuelo,3,"0", STR_PAD_LEFT) . ".kml"))
 			echo "KML GENERADO CORRECTAMENTE". PHP_EOL;
 		else 
 			echo "Error al cambiar la extension del fichero, por favor compruebe la carpeta resultados."  . PHP_EOL;
@@ -179,7 +179,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
  	    	$contenido3 = '</Polygon></MultiGeometry></Placemark></Document></kml>';
  	    	
 			fwrite ($kml, $contenido3);
-			if (rename ($nombreFich, $ruta."/".$radar['site']."_FL_" . $nivelVuelo . ".kml")){
+			if (rename ($nombreFich, $ruta."/".$radar['site']."_FL_" .  str_pad($nivelVuelo,3,"0", STR_PAD_LEFT) . ".kml")){
 				echo "KML GENERADO CORRECTAMENTE". PHP_EOL;
 			}
 			else{
