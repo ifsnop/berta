@@ -121,11 +121,17 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){
 	$contenido = ""; $cadenaOuter = ""; $cadena = ""; $nombreFich = "" ; $cadenaInner = "";
 	
 	$numIslas = count($listaC);
-	$cadenaOuter = toStringB($listaC[0]);
 	$nivelVuelo = (string)$fl;
 	$radarWithFL = $radar['site']."_FL" .  str_pad($nivelVuelo,3,"0", STR_PAD_LEFT);
 	$nombreFich = $ruta . $radarWithFL . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
+        if ( count($listaC) == 0 ) {
+            print "No se genera fichero para FL $nivelVuelo porque no hay cobertura" . PHP_EOL;
+            return false;
+        }
+	$cadenaOuter = toStringB($listaC[0]);
+
+
 	echo "NOMBRE FICH: " . $nombreFich. PHP_EOL;
 	$kml = fopen($nombreFich, 'w+');
 	

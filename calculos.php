@@ -5,7 +5,7 @@ CONST PIE_EN_METROS =  3.2808;
 CONST CIEN_PIES = 100;
 CONST PASO_A_GRADOS = 180;
 CONST DISTANCIA_ENTRE_PUNTOS = 5; // maxima distancia q puede haber entre dos puntos de un acimut para saber si es necesario interpolar 
-CONST TAM_CELDA = 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no peta
+CONST TAM_CELDA = 0.4; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no peta
 
 //// CONSTANTES PARA LA DETECCION DE CONTRONOS /////
 CONST NONE = 0;

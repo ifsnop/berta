@@ -80,7 +80,7 @@ do{
 	                                $mallaGrande = mallaMarco($malla);
 					determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
 					calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos);
-					crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode);
+    					crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode);
                                     }
 				    clearstatcache();
 				}// for interno
