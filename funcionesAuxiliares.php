@@ -64,10 +64,10 @@ function altitudeModetoString ($altitudeMode){
 function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono, &$lugares){
 	
 	do{
-		echo "Indica el nivel de vuelo minimo:  ";
+		echo "Indica el nivel de vuelo minimo (FL):  ";
 		fscanf (STDIN, "%d\n", $flMin);
 	     
-		echo "Indica el nivel de vuelo maximo:  ";
+		echo "Indica el nivel de vuelo maximo (FL):  ";
 		fscanf (STDIN, "%d\n", $flMax);
 		
 	}while ($flMin > $flMax);
@@ -75,7 +75,7 @@ function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono,
 	if ( $flMin == $flMax ) {
 	    $paso = 100;
 	} else {
-            echo "Indica el paso:  ";
+            echo "Indica el paso (pies*100):  ";
     	    fscanf (STDIN, "%d\n", $paso); 
         }
 
