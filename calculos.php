@@ -5,7 +5,8 @@ CONST PIE_EN_METROS =  3.2808;
 CONST CIEN_PIES = 100;
 CONST PASO_A_GRADOS = 180;
 CONST DISTANCIA_ENTRE_PUNTOS = 5; // maxima distancia q puede haber entre dos puntos de un acimut para saber si es necesario interpolar 
-CONST TAM_CELDA = 0.4; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no peta
+CONST TAM_CELDA = 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no peta
+CONST TAM_CELDA_MITAD = 0.25;
 
 //// CONSTANTES PARA LA DETECCION DE CONTRONOS /////
 CONST NONE = 0;
@@ -498,22 +499,63 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
  * @return number (SALIDA)
  */
 function buscaDistanciaMenor($listaObstaculos, $punto){
+
+    // print "punto:$punto" . PHP_EOL;
+    // $ptometodo1 = false;
+    if ( count($listaObstaculos) == 1 ) {
+        return 0;
+    }
+
+    $min_new_act = abs($punto - $listaObstaculos[0]['angulo']);
+    for ($i = 1; $i < count ($listaObstaculos) ; $i++) {
+	$min_new_next = abs($punto - $listaObstaculos[$i]['angulo']);
+
+        if ( $min_new_act < $min_new_next ) {
+            return ($i-1);
+            // $ptometodo1 = ($i-1);
+            // break;
+        }
+        $min_new_act = $min_new_next;
+    }
+    return ($i-1);
+
+//    if ( $ptometodo1 === false ) {
+//        $ptometodo1 = ($i-1);
+//    }
+/*
+    $posPunto = 0;
 	
-	$posPunto = 0;
-	
-	// miramos la diferencia con el primer punto para poder comparar 
+    // miramos la diferencia con el primer punto para poder comparar 
     $min = abs($punto - $listaObstaculos[0]['angulo']);
     
-	for ($i = 0; $i < count ($listaObstaculos); $i++){
+    for ($i = 0; $i < count ($listaObstaculos); $i++){
 
-		if(abs($punto - $listaObstaculos[$i]['angulo']) < $min){
-			
-			// si la diferencia es mas pequeña que el min anterior actualizamos min 
-			$min = abs($punto - $listaObstaculos[$i]['angulo']);
-			$posPunto = $i; // me guardo el punto que tiene la distancia minima hasta el momento
-		}
+	if(abs($punto - $listaObstaculos[$i]['angulo']) < $min){
+            // si la diferencia es mas pequeña que el min anterior actualizamos min 
+	    $min = abs($punto - $listaObstaculos[$i]['angulo']);
+	    $posPunto = $i; // me guardo el punto que tiene la distancia minima hasta el momento
 	}
-	return $posPunto; //  devolvemos la posicion del punto xq lo que nos interesa luego es mirar si tiene cobertura
+    }
+    return $posPunto; //  devolvemos la posicion del punto xq lo que nos interesa luego es mirar si tiene cobertura
+*/
+    // $ptometodo2 = $posPunto;
+/*
+    if ( $ptometodo1 != $ptometodo2 ) {
+        print "PUNTO: " . $punto . PHP_EOL;
+        print_r($listaObstaculos);
+        
+        for ($i = 0; $i < count ($listaObstaculos)-1; $i++) {
+	    print "$i]" . abs($punto - $listaObstaculos[$i]['angulo']) . PHP_EOL;
+	    print ($i+1) . "]" . abs($punto - $listaObstaculos[$i+1]['angulo']) . PHP_EOL;
+	    
+        }
+        
+        die ("pto1: $ptometodo1 pto2: $ptometodo2" . PHP_EOL);
+        exit(0);
+    }
+
+    return $ptometodo;
+*/
 }
 
 /**
@@ -577,14 +619,24 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 	
 	// CENTRAMOS LA MALLA Y CALCULAMOS EL PTO MEDIO DE CADA CELDA
 	
+	$tamMallaMitad = $tamMalla / 2;
+	// CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte comÃºn del cÃ¡lculo fuera del bucle)
+        // $x = -( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA) 
 	for ($i = 0; $i < $tamMalla; $i++){ // recorre las columnas de la malla 
+	        print "[$i]";
+		// CALCULAMOS LAS COORDENADAS X DE CADA CELDA
+	        // $x += ($i * TAM_CELDA);
+	        $x = ($i * TAM_CELDA) - ( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD );
+		// CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte comÃºn del cÃ¡lculo fuera del bucle)
+	        // $y = ( $tamMallaMitad * TAM_CELDA ) - ( TAM_CELDA_MITAD );//  #- ( $j * TAM_CELDA ) 
+
 		for ($j = 0; $j < $tamMalla; $j++){ // recorre las filas de la malla 
 		
-			// CALCULAMOS LAS COORDENADAS DE CADA CELDA
-			$x = ($i * TAM_CELDA) - ( ($tamMalla / 2 ) * TAM_CELDA ) + ( TAM_CELDA / 2 );
-			$y = ( ( $tamMalla / 2 ) * TAM_CELDA ) - ( $j * TAM_CELDA ) - ( TAM_CELDA / 2 );
-		
-			// CALCULAMOS EL AZIMUT DE CADA CELDA Y APROXIMAMOS
+			// CALCULAMOS LAS COORDENADAS Y DE CADA CELDA
+                        // $y -= $j * TAM_CELDA;
+                        $y = ( $tamMallaMitad * TAM_CELDA ) - ( TAM_CELDA_MITAD ) - ( $j * TAM_CELDA );
+    
+		        // CALCULAMOS EL AZIMUT DE CADA CELDA Y APROXIMAMOS
 			$azimutTeorico = calculaAcimut($x, $y); 
 			
 			if ($radar['totalAzimuths'] == 720){
@@ -598,10 +650,12 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 			   		$azimutCelda = 359; 
 			}
 			// al dividir entre el radio tenemos el angulo deseado
-			$distanciaCeldaAradar = ( sqrt( pow( ($xR - $x),2 )+ pow( ($yR - $y),2) ) ) / $radioTerrestreAumentadoEnMillas;
+			// $distanciaCeldaAradar = ( sqrt( pow( ($xR - $x),2 )+ pow( ($yR - $y),2) ) ) / $radioTerrestreAumentadoEnMillas;
+			$distanciaCeldaAradar = ( sqrt(pow($x,2)+pow($y,2)) ) / $radioTerrestreAumentadoEnMillas;
 			
 			// busca la posicion de la  distancia mas proxima en la lista de obstaculos del acimut aproximado (el menor)
 			$pos = buscaDistanciaMenor($radar['listaAzimuths'][$azimutCelda], $distanciaCeldaAradar); 
+			// print "(" . $pos . "/" . count($radar['listaAzimuths'][$azimutCelda]) . ")";
 				
 			if ( ($radar['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false){
 				$malla[$j][$i] = 0;
@@ -1073,56 +1127,48 @@ class FloodFiller {
  * @param array $listaContornos (ENTRADA/SALIDA)
  */
 function determinaContornos($radar, $malla, $flm, &$listaContornos){
-	
-		$listaContornos = array();
-	
-		// busca todos los contornos "externos" de las zonas con cobertura
-		// rellenando el interior con el mismo valor que ponemos para marcar el contorno
-		// seran contornos de zonas CON cobertura
-	
-		while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 1 )) ) { // nos da el contorno de una isla
-			
-			// mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
-			// este paso podra ser opcional, desde que floodfill funciona bien no es necesario delimitar la zona
-			
-			//$nuevaMalla = mergeContorno($malla, $contorno, $value = 2);
-			
-			
-			$pInicial = array( 'x' => $contorno[0]['col']+1, 'y' => $contorno[0]['fila']+1 ); // el primer punto del contorno siempre esta arriba a la izq.
-			$floodFiller = new FloodFiller();	
-			
-			
-			//$nuevaMalla = $floodFiller->Scan($nuevaMalla, $pInicial, $floodValue = 2, $searchValue = 1);
-			$nuevaMalla = $floodFiller->Scan($malla, $pInicial, $floodValue = 2, $searchValue = 1);
-			
-			$malla = $nuevaMalla;
-			$listaContornos[] = $contorno;
-		}
-	
-		// ahora buscamos los contornos dentro de las zonas con cobertura, seran islas SIN cobertura
-		// para ello rellenamos la matriz con '2', y solo tendremos '2' y '0'
-		// (zona sin cobertura que tengo que apuntar en la lista de contornos)
-		$floodFiller = new FloodFiller();
-		$malla = $floodFiller->Scan($malla, array( 'x' => 0, 'y' => 0 ), $floodValue = 2, $searchValue = 0);
-	
-		while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 0 )) ) { // nos da el contorno de una isla
-	
-			// mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
-			// este paso podra ser opcional
-			
-			//$nuevaMalla = mergeContorno($malla, $contorno, $value = 3);
-			
-			
-			$pInicial = array( 'x' => $contorno[0]['col']+1, 'y' => $contorno[0]['fila']+1 ); // el primer punto del contorno siempre esta arriba a la izq.
-			$floodFiller = new FloodFiller();
-			
-			
-			//$nuevaMalla = $floodFiller->Scan($nuevaMalla, $pInicial, $floodValue = 3, $searchValue = 0);
-			$nuevaMalla = $floodFiller->Scan($malla, $pInicial, $floodValue = 3, $searchValue = 0);
-			
-			
-			$malla = $nuevaMalla;
-			$listaContornos[] = $contorno;
-		}	
-		return true;
+
+    $listaContornos = array();
+    // busca todos los contornos "externos" de las zonas con cobertura
+    // rellenando el interior con el mismo valor que ponemos para marcar el contorno
+    // seran contornos de zonas CON cobertura
+
+    while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 1 )) ) { // nos da el contorno de una isla
+        // mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
+	// este paso podra ser opcional, desde que floodfill funciona bien no es necesario delimitar la zona
+	// $nuevaMalla = mergeContorno($malla, $contorno, $value = 2);
+
+	$pInicial = array( 'x' => $contorno[0]['col']+1, 'y' => $contorno[0]['fila']+1 ); // el primer punto del contorno siempre esta arriba a la izq.
+	$floodFiller = new FloodFiller();
+
+	//$nuevaMalla = $floodFiller->Scan($nuevaMalla, $pInicial, $floodValue = 2, $searchValue = 1);
+	$nuevaMalla = $floodFiller->Scan($malla, $pInicial, $floodValue = 2, $searchValue = 1);
+
+	$malla = $nuevaMalla;
+	$listaContornos[] = $contorno;
+    }
+
+    // ahora buscamos los contornos dentro de las zonas con cobertura, seran islas SIN cobertura
+    // para ello rellenamos la matriz con '2', y solo tendremos '2' y '0'
+    // (zona sin cobertura que tengo que apuntar en la lista de contornos)
+
+    $floodFiller = new FloodFiller();
+    $malla = $floodFiller->Scan($malla, array( 'x' => 0, 'y' => 0 ), $floodValue = 2, $searchValue = 0);
+
+    while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 0 )) ) { // nos da el contorno de una isla
+	// mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
+	// este paso podra ser opcional
+
+	//$nuevaMalla = mergeContorno($malla, $contorno, $value = 3);
+	// el primer punto del contorno siempre esta arriba a la izq.
+	$pInicial = array( 'x' => $contorno[0]['col']+1, 'y' => $contorno[0]['fila']+1 );
+	$floodFiller = new FloodFiller();
+
+	//$nuevaMalla = $floodFiller->Scan($nuevaMalla, $pInicial, $floodValue = 3, $searchValue = 0);
+	$nuevaMalla = $floodFiller->Scan($malla, $pInicial, $floodValue = 3, $searchValue = 0);
+
+	$malla = $nuevaMalla;
+	$listaContornos[] = $contorno;
+    }
+    return true;
 }

@@ -2,7 +2,7 @@
 
 
 /**
- * Carga la intofrmacion del radar con el que vamos a trabajar desde Coral
+ * Carga la informacion del radar con el que vamos a trabajar desde Coral
  * 
  * @param array $infoCoral (ENTRADA)
  * @param string $name, nombre del lugar donde esta el radar (ENTRADA)
@@ -38,6 +38,7 @@ function getRadars($eval_dir, $parse_all = false) {
 	
 	$radars = array();
 
+        print "cargando la informaciÃ³n de los radares de >$eval_dir<";
 	if ( false === $parse_all) {  
 		
 		// obtenemos el nombre del fichero que contiene todos los radares activos en la evaluación
@@ -71,17 +72,21 @@ function getRadars($eval_dir, $parse_all = false) {
 			}
 		}
 	}else {
-	exec("/usr/bin/find -L $eval_dir -name \"*.rdb\" 2> /dev/null", $radar_rbk_files);
+	exec("/usr/bin/find -L $eval_dir  -maxdepth 2 -name \"*.rdb\" 2> /dev/null", $radar_rbk_files);
 	if ( 0 == count($radar_rbk_files) ) {
 
 		print "error couldn't find ${name}.rdb inside $eval_dir" . PHP_EOL;
 		exit;
 	}
 	foreach($radar_rbk_files as $radar_rbk_file) {
-		$pathinfo = pathinfo($radar_rbk_file);
-		$name = $pathinfo['filename'];
-		$radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, -1) );
+            $pathinfo = pathinfo($radar_rbk_file);
+    	    $name = $pathinfo['filename'];
+    	    if ( $name[0] == "%" )
+    	        continue;
+	    print ".";
+            $radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, -1) );
 	}
+	print PHP_EOL;
   }
 return $radars;
 }

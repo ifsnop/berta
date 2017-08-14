@@ -38,6 +38,7 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 	$lineaActual = 7; // primera línea donde comienzan los AZIMUT
 	
 	// recorremos los azimuths
+	print "cargando contenido de >$nombreFichero< ";
 	for($i = 0; $i < $radar['totalAzimuths']; $i++){
 			
 			$listaObstaculos = array();
@@ -45,10 +46,14 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 			while ("AZIMUTH" != substr($contenidoFichero[$lineaActual], 0, 7)){
 				  $lineaActual++;
 			}
+			print ".";
 			// anotamos el acimut actual
-			list(, $acimutActual) = explode(' ', $contenidoFichero[$lineaActual++]);
+			// safer
+			// list(, $acimutActual) = explode(' ', $contenidoFichero[$lineaActual++]);
+			// faster
+			$acimutActual = substr($contenidoFichero[$lineaActual++], 8) + 0;
 			// normaliza el número de acimuts para que siempre sea de 0 a 360º
-			$acimutActual = (integer)(round(($acimutActual / $radar['totalAzimuths']) * TOTAL_AZIMUTHS));
+			$acimutActual = (round(($acimutActual / $radar['totalAzimuths']) * TOTAL_AZIMUTHS));
 			
 			// anotamos el número de obstaculos para ese acimut
 			$contadorObstaculos = $contenidoFichero[$lineaActual++];
@@ -58,26 +63,28 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 				$pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';
 				if ( false === ($cuenta = preg_match($pattern, $contenidoFichero[$lineaActual], $salida)) && (3 == $cuenta) ) {
 					// $salida tiene 3 posiciones, las dos ultimas contienen los strings que necesitamos
-					echo "Error durante la comparacion"; 
 					die("Error durante la comparacion linea($lineaActual) contenido(" . $contenidoFichero[$lineaActual] . ")");
 				}
 				// convierte el string a numero y los almacena en el array
-				$listaObstaculos[$j] = array('angulo' => floatval ($salida[1]), 'altura' => floatval ($salida[2]), 'estePtoTieneCobertura' => false);
+				$listaObstaculos[$j] = array(
+				    'angulo' => floatval ($salida[1]), 
+				    'altura' => floatval ($salida[2]), 
+				    'estePtoTieneCobertura' => false);
 				$lineaActual++;
 			}
 			$radar['listaAzimuths'][$acimutActual] = $listaObstaculos;	
 	} // end for exterior
 	
+	print PHP_EOL;
 	// Camprobacion extra para algunos valores
 	if ($radar['k-factor'] <= 0)
-		$radioTerrestreAumentado= (4/3) * RADIO_TERRESTRE;
-		else
-			$radioTerrestreAumentado= $radar['k-factor'] * RADIO_TERRESTRE;
-	
-	
+	    $radioTerrestreAumentado= (4/3) * RADIO_TERRESTRE;
+	else
+	    $radioTerrestreAumentado= $radar['k-factor'] * RADIO_TERRESTRE;
+
 	if ($radar['range']<=0){
 	     echo 'Introduce el alcance del radar (NM): ';
-	    fscanf(STDIN, "%d/n", $rango);
+	    // fscanf(STDIN, "%d/n", $rango);
             $radar['range']= $rango * MILLA_NAUTICA_EN_METROS;
 	}
 	 else

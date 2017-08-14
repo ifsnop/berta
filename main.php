@@ -19,9 +19,9 @@ CONST TOTAL_AZIMUTHS = 360;
 CONST MAX_AZIMUTHS = 720;
 
 
-  programaPrincipal();
+programaPrincipal();
 
- function programaPrincipal(){
+function programaPrincipal(){
  	
  	$path = "/home/eval/%rassv6%/spain.tsk";
  	$rutaResultados = "./RESULTADOS/";
@@ -35,7 +35,7 @@ CONST MAX_AZIMUTHS = 720;
 	$altitudeMode = 0;
 	$radioTerrestreAumentado = 0;
 	$poligono = false;
-	$lugares = "";
+	$lugares = array();
 	$angulosApantallamiento = array();
 	$distanciasCobertura = array();
 	$coordenadasGeograficas = array();
@@ -43,8 +43,9 @@ CONST MAX_AZIMUTHS = 720;
 	// Definicion de la estructura de datos que guarda las coordenadas del kml.
 	$coordenadasGeograficas = array ( array('longitud' => 0, 'latitud' => 0, 'altura' => 0) );
 
-do{
-	$op = menu();
+    $op = 1;
+    do{
+	// $op = menu();
 	
 	switch ($op) {
 		case 0:
@@ -52,7 +53,13 @@ do{
 			clearstatcache();
 			break;
 		case 1:
-			pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
+			// pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
+			$flMin = 7;
+			$flMax = 7;
+			$paso = 100;
+			$altitudeMode = 0;
+			$lugares[] = "canchoblanco";
+			$op = 0;
 	
 			$altMode = altitudeModetoString($altitudeMode);
 			$infoCoral = getRadars($path, $parse_all = true);
@@ -67,6 +74,7 @@ do{
                                     clearstatcache();
                                 }
 				for ($fl = $flMin; $fl <= $flMax; $fl += $paso){
+				    print "${fl}00 feet" . PHP_EOL;
 				    $radar = $radarOriginal;
 				    $flm = fltoMeters($fl); 
 				    // DISTINCION DE CASOS 
@@ -75,17 +83,25 @@ do{
 					calculaCoordenadasGeograficas($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
 					crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode);
 				    } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
+				        print "[calculosFLdebajoRadar]";
 				        calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado);
+				        print "[generacionMallado]";
                                         generacionMallado($radar, $radioTerrestreAumentado, $malla);
+                                        print "[mallaMarco]";
 	                                $mallaGrande = mallaMarco($malla);
+	                                print "[determinaContornos]";
 					determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
+					print "[calculaCoordenadasGeograficasB]";
 					calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos);
+					print "[crearKmlB]";
     					crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode);
                                     }
 				    clearstatcache();
 				}// for interno
 			}// foreach
 			break;
-		}// switch
-	}while ($op != 0);
+	}// switch
+    } while ($op != 0);
+
+    return;
 }
