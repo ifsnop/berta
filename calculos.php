@@ -621,21 +621,21 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 	
 	$tamMallaMitad = $tamMalla / 2;
 	// CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
-        // $x = -( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA) 
+        $x_fixed = -( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA) 
 	for ($i = 0; $i < $tamMalla; $i++){ // recorre las columnas de la malla 
 	        print "[$i]";
 		// CALCULAMOS LAS COORDENADAS X DE CADA CELDA
-	        // $x += ($i * TAM_CELDA);
-	        $x = ($i * TAM_CELDA) - ( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD );
+	        $x = $x_fixed + ($i * TAM_CELDA);
+	        // $x = ($i * TAM_CELDA) - ( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD );
+		
 		// CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
-	        // $y = ( $tamMallaMitad * TAM_CELDA ) - ( TAM_CELDA_MITAD );//  #- ( $j * TAM_CELDA ) 
+	        $y_fixed = ( $tamMallaMitad * TAM_CELDA ) - ( TAM_CELDA_MITAD );//  #- ( $j * TAM_CELDA ) 
 
 		for ($j = 0; $j < $tamMalla; $j++){ // recorre las filas de la malla 
-		
 			// CALCULAMOS LAS COORDENADAS Y DE CADA CELDA
-                        // $y -= $j * TAM_CELDA;
-                        $y = ( $tamMallaMitad * TAM_CELDA ) - ( TAM_CELDA_MITAD ) - ( $j * TAM_CELDA );
-    
+                        $y = $y_fixed - ($j * TAM_CELDA);
+                        // $y = ( $tamMallaMitad * TAM_CELDA ) - ( TAM_CELDA_MITAD ) - ( $j * TAM_CELDA );
+
 		        // CALCULAMOS EL AZIMUT DE CADA CELDA Y APROXIMAMOS
 			$azimutTeorico = calculaAcimut($x, $y); 
 			
@@ -967,7 +967,7 @@ function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm, $searchV
 		}
 
 		switch ($nextStep){
-			case UP: $y --; break;
+			case UP: $y--; break;
 			case LEFT: $x--; break;
 			case DOWN: $y++; break;
 			case RIGHT: $x++; break;
