@@ -619,7 +619,7 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 	
 	// CENTRAMOS LA MALLA Y CALCULAMOS EL PTO MEDIO DE CADA CELDA
 	
-	$tamMallaMitad = $tamMalla / 2;
+	$tamMallaMitad = $tamMalla / 2.0;
 	// CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
         $x_fixed = -( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA) 
 	for ($i = 0; $i < $tamMalla; $i++){ // recorre las columnas de la malla 
@@ -703,55 +703,58 @@ function mallaMarco($malla){
  * @param array $listaC (ENTRADA/SALIDA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
  */
 function calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, &$listaC){
+    // DUDA ¿es necesario?
+    $xR = 0;
+    $yR = 0;
+    // pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
+    $tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
+    $tamMallaMitad = $tamMalla / 2.0;
+    $islaCount = count($listaC);
+    for($isla = 0; $isla < $islaCount; $isla++){ // recorre la lista de islas/ contornos
 
-	$xR = 0;
-	$yR = 0;
-	// pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
-	$tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
+	$n = count($listaC[$isla]);
 
-	for($isla = 0; $isla < count($listaC); $isla++){ // recorre la lista de islas/ contornos
+        for($i = 0; $i < $n; $i++){ // recorre la lista de puntos del contorno
+            // DUDA ¿por qué se utiliza el -1?
+	    $x = ( (($listaC[$isla][$i]['col']-1) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA) + TAM_CELDA_MITAD );
+	    $y = ( ( $tamMallaMitad * TAM_CELDA) - (($listaC[$isla][$i]['fila']-1) * TAM_CELDA) - TAM_CELDA_MITAD );
 
-		$n = count($listaC[$isla]);
+	    // CALCULO DE LA DISTANCIA
+	    // DUDA ¿es necesario $xR e $yR?
+	    // $distanciaCeldaAradar = (sqrt(pow(($xR- $x),2)+ pow(($yR - $y),2)) );
+	    $distanciaCeldaAradar = sqrt(pow($x,2) + pow($y,2));
 
-		for($i = 0; $i < $n; $i++){ // recorre la lista de puntos del contorno
+	    // CALCULO DEL ACIMUT
+	    $azimutTeorico = calculaAcimut($x, $y);
 
-			$x = ( (($listaC[$isla][$i]['col']-1) * TAM_CELDA) - (($tamMalla /2) * TAM_CELDA) + (TAM_CELDA/2) );
-			$y = ( ( ($tamMalla /2) * TAM_CELDA) - (($listaC[$isla][$i]['fila']-1) * TAM_CELDA) - (TAM_CELDA/2) );
+	    // CALCULO DE LA LATITUD
+	    $anguloCentral = ($distanciaCeldaAradar * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
+	    $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $coordenadas['latitud']);
+	    $r = rad2deg(acos (cos($latitudComplementaria) * cos($anguloCentral) + sin($latitudComplementaria) * sin($anguloCentral)
+                * cos(deg2rad($azimutTeorico)))); // tenemos r en grados
 
-			// CALCULO DE LA DISTANCIA
-			$distanciaCeldaAradar = (sqrt(pow(($xR- $x),2)+ pow(($yR - $y),2)) );
-				
-			// CALCULO DEL ACIMUT
-			$azimutTeorico = calculaAcimut($x, $y);
-				
-			// CALCULO DE LA LATITUD
-			$anguloCentral = ($distanciaCeldaAradar * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
-			$latitudComplementaria = deg2rad(FRONTERA_LATITUD - $coordenadas['latitud']);
-			$r = rad2deg(acos (cos($latitudComplementaria) * cos($anguloCentral) + sin($latitudComplementaria) * sin($anguloCentral)
-					* cos(deg2rad($azimutTeorico)))); // tenemos r en grados
+            // CALCULO DE LA LONGITUD
+	    $rEnRadianes = deg2rad($r);
+	    $numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($rEnRadianes);
+	    $denominador = sin($latitudComplementaria) * sin($rEnRadianes);
 
-					// CALCULO DE LA LONGITUD
-					$rEnRadianes = deg2rad($r);
-					$numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($rEnRadianes);
-					$denominador = sin($latitudComplementaria) * sin($rEnRadianes);
-						
-					if($numerador>$denominador)
-						$p = 0;
-						else
-							$p =  rad2deg(acos($numerador/$denominador));
+	    if( $numerador > $denominador ) {
+                $p = 0;
+            } else {
+	        $p = rad2deg(acos($numerador/$denominador));
+	    }
 
-							// asignacion de valores a la estructura de datos
-							if (round($azimutTeorico) < 180)
-								$listaC[$isla][$i]['fila'] = $coordenadas['longitud'] + $p;
-								else
-									$listaC[$isla][$i]['fila'] = $coordenadas['longitud'] - $p;
-									$listaC[$isla][$i]['col'] = FRONTERA_LATITUD - $r;
-									$listaC[$isla][$i]['altura'] = $flm;
-
-		}
+	    // asignacion de valores a la estructura de datos
+	    if ( $azimutTeorico < 180 ) {
+	        $listaC[$isla][$i]['fila'] = $coordenadas['longitud'] + $p;
+	    } else {
+	        $listaC[$isla][$i]['fila'] = $coordenadas['longitud'] - $p;
+	    }
+	    $listaC[$isla][$i]['col'] = FRONTERA_LATITUD - $r;
+	    $listaC[$isla][$i]['altura'] = $flm;
 	}
+    }
 }
-
 
 /////////////////////////////////////////////// FUNCIONES NECESARIAS PARA PODER APLICAR EL ALGORITMO MARCHING SQUARES ////////////////////////////////////////////////////////////// 
 
