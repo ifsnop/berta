@@ -99,10 +99,12 @@ function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono,
     echo "Los ficheros de salida irán ordenados por radar(r) o por nivel de vuelo(f) (R/f): ";
     $line = trim(fgets(STDIN));
     $line = strtolower($line);
-    if ("r" == $line ) {
-        $ordenarPorRadar = true;
-    } else {
+    if ("f" == $line ) {
 	$ordenarPorRadar = false;
+	echo "Ordenando por nivel de vuelo" . PHP_EOL;
+    } else {
+        $ordenarPorRadar = true;
+        echo "Ordenando por radar" . PHP_EOL;
     }
 
     echo "Indica con que radares quieres trabajar (separados por espacios): ";
