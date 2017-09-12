@@ -46,14 +46,15 @@ function toStringB ($isla){
  * @param string $ruta          (ENTRADA)
  * @param int $fl               (ENTRADA)
  * @param string $altMode       (ENTRADA)
+ * @param boolean $ordenarPorRadar Si true, una carpeta por radar, si false una carpeta por nivel de vuelo (ENTRADA)
  */
-function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
+function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode, $ordenarPorRadar){
 	
 	$cadena = ""; 
 	$cadena = toString($coordenadasG);
 	$rgb = "7d00ff00"; 
-	$nivelVuelo = (string)$fl;
-	$radarWithFL = $radar['site']."_FL" .  str_pad($nivelVuelo,3,"0", STR_PAD_LEFT);
+	$nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+	$radarWithFL = $radar['site']."_FL" .  $nivelVuelo;
 	$nombreFich = $ruta . $radarWithFL . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
 	$contenido = "";
@@ -114,15 +115,16 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode){
  * @param string $ruta     (ENTRADA)
  * @param int $fl          (ENTRADA) 
  * @param string $altMode  (ENTRADA)
+ * @param boolean $ordenarPorRadar Si true, una carpeta por radar, si false una carpeta por nivel de vuelo (ENTRADA)
  */
-function crearKmlB($listaC, $radar, $ruta, $fl, $altMode){ 
+function crearKmlB($listaC, $radar, $ruta, $fl, $altMode, $ordenarPorRadar){
  
 	$rgb = "7d00ff00";
 	$contenido = ""; $cadenaOuter = ""; $cadena = ""; $nombreFich = "" ; $cadenaInner = "";
 	
 	$numIslas = count($listaC);
-	$nivelVuelo = (string)$fl;
-	$radarWithFL = $radar['site']."_FL" .  str_pad($nivelVuelo,3,"0", STR_PAD_LEFT);
+	$nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+	$radarWithFL = $radar['site']."_FL" .  $nivelVuelo;
 	$nombreFich = $ruta . $radarWithFL . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
         if ( count($listaC) == 0 ) {

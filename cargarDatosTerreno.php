@@ -11,9 +11,10 @@
 /**
  * Esta funcion se encarga de abrir el fichero de terrenos y leer la informacion para almacenarla en memoria.
  * 
+ * @int $defaultRange Alcance por defecto del radar en caso de no existir dato en el fichero de screening
  * @return array $radar con la informacion del radar leido de fichero
  */
-function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
+function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado, $defaultRange = 0) {
 
 	// esta funcion guarda el contenido del fichero en un array 
 	if ( false === ($contenidoFichero = file($nombreFichero, FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
@@ -83,13 +84,16 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado) {
 	    $radioTerrestreAumentado= $radar['k-factor'] * RADIO_TERRESTRE;
 
 	if ($radar['range']<=0){
-	     echo 'Introduce el alcance del radar (NM): ';
-	    // fscanf(STDIN, "%d/n", $rango);
-            $radar['range']= $rango * MILLA_NAUTICA_EN_METROS;
-	}
-	 else
-		$radar['range']=$radar['range'] * MILLA_NAUTICA_EN_METROS;
-			
+            // echo 'Introduce el alcance del radar (NM): ';
+	    // $rango = fscanf(STDIN, "%d\n");
+	    // echo "El alcance del radar es de " . $rango[0] . "NM" . PHP_EOL;
+            // $radar['range']= $rango[0] * MILLA_NAUTICA_EN_METROS;
+	    $radar['range'] = $defaultRange * MILLA_NAUTICA_EN_METROS;
+	    echo "El alcance del radar es de " . $defaultRange . "NM y " . $radar['range'] . "m" . PHP_EOL;
+	} else {
+	    echo "El alcance del radar es de " . $radar['range'] . "NM" . PHP_EOL;
+	    $radar['range']=$radar['range'] * MILLA_NAUTICA_EN_METROS;
+        }
 	return $radar;	
 	
 }

@@ -39,7 +39,7 @@ function getRadars($eval_dir, $parse_all = false) {
 	$radars = array();
 
         print "cargando la informaciÃ³n de los radares de >$eval_dir<";
-	if ( false === $parse_all) {  
+    if ( false === $parse_all) {  
 		
 		// obtenemos el nombre del fichero que contiene todos los radares activos en la evaluación
 		exec("/usr/bin/find $eval_dir -name  \"recording_details.par\" | grep -v \\.eva 2> /dev/null", $recording_details_file);
@@ -87,8 +87,8 @@ function getRadars($eval_dir, $parse_all = false) {
             $radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, -1) );
 	}
 	print PHP_EOL;
-  }
-return $radars;
+    }
+    return $radars;
 }
 
 /**

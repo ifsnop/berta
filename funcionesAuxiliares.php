@@ -60,53 +60,95 @@ function altitudeModetoString ($altitudeMode){
  * @param int $altitudeMode : modo de altitud seleccionada (ENTRADA/SALIDA)
  * @param boolean $poligono (ENTRADA/SALIDA)
  * @param array $lugares : array con los nombres de todos los radares para los que se quiere calcular la cobertura (ENTRADA/SALIDA)
+ * @param boolean $ordenarPorRadar (true = ordenar los ficheros por radar, false ordenar por FL)
  */
-function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono, &$lugares){
-	
-	do{
-		echo "Indica el nivel de vuelo minimo (FL):  ";
-		fscanf (STDIN, "%d\n", $flMin);
-	     
-		echo "Indica el nivel de vuelo maximo (FL):  ";
-		fscanf (STDIN, "%d\n", $flMax);
-		
-	}while ($flMin > $flMax);
-	
-	if ( $flMin == $flMax ) {
-	    $paso = 100;
-	} else {
-            echo "Indica el paso (pies*100):  ";
-    	    fscanf (STDIN, "%d\n", $paso); 
-        }
+function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono, &$lugares, &$ordenarPorRadar){
 
-	do{ 
-		mostrarAltitudMode();
-		echo "Indica el modo de altitud: ";
-		fscanf (STDIN, "%d\n", $altitudeMode);
-		
-	}while ($altitudeMode < 0 || $altitudeMode > 4);
+    do {
+	echo "Indica el nivel de vuelo minimo (FL):  ";
+	fscanf (STDIN, "%d\n", $flMin);
+	echo "Indica el nivel de vuelo maximo (FL):  ";
+	fscanf (STDIN, "%d\n", $flMax);
+
+    } while ($flMin > $flMax);
+
+    if ( $flMin == $flMax ) {
+        $paso = 100;
+    } else {
+        echo "Indica el paso (pies*100):  ";
+        fscanf (STDIN, "%d\n", $paso); 
+    }
+
+    do { 
+	mostrarAltitudMode();
+	echo "Indica el modo de altitud: ";
+	fscanf (STDIN, "%d\n", $altitudeMode);
+    } while ($altitudeMode < 0 || $altitudeMode > 4);
 	
-	$poligono = FALSE;
-/*	echo "Indica si quieres la opcion poligono: (s/n) " .PHP_EOL;
-	$line = trim(fgets(STDIN));
-	$line = strtolower($line);
-	
-	if ($line == "n")
-		$poligono = FALSE;
-	else 
-		$poligono = TRUE;
-	
+    $poligono = FALSE;
+/*
+    echo "Indica si quieres la opcion poligono: (s/n) " .PHP_EOL;
+    $line = trim(fgets(STDIN));
+    $line = strtolower($line);
+    if ($line == "n") {
+        $poligono = FALSE;
+    } else {
+	$poligono = TRUE;
+    }
 */
+    echo "Los ficheros de salida irán ordenados por radar(r) o por nivel de vuelo(f) (R/f): ";
+    $line = trim(fgets(STDIN));
+    $line = strtolower($line);
+    if ("r" == $line ) {
+        $ordenarPorRadar = true;
+    } else {
+	$ordenarPorRadar = false;
+    }
+
     echo "Indica con que radares quieres trabajar (separados por espacios): ";
     $linea = strtolower(trim(fgets(STDIN)));
     $lugares = explode(" ", $linea);
 }
 
+function printMalla($malla, $relleno = " ") {
 
+    for($i = 0; $i < count($malla); $i++) {
+        for($j = 0; $j < count($malla[$i]); $j++) {
+            if ( $malla[$i][$j] == "0" ) {
+                print $relleno;
+            } else {
+                print $malla[$i][$j];
+            }
+        }
+        print PHP_EOL;
+    }
+}
 
+function printContornos($contornos, $malla) {
+/*
+    $malla = array();
+    for($i=0; $i<$tamMalla; $i++) {
+        $malla[$i] = array();
+        for($j=0; $j<$tamMalla; $j++) {
+            $malla[$i][$j] = 0;
+        }
+    }
+*/
+    $alfa = array(
+        'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+        'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'
+    );
+    $i = 0;
+    foreach($contornos as $contorno) {
+        foreach($contorno as $pto) {
+            if ( $malla[$pto['fila']][$pto['col']] == "0" ) {
+                $malla[$pto['fila']][$pto['col']] = $alfa[(($i++)%count($alfa))];
+            } else {
+                print "punto repetido!" . PHP_EOL;
+            }
+        }
+    }
+    printMalla($malla);
 
-
-
-
-
-
+    return true;
+}

@@ -9,8 +9,6 @@ include 'guardar.php';
 
 // DEFINICION DE RUTAS
 $path = "/home/eval/%rassv6%/spain.tsk";
-$ruta = "/home/eval/berta/RESULTADOS";
-
 
 CONST PI = M_PI;
 CONST RADIO_TERRESTRE = 6371000;
@@ -35,6 +33,7 @@ function programaPrincipal(){
 	$altitudeMode = 0;
 	$radioTerrestreAumentado = 0;
 	$poligono = false;
+	$ordenarPorRadar = true;
 	$lugares = array();
 	$angulosApantallamiento = array();
 	$distanciasCobertura = array();
@@ -45,7 +44,7 @@ function programaPrincipal(){
 
     $op = 1;
     do{
-	// $op = menu();
+	$op = menu();
 	
 	switch ($op) {
 		case 0:
@@ -53,27 +52,38 @@ function programaPrincipal(){
 			clearstatcache();
 			break;
 		case 1:
-			// pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
-			$flMin = 7;
-			$flMax = 7;
+			pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares, $ordenarPorRadar);
+			/*
+			$flMin = 10;
+			$flMax = 10;
 			$paso = 100;
 			$altitudeMode = 0;
 			$lugares[] = "canchoblanco";
 			$op = 0;
-	
+			*/
 			$altMode = altitudeModetoString($altitudeMode);
 			$infoCoral = getRadars($path, $parse_all = true);
 			// recoremos todas las localizaciones que nos ha dado el usuario
                         foreach($lugares as $lugar) {
 				$coordenadas = cargarDatosCoordenadas($infoCoral, $lugar);
-				$radarOriginal = cargarDatosTerreno($coordenadas['screening'], $radioTerrestreAumentado);
+				$radarOriginal = cargarDatosTerreno(
+				    $coordenadas['screening'],
+				    $radioTerrestreAumentado,
+				    $defaultRange = $infoCoral[strtolower($lugar)]['secondaryMaximumRange']
+				);
 				$hA = $radarOriginal['towerHeight'] + $radarOriginal['terrainHeight'];
-                                $ruta = $rutaResultados . $radarOriginal['site'] . "/";
-                                if ( !is_dir( $ruta ) ) {
-                                    crearCarpetaResultados($radarOriginal, $ruta);
-                                    clearstatcache();
-                                }
 				for ($fl = $flMin; $fl <= $flMax; $fl += $paso){
+				    if ( $ordenarPorRadar ) {
+                                        $ruta = $rutaResultados . $radarOriginal['site'] . "/";
+                                    } else {
+                                        $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+                                        $ruta = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
+                                    }
+                                    if ( !is_dir( $ruta ) ) {
+                                        crearCarpetaResultados($radarOriginal, $ruta);
+                                        clearstatcache();
+                                    }
+				
 				    print "${fl}00 feet" . PHP_EOL;
 				    $radar = $radarOriginal;
 				    $flm = fltoMeters($fl); 
@@ -81,12 +91,13 @@ function programaPrincipal(){
                                     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
 					calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, $angulosApantallamiento, $distanciasCobertura);
 					calculaCoordenadasGeograficas($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
-					crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode);
+					crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
 				    } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 				        print "[calculosFLdebajoRadar]";
 				        calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado);
 				        print "[generacionMallado]";
                                         generacionMallado($radar, $radioTerrestreAumentado, $malla);
+                                        // printMalla($malla);
                                         print "[mallaMarco]";
 	                                $mallaGrande = mallaMarco($malla);
 	                                print "[determinaContornos]";
@@ -94,7 +105,7 @@ function programaPrincipal(){
 					print "[calculaCoordenadasGeograficasB]";
 					calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos);
 					print "[crearKmlB]";
-    					crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode);
+    					crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
                                     }
 				    clearstatcache();
 				}// for interno

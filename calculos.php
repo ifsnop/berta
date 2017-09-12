@@ -765,6 +765,7 @@ function calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, &$listaC){
  * @param array $malla (ENTRADA)
  * @return array[] (SALIDA)
  */
+// FUNCION SUSCEPTIBLE DE ELIMINACION
 function getFila($y, $malla){
 	
 	$rowData = array();
@@ -801,6 +802,7 @@ function matrixToVector ($malla){
  * @param int $x (ENTRADA/SALIDA)
  * @param int $y (ENTRADA/SALIDA)
  */
+// FUNCION SUSCEPTIBLE DE MEJORA
 function getFirstPoint($malla, &$x, &$y, $searchValue){
 
 	$x = -1; $y = -1;
@@ -813,7 +815,7 @@ function getFirstPoint($malla, &$x, &$y, $searchValue){
 
 	while ($fila < count($malla) && !$salir){
 
-		$rowData = getFila($fila, $malla); // no quedamos con la fila de la matriz
+		$rowData = getFila($fila, $malla); // nos quedamos con la fila de la matriz
 		$j = 0;
 			
 		while ($j < count($rowData) && !$enc){
@@ -835,7 +837,7 @@ function getFirstPoint($malla, &$x, &$y, $searchValue){
 }
 
 /**
- * Funcion que deternina y establece un conjunto de 4 pixels que representan nuestro estado actual, para deerminar nuestra direccion actual y la siguiente
+ * Funcion que determina y establece un conjunto de 4 pixels que representan nuestro estado actual, para deerminar nuestra direccion actual y la siguiente
  * 
  * @param int $index (ENTRADA)
  * @param array $vector (ENTRADA)
@@ -978,6 +980,8 @@ function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm, $searchV
 		}
 	} while (($x != $startX || $y != $startY) && ($index < count($vector)));
 
+        // si hay mas de un punto en la lista, es que tenemos un contorno
+        // hay que cerrarlo para que luego se pinte bien.
 	if ( count($pointList) > 0 ) {
 		$pointList[] = $pointList[0];
 		return $pointList;
@@ -1135,7 +1139,7 @@ function determinaContornos($radar, $malla, $flm, &$listaContornos){
     // busca todos los contornos "externos" de las zonas con cobertura
     // rellenando el interior con el mismo valor que ponemos para marcar el contorno
     // seran contornos de zonas CON cobertura
-
+    $malla_original = $malla;
     while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 1 )) ) { // nos da el contorno de una isla
         // mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
 	// este paso podra ser opcional, desde que floodfill funciona bien no es necesario delimitar la zona
@@ -1148,8 +1152,11 @@ function determinaContornos($radar, $malla, $flm, &$listaContornos){
 	$nuevaMalla = $floodFiller->Scan($malla, $pInicial, $floodValue = 2, $searchValue = 1);
 
 	$malla = $nuevaMalla;
+	// $contorno = eliminaPuntosRepetidos($contorno);
 	$listaContornos[] = $contorno;
     }
+
+    // printContornos($listaContornos, $malla_original);
 
     // ahora buscamos los contornos dentro de las zonas con cobertura, seran islas SIN cobertura
     // para ello rellenamos la matriz con '2', y solo tendremos '2' y '0'
@@ -1171,7 +1178,23 @@ function determinaContornos($radar, $malla, $flm, &$listaContornos){
 	$nuevaMalla = $floodFiller->Scan($malla, $pInicial, $floodValue = 3, $searchValue = 0);
 
 	$malla = $nuevaMalla;
+	// $contorno = eliminaPuntosRepetidos($contorno);
 	$listaContornos[] = $contorno;
     }
     return true;
+}
+
+function eliminaPuntosRepetidos($contorno) {
+    $newContorno = array();
+    $ptosUsados = array();
+    foreach($contorno as $c) {
+        $k = $c['fila'] . ";" . $c['col'];
+        if ( !isset($ptosUsados[$k]) ) {
+            $ptosUsados[$k] = $c;
+            $newContorno[] = $c;
+        }
+    }
+    $newContorno[] = $contorno[0]; // necesitamos contornos cerrados
+    return $newContorno;
+
 }
