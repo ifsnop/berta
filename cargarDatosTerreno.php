@@ -54,7 +54,7 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado, $
 			// faster
 			$acimutActual = substr($contenidoFichero[$lineaActual++], 8) + 0;
 			// normaliza el número de acimuts para que siempre sea de 0 a 360º
-			$acimutActual = (round(($acimutActual / $radar['totalAzimuths']) * TOTAL_AZIMUTHS));
+			// $acimutActual = (round(($acimutActual / $radar['totalAzimuths']) * TOTAL_AZIMUTHS));
 			
 			// anotamos el número de obstaculos para ese acimut
 			$contadorObstaculos = $contenidoFichero[$lineaActual++];
@@ -89,7 +89,7 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado, $
 	    // echo "El alcance del radar es de " . $rango[0] . "NM" . PHP_EOL;
             // $radar['range']= $rango[0] * MILLA_NAUTICA_EN_METROS;
 	    $radar['range'] = $defaultRange * MILLA_NAUTICA_EN_METROS;
-	    echo "El alcance del radar es de " . $defaultRange . "NM y " . $radar['range'] . "m" . PHP_EOL;
+	    echo "El alcance del radar es de " . $defaultRange . "NM / " . $radar['range'] . "m" . PHP_EOL;
 	} else {
 	    echo "El alcance del radar es de " . $radar['range'] . "NM" . PHP_EOL;
 	    $radar['range']=$radar['range'] * MILLA_NAUTICA_EN_METROS;

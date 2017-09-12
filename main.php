@@ -44,7 +44,7 @@ function programaPrincipal(){
 
     $op = 1;
     do{
-	$op = menu();
+	// $op = menu();
 	
 	switch ($op) {
 		case 0:
@@ -52,15 +52,16 @@ function programaPrincipal(){
 			clearstatcache();
 			break;
 		case 1:
-			pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares, $ordenarPorRadar);
-			/*
-			$flMin = 10;
-			$flMax = 10;
-			$paso = 100;
+			//pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares, $ordenarPorRadar);
+			
+			$flMin = 60;
+			$flMax = 70;
+			$paso = 5;
 			$altitudeMode = 0;
-			$lugares[] = "canchoblanco";
+			$lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco constantina eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
 			$op = 0;
-			*/
+			$ordenarPorRadar = false;
+			
 			$altMode = altitudeModetoString($altitudeMode);
 			$infoCoral = getRadars($path, $parse_all = true);
 			// recoremos todas las localizaciones que nos ha dado el usuario
@@ -84,13 +85,13 @@ function programaPrincipal(){
                                         clearstatcache();
                                     }
 				
-				    print "${fl}00 feet" . PHP_EOL;
+				    print "Generando: ${fl}00 feet" . PHP_EOL;
 				    $radar = $radarOriginal;
 				    $flm = fltoMeters($fl); 
 				    // DISTINCION DE CASOS 
                                     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
 					calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, $angulosApantallamiento, $distanciasCobertura);
-					calculaCoordenadasGeograficas($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
+					calculaCoordenadasGeograficasA($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
 					crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
 				    } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 				        print "[calculosFLdebajoRadar]";

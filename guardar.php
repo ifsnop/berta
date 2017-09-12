@@ -76,7 +76,7 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode, $ordenarPorRadar
 					'<styleUrl>#transGreenPoly</styleUrl>
 				<Polygon>
 					<extrude>1</extrude>
-					<altitudeMode>' .$altMode. ' </altitudeMode>
+					<altitudeMode>' .$altMode. '</altitudeMode>
 					<outerBoundaryIs>
 						<LinearRing>
 							<coordinates>'. $cadena. PHP_EOL. '</coordinates>

@@ -111,16 +111,21 @@ function calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, &$angulos
 	 	for ($i=0; $i < $radar['totalAzimuths']; $i++){
  	 		
 	 		// obtenemos la ultima linea del array para cada azimut.
-	 		$tamaño = count($radar['listaAzimuths'][$i]);
+	 		if ( !isset($radar['listaAzimuths'][$i]) ) {
+	 		    print "ERROR, el azimuth $i no existe" . PHP_EOL;
+	 		    print_r($radar);
+	 		    exit(-1);	 		
+	 		}
+	 		$tamano = count($radar['listaAzimuths'][$i]);
 	 	
 	 		// obtenemos la altura del ultimo punto para cada azimuth
-	 		$obstaculoLimitante = $radar['listaAzimuths'][$i][$tamaño-1]['altura'];  
+	 		$obstaculoLimitante = $radar['listaAzimuths'][$i][$tamano-1]['altura'];  
 	 		
 	 		if ($flm >= $obstaculoLimitante){
 	 			
 	 			$earthToEvalPoint = $radioTerrestreAumentado + $obstaculoLimitante; 
 	 			// obtenemos el angulo del ultimo obstaculo de cada azimuth
-	 			$angulo = $radar['listaAzimuths'][$i][$tamaño-1]['angulo'];
+	 			$angulo = $radar['listaAzimuths'][$i][$tamano-1]['angulo'];
 	 				 	
 	 			$distanciasCobertura[$i]= sqrt ((pow($earthToRadar,2) + pow($earthToEvalPoint,2)) - 2 * $earthToRadar * $earthToEvalPoint * cos($angulo));
 	 	 		$gammaMax = acos((pow($distanciasCobertura[$i],2) + pow($earthToRadar,2) - pow($earthToEvalPoint,2)) / (2 * $earthToRadar * $distanciasCobertura[$i]));
@@ -145,9 +150,9 @@ function calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, &$angulos
 	 	 		
 	 	 		 if(buscarPuntosLimitantes($radar['listaAzimuths'][$i], $flm, $alturaPrimerPtoSinCob, $anguloPrimerPtoSinCob, $alturaUltimoPtoCob, $anguloUltimoPtoCob)){
 	 	 		 	$anguloLimitante = (($flm-$alturaUltimoPtoCob) * (($anguloPrimerPtoSinCob - $anguloUltimoPtoCob)  / ($alturaPrimerPtoSinCob - $alturaUltimoPtoCob))) + $anguloUltimoPtoCob;
+	 	 		 } else {
+	 	 		 	die("ERROR MALIGNO !! No deberias haber entrado aqui" . PHP_EOL);
 	 	 		 }
-	 	 		 else 
-	 	 		 	echo " ERROR MALIGNO !! No deberias haber entrado aqui" . PHP_EOL;
 	 	 		 	
 	 	 		 if ($anguloLimitante > $anguloMaxCob)
 	 	 		 	 $distanciasCobertura[$i] = $radioTerrestreAumentado * $anguloMaxCob/ MILLA_NAUTICA_EN_METROS;
@@ -168,7 +173,7 @@ function calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, &$angulos
  * @param int $flm, en metros (ENTRADA)
  * @param array $coordenadasGeograficas (ENTRADA/SALIDA)
  */
-function calculaCoordenadasGeograficas( $radar, $coordenadas, $distanciasCobertura, $flm, &$coordenadasGeograficas){
+function calculaCoordenadasGeograficasA( $radar, $coordenadas, $distanciasCobertura, $flm, &$coordenadasGeograficas){
 	
 	// Calcula el paso en funcion del numero maximo de azimuth (puede ser desde 360 o 720)
 	$paso = 360.0 / $radar['totalAzimuths'];
@@ -322,7 +327,7 @@ function miraSiHayCobertura(&$listaObstaculosAmpliada, $flm){
  * @param float $earthToFl (ENTRADA/SALIDA)
  * @param float $radarSupTierra (ENTRADA/SALIDA)
  */
-function calculador($radar,$listaObstaculos, $radioTerrestreAumentado, $flm, $obstaculoLimitante, &$gammaMax, &$theta0, &$earthToRadar, &$earthToEvalPoint, &$earthToFl, &$radarSupTierra){
+function calculador($radar, $listaObstaculos, $radioTerrestreAumentado, $flm, $obstaculoLimitante, &$gammaMax, &$theta0, &$earthToRadar, &$earthToEvalPoint, &$earthToFl, &$radarSupTierra){
 	
 	$radarSupTierra = $radar['towerHeight'] + $radar['terrainHeight'];  // distancia del radar a la superficie terrestre
 
@@ -398,7 +403,7 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 	 	miraSiHayCobertura($listaObstaculosAmpliada, $flm);
 	 	
 	 	// se calcula el punto limitante
-	 	$tamaño = count ($listaObstaculosAmpliada);
+	 	$tamano = count ($listaObstaculosAmpliada);
 	 	$numPtosAzimut = count ($radar['listaAzimuths'][$i]);
 	 	$obstaculoLimitante = $radar['listaAzimuths'][$i][$numPtosAzimut-1]['altura'];
 	 	$anguloLimitante = $radar['listaAzimuths'][$i][$numPtosAzimut-1]['angulo'];
