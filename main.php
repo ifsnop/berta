@@ -54,11 +54,12 @@ function programaPrincipal(){
 		case 1:
 			//pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares, $ordenarPorRadar);
 			
-			$flMin = 60;
-			$flMax = 70;
-			$paso = 5;
+			$flMin = 0;
+			$flMax = 400;
+			$paso = 1;
 			$altitudeMode = 0;
 			$lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco constantina eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
+			// $lugares = array("aspontes");
 			$op = 0;
 			$ordenarPorRadar = false;
 			

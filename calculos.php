@@ -1046,7 +1046,8 @@ class FloodFiller {
 	$this->map          = $map;
 	$this->fill         = array();
 	$this->searchNext   = array();
-	$this->searchNext[] = array('x' => $point[ 'x' ], 'y' => $point[ 'y' ]);
+	//$this->searchNext[] = array('x' => $point[ 'x' ], 'y' => $point[ 'y' ]);
+	$this->searchNext[$point['x'] . ";" . $point['y']] = array('x' => $point[ 'x' ], 'y' => $point[ 'y' ]);
 	$this->floodValue   = $floodValue;
 	$this->searchValue  = $searchValue;
 	
@@ -1055,9 +1056,23 @@ class FloodFiller {
 	while ( !empty( $this->searchNext ) ) {
 	
 		// Get the next square item and erase it from the list
-		$next = array_pop( $this->searchNext );
-		$this->x = $next[ 'x' ];
-		$this->y = $next[ 'y' ];
+//		print "===========";
+//		print_r($this->searchNext);
+		// $key = key( $this->searchNext );
+		// $this->searchNext = array_slice($this->searchNext, 1);
+		// list($this->x, $this->y) = explode(";", $key);
+		
+		$value = reset($this->searchNext);
+		$key = key($this->searchNext);
+		unset($this->searchNext[$key]);
+		$this->x = $value['x'];
+		$this->y = $value['y'];
+		
+//		print $key . " >>" . $this->x . " " . $this->y . PHP_EOL;
+//		print_r($this->searchNext);
+//		print PHP_EOL . PHP_EOL;
+		// $this->x = $next[ 'x' ];
+		// $this->y = $next[ 'y' ];
 	
 		// Check square. If it's traversable we add
 		// the square to our fill list and we turn the
@@ -1085,7 +1100,12 @@ class FloodFiller {
 		// if we can fill this square we add it to our queue
 		if ( isset($this->map[ $checkY ][ $checkX ]) &&
 			$this->map[ $checkY ][ $checkX ] == $this->searchValue ) {
-			$this->searchNext[] = array( 'x' => $checkX, 'y' => $checkY );
+			// print count($this->searchNext) . " ";
+			// optimizar esto para que no inserte dos veces el mismo punto
+			// $this->searchNext[] = array( 'x' => $checkX, 'y' => $checkY );
+			$this->searchNext[$checkX . ";" . $checkY] = array( 'x' => $checkX, 'y' => $checkY );
+			//print_r($this->searchNext);
+			// die("IFSNOP");
 		}
 	}
 
