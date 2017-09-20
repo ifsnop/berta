@@ -18,7 +18,7 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado, $
 
 	// esta funcion guarda el contenido del fichero en un array 
 	if ( false === ($contenidoFichero = file($nombreFichero, FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
-		print "error, no ha sido posible leer el fichero" . PHP_EOL;
+		print "ERROR no ha sido posible leer el fichero" . PHP_EOL;
 		exit;
 	}
 	// TRATAMIENTO DE LA INFORMACION CAPTURADA (Primera parte del fichero)
@@ -39,7 +39,7 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado, $
 	$lineaActual = 7; // primera línea donde comienzan los AZIMUT
 	
 	// recorremos los azimuths
-	print "cargando contenido de >$nombreFichero< ";
+	print "cargando contenido de >$nombreFichero< totalAzimuths(" . $radar['totalAzimuths'] . ")" . PHP_EOL;
 	for($i = 0; $i < $radar['totalAzimuths']; $i++){
 			
 			$listaObstaculos = array();

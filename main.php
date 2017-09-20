@@ -1,5 +1,8 @@
 <?php
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // INCLUSION DE FICHEROS
 include 'cargarDatosTerreno.php';
 include 'cargarDatosCoordenadas.php';
@@ -54,12 +57,18 @@ function programaPrincipal(){
 		case 1:
 			//pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares, $ordenarPorRadar);
 			
-			$flMin = 0;
-			$flMax = 400;
+			// tenemos un problema con constantina a 2800, que el primer punto no tiene cobertura y hay que probar
+			// una nueva solucion
+			
+			// ademas, todos los scr por debajo del radar (caso b) que tengan 720 azimut, se pintan mal
+			// ejemlo: constantina, auch lias...
+			
+			$flMin = 28;
+			$flMax = 36;
 			$paso = 1;
 			$altitudeMode = 0;
-			$lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco constantina eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
-			// $lugares = array("aspontes");
+			$lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
+			$lugares = array("portosanto");
 			$op = 0;
 			$ordenarPorRadar = false;
 			
@@ -88,7 +97,7 @@ function programaPrincipal(){
 				
 				    print "Generando: ${fl}00 feet" . PHP_EOL;
 				    $radar = $radarOriginal;
-				    $flm = fltoMeters($fl); 
+				    $flm = $fl*100*FEET_TO_METERS; 
 				    // DISTINCION DE CASOS 
                                     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
 					calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, $angulosApantallamiento, $distanciasCobertura);
