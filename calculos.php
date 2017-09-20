@@ -193,15 +193,15 @@ function calculaCoordenadasGeograficasA( $radar, $coordenadas, $distanciasCobert
  		else
  			$p =  rad2deg( acos($numerador / $denominador) );
  		
- 			// asignacion de valores a la estructura de datos
+ 		// asignacion de valores a la estructura de datos
  		if ( $i < ($radar['totalAzimuths'] / 2) )
  			$coordenadasGeograficas[$i]['longitud'] = $coordenadas['longitud'] + $p;
  		else
  			$coordenadasGeograficas[$i]['longitud'] = $coordenadas['longitud'] - $p;
  							
- 			$coordenadasGeograficas[$i]['latitud'] = FRONTERA_LATITUD - $r;
- 
- 			$coordenadasGeograficas[$i]['altura'] = $flm;
+ 		$coordenadasGeograficas[$i]['latitud'] = FRONTERA_LATITUD - $r;
+		$coordenadasGeograficas[$i]['altura'] = $flm;
+
  	}
 }
 
