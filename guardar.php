@@ -55,7 +55,7 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode, $ordenarPorRadar
 	$rgb = "7d00ff00"; 
 	$nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
 	$radarWithFL = $radar['site']."_FL" .  $nivelVuelo;
-	$nombreFich = $ruta . $radarWithFL . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
+	$fileName = $ruta . $radarWithFL; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
 	$contenido = "";
 	$contenido = '<?xml version="1.0" encoding="UTF-8"?>'.
@@ -86,25 +86,17 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode, $ordenarPorRadar
 			</Placemark>
  		</Document>
 	</kml>';
-	
-	
-	
-	echo "NOMBRE FICH: " . $nombreFich. PHP_EOL;
-	$kml = fopen($nombreFich, 'w+'); 
-	
-	if (is_writable($nombreFich)){
 
-		fwrite ($kml, $contenido);
-		fclose($kml);
-		if (rename ($nombreFich, $ruta . "/" . $radarWithFL . ".kml"))
-			echo "KML GENERADO CORRECTAMENTE". PHP_EOL;
-		else 
-			echo "Error al cambiar la extension del fichero, por favor compruebe la carpeta resultados."  . PHP_EOL;
-	}
-	else
-		echo "Error al intentar escribir en el fichero" . PHP_EOL;
-	
-	clearstatcache();
+	print "NOMBRE FICHERO: " . $fileName . ".kmz" . PHP_EOL;
+	$zip = new ZipArchive();
+        if ( false === $zip->open(
+            $fileName . ".kmz",
+            ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE)
+        ) {
+            print "ERROR can't create " . $fileName . ".kmz" . PHP_EOL; exit;
+        }
+        $zip->addFromString($radarWithFL . ".kml", $contenido);
+        $zip->close();
 }
 
 /**
@@ -118,90 +110,64 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode, $ordenarPorRadar
  * @param boolean $ordenarPorRadar Si true, una carpeta por radar, si false una carpeta por nivel de vuelo (ENTRADA)
  */
 function crearKmlB($listaC, $radar, $ruta, $fl, $altMode, $ordenarPorRadar){
- 
-	$rgb = "7d00ff00";
-	$contenido = ""; $cadenaOuter = ""; $cadena = ""; $nombreFich = "" ; $cadenaInner = "";
-	
-	$numIslas = count($listaC);
-	$nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
-	$radarWithFL = $radar['site']."_FL" .  $nivelVuelo;
-	$nombreFich = $ruta . $radarWithFL . ".txt"; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
-	
-        if ( count($listaC) == 0 ) {
-            print "No se genera fichero para FL $nivelVuelo porque no hay cobertura" . PHP_EOL;
-            return false;
-        }
-	$cadenaOuter = toStringB($listaC[0]);
 
+    $rgb = "7d00ff00";
+    $contenido = ""; $cadenaOuter = ""; $cadena = ""; $cadenaInner = "";
 
-	echo "NOMBRE FICH: " . $nombreFich. PHP_EOL;
-	$kml = fopen($nombreFich, 'w+');
-	
-	$contenido = '<?xml version="1.0" encoding="UTF-8"?>'.
-	'<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
-	
+    $numIslas = count($listaC);
+    $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+    $radarWithFL = $radar['site']."_FL" .  $nivelVuelo;
+    $fileName = $ruta . $radarWithFL;
+    if ( count($listaC) == 0 ) {
+        print "No se genera fichero para FL $nivelVuelo porque no hay cobertura" . PHP_EOL;
+        return false;
+    }
+    $cadenaOuter = toStringB($listaC[0]);
+
+    $contenido = '<?xml version="1.0" encoding="UTF-8"?>
+	<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
 	<Document>
-			
 	<name>' . $radarWithFL . '</name>
-			
 	<Style id="transGreenPoly">
-		<LineStyle>
-			<width>1.5</width>
-		</LineStyle>
-		<PolyStyle>
-			<color>'.$rgb .'</color>
-		</PolyStyle>
+            <LineStyle><width>1.5</width></LineStyle>
+            <PolyStyle><color>' . $rgb . '</color></PolyStyle>
 	</Style>
-	
 	<Placemark>
-			
-	<name>' .  $radarWithFL . '</name>
-			
-	<styleUrl>#transGreenPoly</styleUrl>
-		<MultiGeometry>
-			<Polygon>
-				<extrude>1</extrude>
-					<altitudeMode>' . $altMode . '</altitudeMode>'. 
-					'<outerBoundaryIs>
-		<LinearRing>
-			<coordinates>'. $cadenaOuter . '</coordinates>
-		</LinearRing>
-	 </outerBoundaryIs>' ;
-	
-	
-	if (is_writable($nombreFich)){
-	
-		fwrite ($kml, $contenido);
+            <name>' .  $radarWithFL . '</name>
+	    <styleUrl>#transGreenPoly</styleUrl>
+	    <MultiGeometry>
+		<Polygon>
+                <extrude>1</extrude>
+		<altitudeMode>' . $altMode . '</altitudeMode>
+		<outerBoundaryIs>
+		    <LinearRing><coordinates>'. $cadenaOuter . '</coordinates></LinearRing>
+	        </outerBoundaryIs>';
 
- 	     for ($isla = 1; $isla < $numIslas; $isla++){
-	
-			$cadenaInner = toStringB($listaC[$isla]);
-		
-			$contenido2 = '<innerBoundaryIs>
-			<LinearRing>
-				<coordinates>' . $cadenaInner. '</coordinates>
-			</LinearRing>
-	 			</innerBoundaryIs>';
-			
-				fwrite ($kml, $contenido2);
- 	    }// for  
- 	    	$contenido3 = '</Polygon></MultiGeometry></Placemark></Document></kml>';
- 	    	
-			fwrite ($kml, $contenido3);
-			if (rename ($nombreFich, $ruta . "/" . $radarWithFL . ".kml")){
-				echo "KML GENERADO CORRECTAMENTE". PHP_EOL;
-			}
-			else{
-				echo "Error al cambiar la extension del fichero, por favor compruebe la carpeta resultados."  . PHP_EOL;			
-			}
-	}
-	else{
-		echo "Error al intentar escribir en el fichero" . PHP_EOL;
-	}
-	
-fclose($kml);
-clearstatcache();
+    // el resto de islas son interiores siempre
+    for ($isla = 1; $isla < $numIslas; $isla++) {
+	$cadenaInner = toStringB($listaC[$isla]);
+	$contenido .= '
+	        <innerBoundaryIs>
+		    <LinearRing><coordinates>' . $cadenaInner. '</coordinates></LinearRing>
+                </innerBoundaryIs>';
+    }// for
+    $contenido .= '
+                </Polygon>
+            </MultiGeometry>
+        </Placemark>
+        </Document></kml>';
 
+
+    print "NOMBRE FICHERO: " . $fileName . ".kmz" . PHP_EOL;
+    $zip = new ZipArchive();
+    if ( false === $zip->open(
+        $fileName . ".kmz",
+        ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE)
+    ) {
+        print "ERROR can't create " . $fileName . ".kmz" . PHP_EOL; exit;
+    }
+    $zip->addFromString($radarWithFL . ".kml", $contenido);
+    $zip->close();
 }
 
 /**

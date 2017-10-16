@@ -38,7 +38,6 @@ function programaPrincipal(){
 	$poligono = false;
 	$ordenarPorRadar = true;
 	$lugares = array();
-	$coordenadasGeograficas = array();
 	
 	// Definicion de la estructura de datos que guarda las coordenadas del kml.
 	$coordenadasGeograficas = array ( array('longitud' => 0, 'latitud' => 0, 'altura' => 0) );
@@ -61,12 +60,13 @@ function programaPrincipal(){
 			// ademas, todos los scr por debajo del radar (caso b) que tengan 720 azimut, se pintan mal
 			// ejemlo: constantina, auch lias...
 			
-			$flMin = 45;
-			$flMax = 45;
+			$flMin = 0;
+			$flMax = 400;
 			$paso = 1;
 			$altitudeMode = 0;
 			$lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
-			$lugares = array("begas");
+			// $lugares = array("auchlias", "begas");
+			$lugares = array("montejunto");
 			$op = 0;
 			$ordenarPorRadar = false;
 			
@@ -100,6 +100,7 @@ function programaPrincipal(){
                                     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
                                         $angulosApantallamiento = array();
 	                                $distanciasCobertura = array();
+                                        $coordenadasGeograficas = array();
 
 					calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, $angulosApantallamiento, $distanciasCobertura);
 					calculaCoordenadasGeograficasA($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
