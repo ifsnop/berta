@@ -60,18 +60,20 @@ function programaPrincipal(){
 			// ademas, todos los scr por debajo del radar (caso b) que tengan 720 azimut, se pintan mal
 			// ejemlo: constantina, auch lias...
 			
-			$flMin = 0;
-			$flMax = 400;
+			$flMin = 13;
+			$flMax = 13;
 			$paso = 1;
 			$altitudeMode = 0;
 			$lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
 			// $lugares = array("auchlias", "begas");
-			$lugares = array("montejunto");
+			$lugares = array("canchoblanco");
 			$op = 0;
 			$ordenarPorRadar = false;
 			
 			$altMode = altitudeModetoString($altitudeMode);
 			$infoCoral = getRadars($path, $parse_all = true);
+			// para probar con una distancia más pequeña y forzar alcance a 20NM
+			// $infoCoral['canchoblanco']['secondaryMaximumRange'] = 20;
 			// recorremos todas las localizaciones que nos ha dado el usuario
                         foreach($lugares as $lugar) {
 				$coordenadas = cargarDatosCoordenadas($infoCoral, $lugar);
@@ -80,6 +82,8 @@ function programaPrincipal(){
 				    $radioTerrestreAumentado,
 				    $defaultRange = $infoCoral[strtolower($lugar)]['secondaryMaximumRange']
 				);
+				// para probar con una distancia más pequeña y forzar alcance a 20NM
+				// $radarOriginal['range'] = 20*1852;
 				$hA = $radarOriginal['towerHeight'] + $radarOriginal['terrainHeight'];
 				for ($fl = $flMin; $fl <= $flMax; $fl += $paso){
 				    if ( $ordenarPorRadar ) {
@@ -109,8 +113,9 @@ function programaPrincipal(){
 				        print "[calculosFLdebajoRadar]";
 				        calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado);
 				        print "[generacionMallado]";
-                                        generacionMallado($radar, $radioTerrestreAumentado, $malla);
-                                        // printMalla($malla);
+                                        $malla = generacionMallado($radar, $radioTerrestreAumentado);
+                                        //printMalla($malla);
+                                        storeMallaAsImage($malla, $lugar);
                                         print "[mallaMarco]";
 	                                $mallaGrande = mallaMarco($malla);
 	                                print "[determinaContornos]";

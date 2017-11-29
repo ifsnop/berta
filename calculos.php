@@ -246,7 +246,7 @@ function interpolarPtosTerreno($listaObstaculos, $radioTerrestreAumentado, $caso
 	// PEDIR AL USUARIO LA DISTANCIA QUE TIENE QUE HABER ENTRE LOS PTOS
 	//$anguloMaximo=calculoAnguloMaximoEntrePtos($radioTerrestreAumentado);
 	
-	$anguloMaximo = (DISTANCIA_ENTRE_PUNTOS * MILLA_NAUTICA_EN_METROS) / $radioTerrestreAumentado; // paso  0.5NM a grados
+	$anguloMaximo = (DISTANCIA_ENTRE_PUNTOS * MILLA_NAUTICA_EN_METROS) / $radioTerrestreAumentado; // paso de 5NM a grados
 	$n = count($listaObstaculos); //obtenemos la long de la lista obstaculos del azimuts  
     
 	for ($i = 0; $i < $n-1 ; $i++){//recorremos la lista de obstaculos del azimut para ver donde tenemos q insertar puntos nuevos (MENOS EL ULTIMO OBSTACULO!)
@@ -257,7 +257,10 @@ function interpolarPtosTerreno($listaObstaculos, $radioTerrestreAumentado, $caso
 		$diferencia = $listaObstaculos[$i+1]['angulo'] -  $listaObstaculos[$i]['angulo'];
 		
 		if ($diferencia > $anguloMaximo){// es necesario interpolar
+		        //print $diferencia . PHP_EOL;
+		        //print $anguloMaximo . PHP_EOL;
 			$ptosQueMeter = round(($listaObstaculos[$i+1]['angulo'] -  $listaObstaculos[$i]['angulo']) / $anguloMaximo);
+			//print $ptosQueMeter . PHP_EOL;exit();
 			$distancia = ($listaObstaculos[$i+1]['angulo'] -  $listaObstaculos[$i]['angulo']) / ($ptosQueMeter+1); // se le suma una xq son segmentos
 					
 			for ($j = 0; $j < $ptosQueMeter; $j++){ // creamos los ptos
@@ -385,7 +388,7 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
 function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 	
 	$anguloMaxCob = calculaAnguloMaximaCobertura($radar, $radioTerrestreAumentado, $flm);
-	 $X = (0.1 *  MILLA_NAUTICA_EN_METROS ) / ( RADIO_TERRESTRE * (4/3) ); // angulo (en radianes) entre el ultimo pto de cada acimut y el pto extra para una distancia de 0.1 NM
+	$X = (0.1 *  MILLA_NAUTICA_EN_METROS ) / ( RADIO_TERRESTRE * (4/3) ); // angulo (en radianes) entre el ultimo pto de cada acimut y el pto extra para una distancia de 0.1 NM
 	
 	$ptosNuevos = array();
 	$ptoExtra = array( 'angulo' => 0, 'altura' => 0, 'estePtoTieneCobertura' => false);
@@ -395,7 +398,10 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 	
 	for ($i=0; $i < $radar['totalAzimuths']; $i++){
 	 	
+//              print_r($radar['listaAzimuths'][$i]);
 	 	$listaObstaculosAmpliada = interpolarPtosTerreno($radar['listaAzimuths'][$i], $radioTerrestreAumentado, 1); //interpolamos puntos terreno
+//	 	print_r($listaObstaculosAmpliada);
+//	 	exit();
 	 	miraSiHayCobertura($listaObstaculosAmpliada, $flm);
 	 	
 	 	// se calcula el punto limitante
@@ -494,108 +500,68 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 }
 				
 /**
- * Funcion que busca el punto m�s pr�ximo al punto dado dentro de una lista de obstaculos comparando los angulos y devuelve la posicion de ese punto
- * 
+ * Funcion que busca el punto más próximo al punto dado dentro de una
+ * lista de obstáculos comparando los angulos y devuelve la posicion
+ * de ese punto en la lista de obstáculos.
+ *
  * @param array $listaObstaculos (ENTRADA)
  * @param float $punto (ENTRADA)
  * @return number (SALIDA)
  */
 function buscaDistanciaMenor($listaObstaculos, $punto){
 
-    // print "punto:$punto" . PHP_EOL;
-    // $ptometodo1 = false;
-    if ( count($listaObstaculos) == 1 ) {
-        return 0;
+    if ( !isset($listaObstaculos) || !is_array($listaObstaculos) ) {
+        die ("buscaDistanciaMenor: $$listaObstaculos debería ser un array");
     }
+    $cuentaListaObstaculos = count($listaObstaculos);
 
     $min_new_act = abs($punto - $listaObstaculos[0]['angulo']);
-    for ($i = 1; $i < count ($listaObstaculos) ; $i++) {
+
+    for ( $i = 1; $i < $cuentaListaObstaculos ; $i++ ) {
 	$min_new_next = abs($punto - $listaObstaculos[$i]['angulo']);
 
         if ( $min_new_act < $min_new_next ) {
             return ($i-1);
-            // $ptometodo1 = ($i-1);
-            // break;
         }
         $min_new_act = $min_new_next;
     }
     return ($i-1);
-
-//    if ( $ptometodo1 === false ) {
-//        $ptometodo1 = ($i-1);
-//    }
-/*
-    $posPunto = 0;
-	
-    // miramos la diferencia con el primer punto para poder comparar 
-    $min = abs($punto - $listaObstaculos[0]['angulo']);
-    
-    for ($i = 0; $i < count ($listaObstaculos); $i++){
-
-	if(abs($punto - $listaObstaculos[$i]['angulo']) < $min){
-            // si la diferencia es mas peque�a que el min anterior actualizamos min 
-	    $min = abs($punto - $listaObstaculos[$i]['angulo']);
-	    $posPunto = $i; // me guardo el punto que tiene la distancia minima hasta el momento
-	}
-    }
-    return $posPunto; //  devolvemos la posicion del punto xq lo que nos interesa luego es mirar si tiene cobertura
-*/
-    // $ptometodo2 = $posPunto;
-/*
-    if ( $ptometodo1 != $ptometodo2 ) {
-        print "PUNTO: " . $punto . PHP_EOL;
-        print_r($listaObstaculos);
-        
-        for ($i = 0; $i < count ($listaObstaculos)-1; $i++) {
-	    print "$i]" . abs($punto - $listaObstaculos[$i]['angulo']) . PHP_EOL;
-	    print ($i+1) . "]" . abs($punto - $listaObstaculos[$i+1]['angulo']) . PHP_EOL;
-	    
-        }
-        
-        die ("pto1: $ptometodo1 pto2: $ptometodo2" . PHP_EOL);
-        exit(0);
-    }
-
-    return $ptometodo;
-*/
 }
 
+
 /**
- * Dadas las coordenadas del pto central de una casilla, nos devuelve el acimut de la misma
- * 
+ * Dadas las coordenadas respecto del pto central de una casilla, nos
+ * devuelve el acimut de la misma.
+ *
  * @param int $x (ENTRADA)
  * @param int $y (ENTRADA)
- * @return number (SALIDA)
+ * @return float (SALIDA)
  */
 function calculaAcimut($x, $y){
-	
-	$acimut =0;
-	$acimutCelda =0;
-		
-	if ($x < 0){
-		$acimut = rad2deg( atan($y / $x) + PI );
+
+    $acimut = 0;
+
+    if ($x < 0){
+    	$acimut = rad2deg( atan($y / $x) + PI );
+    } elseif ($x > 0){
+        if ($y < 0){
+            $acimut = rad2deg( atan($y / $x) + 2 * PI );
+        } else{ // $y>= 0
+            $acimut = rad2deg( atan($y / $x) );
+        }
+    } elseif ($x == 0) {
+        if ($y < 0) {
+            $acimut = rad2deg( ( 3 * PI ) / 2 );
+	} elseif ($y > 0) {
+            $acimut = rad2deg( PI / 2 );
 	}
-	elseif($x > 0){
-			if ($y < 0){
-				$acimut = rad2deg( atan($y / $x) + 2 * PI );
-			}
-			else{ // $y>= 0
-				$acimut = rad2deg( atan($y / $x) );
-			}
-	}
-	elseif ($x == 0){
-			if($y < 0){
-				$acimut = rad2deg( ( 3 * PI ) / 2 );
-			}
-			elseif($y > 0){
-				$acimut = rad2deg( PI / 2 );
-			}
-	}
-	$acimutCelda = 90 - $acimut;
-	if ($acimutCelda < 0)
-		$acimutCelda = $acimutCelda + 360;
-		
-	return $acimutCelda;
+    }
+
+    $acimut = 90.0 - $acimut;
+    if ($acimut < 0) {
+        $acimut = $acimut + 360.0;
+    }
+    return $acimut;
 }
 
 /**
@@ -604,14 +570,14 @@ function calculaAcimut($x, $y){
  * 
  * @param array $radar (ENTRADA)
  * @param float $radioTerrestreAumentado (ENTRADA)
- * @param array $malla (ENTRADA/SALIDA)
+ * @return array $malla (SALIDA)
  */
-function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
+function generacionMallado($radar, $radioTerrestreAumentado){
 	
 	// pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
 	$tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
-	$xR = 0; // coordenada x del radar
-	$yR = 0; // coordenada y del radar
+	// $xR = 0; // coordenada x del radar
+	// $yR = 0; // coordenada y del radar
 	$radioTerrestreAumentadoEnMillas  = $radioTerrestreAumentado / MILLA_NAUTICA_EN_METROS;
 	
 	$malla = array(); // creamos una malla vacia 
@@ -622,8 +588,11 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 	// CENTRAMOS LA MALLA Y CALCULAMOS EL PTO MEDIO DE CADA CELDA
 	
 	$tamMallaMitad = $tamMalla / 2.0;
+	print "radar['range']: " . $radar['range'] . PHP_EOL;
+	print "Malla Mitad: " . $tamMallaMitad . PHP_EOL;
+
 	// CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
-        $x_fixed = -( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA) 
+        $x_fixed = -( $tamMallaMitad * TAM_CELDA ); // + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA) 
         
         // Factor de corrección según el número de azimut total que haya en el fichero de screening.
         // Como los ángulos son siempre 360, si en el fichero de screening se define otro número,
@@ -631,17 +600,22 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
         // según screening. Es decir, si hay 720 azimut, y nos sale un ángulo de 360, realmente será de 720.
         
         $ajusteAzimut = $radar['totalAzimuths'] / 360.0;
-        
-	for ($i = 0; $i < $tamMalla; $i++){ // recorre las columnas de la malla 
-	        print "[$i]";
+        print "[Tamaño malla: " . $tamMalla . "]" . PHP_EOL;
+        print "[00%]";
+        $countPct_old = 0;
+	for ($i = 0; $i <= $tamMalla; $i++){ // recorre las columnas de la malla 
+	        //print "[$i]";
+	        $countPct = $i*100.0 / $tamMalla;
+	        if ( ($countPct - $countPct_old) > 10 ) { print "[" . round($countPct) . "%]"; $countPct_old = $countPct; }
+
 		// CALCULAMOS LAS COORDENADAS X DE CADA CELDA
 	        $x = $x_fixed + ($i * TAM_CELDA);
 	        // $x = ($i * TAM_CELDA) - ( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD );
 		
 		// CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
-	        $y_fixed = ( $tamMallaMitad * TAM_CELDA ) - ( TAM_CELDA_MITAD );//  #- ( $j * TAM_CELDA ) 
+	        $y_fixed = ( $tamMallaMitad * TAM_CELDA ); // - ( TAM_CELDA_MITAD );//  #- ( $j * TAM_CELDA ) 
 
-		for ($j = 0; $j < $tamMalla; $j++){ // recorre las filas de la malla 
+		for ($j = 0; $j <= $tamMalla; $j++){ // recorre las filas de la malla 
 			// CALCULAMOS LAS COORDENADAS Y DE CADA CELDA
                         $y = $y_fixed - ($j * TAM_CELDA);
                         // $y = ( $tamMallaMitad * TAM_CELDA ) - ( TAM_CELDA_MITAD ) - ( $j * TAM_CELDA );
@@ -659,19 +633,28 @@ function generacionMallado($radar, $radioTerrestreAumentado, &$malla){
 			// al dividir entre el radio tenemos el angulo deseado
 			// $distanciaCeldaAradar = ( sqrt( pow( ($xR - $x),2 )+ pow( ($yR - $y),2) ) ) / $radioTerrestreAumentadoEnMillas;
 			$distanciaCeldaAradar = ( sqrt(pow($x,2)+pow($y,2)) ) / $radioTerrestreAumentadoEnMillas;
-			
+
+                        // print "$i)" . $azimutCelda . "|" . ( sqrt(pow($x,2)+pow($y,2)) ) . "|" . $x . "|" . $y . " ";
+                        // print "$i)" . $x . "|" . $y . "  ";
+
 			// busca la posicion de la  distancia mas proxima en la lista de obstaculos del acimut aproximado (el menor)
 			$pos = buscaDistanciaMenor($radar['listaAzimuths'][$azimutCelda], $distanciaCeldaAradar); 
 			// print "(" . $pos . "/" . count($radar['listaAzimuths'][$azimutCelda]) . ")";
 				
 			if ( ($radar['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false){
+			        // aqui trasponemos la matriz, no se si es sin querer o es a propósito
 				$malla[$j][$i] = 0;
+				//print "0";
 			}
 			else{
 				$malla[$j][$i] = 1; // entiendase el valor 1 para representar el caso en el que  hay cobertura y 0 para lo contrario
+				//print "1";
 			}	
-		}	
+		}
+		// print PHP_EOL . PHP_EOL;
 	}
+	print "[100%]" . PHP_EOL;
+	return $malla;
 }
 
 /**
@@ -711,8 +694,8 @@ function mallaMarco($malla){
  */
 function calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, &$listaC){
     // DUDA ¿es necesario?
-    $xR = 0;
-    $yR = 0;
+    // $xR = 0;
+    // $yR = 0;
     // pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
     $tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
     $tamMallaMitad = $tamMalla / 2.0;
