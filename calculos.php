@@ -513,17 +513,15 @@ function buscaDistanciaMenor($listaObstaculos, $punto){
     if ( !isset($listaObstaculos) || !is_array($listaObstaculos) ) {
         die ("buscaDistanciaMenor: $$listaObstaculos debería ser un array");
     }
+
     $cuentaListaObstaculos = count($listaObstaculos);
-
-    $min_new_act = abs($punto - $listaObstaculos[0]['angulo']);
-
+    $min_new_old = abs($punto - $listaObstaculos[0]['angulo']);
     for ( $i = 1; $i < $cuentaListaObstaculos ; $i++ ) {
-	$min_new_next = abs($punto - $listaObstaculos[$i]['angulo']);
-
-        if ( $min_new_act < $min_new_next ) {
+	$min_new_act = abs($punto - $listaObstaculos[$i]['angulo']);
+        if ( $min_new_old < $min_new_act ) {
             return ($i-1);
         }
-        $min_new_act = $min_new_next;
+        $min_new_old = $min_new_act;
     }
     return ($i-1);
 }
