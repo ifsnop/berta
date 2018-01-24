@@ -59,6 +59,15 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado, $
 			// anotamos el número de obstaculos para ese acimut
 			$contadorObstaculos = $contenidoFichero[$lineaActual++];
 			
+                        // insertamos el radar como primer obstaculo, para resolver el caso de que
+                        // el primer obstaculo este muy alejado. En matlab no se pinta nada hasta que no
+                        // llega al primer obstaculo.
+                        $listaObstaculos[] = array(
+                            'angulo' => 0,
+                            'altura' => $radar['towerHeight'] + $radar['terrainHeight'],
+                            'estePtoTieneCobertura' => false
+                        );
+
 			// recorre el numero de obstaculos para cada azimuths
 			for ($j = 0; $j < $contadorObstaculos; $j++) { 
 				$pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';
@@ -67,12 +76,13 @@ function cargarDatosTerreno ($nombreFichero = NULL, &$radioTerrestreAumentado, $
 					die("Error durante la comparacion linea($lineaActual) contenido(" . $contenidoFichero[$lineaActual] . ")");
 				}
 				// convierte el string a numero y los almacena en el array
-				$listaObstaculos[$j] = array(
+				$listaObstaculos[] = array(
 				    'angulo' => floatval ($salida[1]), 
 				    'altura' => floatval ($salida[2]), 
 				    'estePtoTieneCobertura' => false);
 				$lineaActual++;
 			}
+			// anadimos un obstaculo mas por que hemos insertado el radar como primer obstaculo
 			$radar['listaAzimuths'][$acimutActual] = $listaObstaculos;	
 	} // end for exterior
 	
