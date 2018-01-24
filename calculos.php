@@ -562,7 +562,13 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 
             $listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, array($ptoExtra));
 	}
+
+        // safety check
+	if ( !isset($listaObstaculosAmpliada) || !is_array($listaObstaculosAmpliada) ) {
+            die ("buscaDistanciaMenor: $$listaObstaculos debería ser un array");
+        }
         $radar['listaAzimuths'][$i] = $listaObstaculosAmpliada; // metemos la lista de obstaculos nueva en la estructura
+
         /*
         for($jj=0;$jj<count($radar['listaAzimuths'][$i]); $jj++) {
             print $radar['listaAzimuths'][$i][$jj]['angulo'] . "|" .
@@ -576,61 +582,36 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 }
 
 /**
- * Funcion que busca el punto más próximo al punto dado dentro de una
- * lista de obstáculos comparando los angulos y devuelve la posicion
- * de ese punto en la lista de obstáculos.
+ * Función que busca el índice del punto más próximo al valor dado dentro
+ * de una lista de obstáculos comparando los angulos, con la clave
+ * de búsqueda pasada como parámetro.
  *
- * @param array $listaObstaculos (ENTRADA)
- * @param float $punto (ENTRADA)
- * @return number (SALIDA)
+ * @param float $value valor para buscar (ENTRADA)
+ * @param array $arr lista de valores (ENTRADA)
+ * @param int $low índice inferior donde buscar
+ * @param int $high índice superior donde buscar
+ * @param string $key índice del campo a comparar con $value
+ * @url https://stackoverflow.com/questions/4257838/how-to-find-closest-value-in-sorted-array
+ *
+ * @return int índice del valor más cercano
  */
-function buscaDistanciaMenor($listaObstaculos, $punto){
-
-    if ( !isset($listaObstaculos) || !is_array($listaObstaculos) ) {
-        die ("buscaDistanciaMenor: $$listaObstaculos debería ser un array");
-    }
-
-    $cuentaListaObstaculos = count($listaObstaculos);
-    $min_new_old = abs($punto - $listaObstaculos[0]['angulo']);
-    for ( $i = 1; $i < $cuentaListaObstaculos ; $i++ ) {
-	$min_new_act = abs($punto - $listaObstaculos[$i]['angulo']);
-        if ( $min_new_old < $min_new_act ) {
-            return ($i-1);
-        }
-        $min_new_old = $min_new_act;
-    }
-    return ($i-1);
-}
-
-function buscaDistanciaMenor2($listaObstaculos, $punto){
-
-    if ( !isset($listaObstaculos) || !is_array($listaObstaculos) ) {
-        die ("buscaDistanciaMenor: $$listaObstaculos debería ser un array");
-    }
-
-    $maxIndex = $i = count($listaObstaculos) - 1;
-    // print $i . "]" . $punto . " " . number_format($listaObstaculos[$i]['angulo'],6) . PHP_EOL;
-    while ( ($i > -1) && ($punto < $listaObstaculos[$i]['angulo']) ) { 
-        print $i . "]" . $punto . " " . number_format($listaObstaculos[$i]['angulo'],10) . PHP_EOL;
-        $i--;
-    }
-    if ( $i == $maxIndex) {
-        return $i;
-    } elseif ( $i == -1 ) {
-        return 0;
-    } else {
-        $diff1 = abs($punto - $listaObstaculos[$i]['angulo']);
-        $diff2 = abs($punto - $listaObstaculos[$i+1]['angulo']);
-        if ( $diff1 > $diff2 ) {
-            return $i;
+function findNearestValue($value, $arr, $low, $high, $key) {
+    $res = false;
+    if ( ($high - $low) > 1 ) {
+        $mid = round($low + ($high - $low) / 2, 0, $mode = PHP_ROUND_HALF_UP );
+        if ( $arr[$mid][$key] > $value ) {
+            $res = findNearestValue($value, $arr, $low, $mid, $key);
+        } else if ( $arr[$mid][$key] < $value ) {
+            $res = findNearestValue($value, $arr, $mid, $high, $key);
         } else {
-            return $i+1;
+            $res = $mid;
         }
+    } else {
+        $res = (abs($value-$arr[$low][$key]) < abs($value-$arr[$high][$key])) ? $low : $high;
     }
-
-    return 0;
-    
+    return $res;
 }
+
 
 
 /**
@@ -743,9 +724,16 @@ function generacionMallado($radar, $radioTerrestreAumentado){
                         // print "$i)" . $x . "|" . $y . "  ";
 
 			// busca la posicion de la  distancia mas proxima en la lista de obstaculos del acimut aproximado (el menor)
-			$pos = buscaDistanciaMenor($radar['listaAzimuths'][$azimutCelda], $distanciaCeldaAradar);
-			$pos2 = buscaDistanciaMenor2($radar['listaAzimuths'][$azimutCelda], $distanciaCeldaAradar);
-			
+			// $pos = buscaDistanciaMenor($radar['listaAzimuths'][$azimutCelda], $distanciaCeldaAradar);
+			// $pos = buscaDistanciaMenor2($radar['listaAzimuths'][$azimutCelda], $distanciaCeldaAradar);
+			$pos = findNearestValue(
+			    $distanciaCeldaAradar,
+			    $radar['listaAzimuths'][$azimutCelda],
+			    0,
+			    count($radar['listaAzimuths'][$azimutCelda]) - 1,
+			    $key = "angulo"
+			);
+			/*
 		        if ( $pos != $pos2 ) {
 		            print "azimutCelda: $azimutCelda" . PHP_EOL;
 		            print "$i,$j] total: " . count($radar['listaAzimuths'][$azimutCelda]) . ": values:" . $pos . " " . $pos2 . PHP_EOL;
@@ -756,9 +744,9 @@ function generacionMallado($radar, $radioTerrestreAumentado){
     		            }
                             exit(-1);
     		        }
-
+                        */
 			//print "(" . $pos . "/" . count($radar['listaAzimuths'][$azimutCelda]) . ")";
-				
+
 			if ( ($radar['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false){
 			        // aqui trasponemos la matriz, no se si es sin querer o es a propósito
 				$malla[$j][$i] = 0;

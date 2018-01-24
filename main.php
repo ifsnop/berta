@@ -60,13 +60,13 @@ function programaPrincipal(){
 			// ademas, todos los scr por debajo del radar (caso b) que tengan 720 azimut, se pintan mal
 			// ejemlo: constantina, auch lias...
 			
-			$flMin = 13;
-			$flMax = 13;
+			$flMin = 45;
+			$flMax = 45;
 			$paso = 1;
 			$altitudeMode = 0;
 			$lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
 			// $lugares = array("auchlias", "begas");
-			$lugares = array("canchoblanco");
+			$lugares = array("turrillas");
 			$op = 0;
 			$ordenarPorRadar = false;
 			
