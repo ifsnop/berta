@@ -10,14 +10,14 @@
  */
 function cargarDatosCoordenadas($infoCoral, $name){
 	
-	$name = strtolower($name);
+    $name = strtolower($name);
 	
-	$coordenadas = array(
-			'longitud'  => $infoCoral[$name]['lon'],
-			'latitud'   => $infoCoral[$name]['lat'],
-			'screening' => $infoCoral[$name]['screening']
-	);
-	return $coordenadas;
+    $coordenadas = array(
+	'longitud'  => $infoCoral[$name]['lon'],
+	'latitud'   => $infoCoral[$name]['lat'],
+	'screening' => $infoCoral[$name]['screening']
+    );
+    return $coordenadas;
 }
 
 
@@ -104,55 +104,56 @@ function getRadars($eval_dir, $parse_all = false) {
  */
 function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
 
-	if ( false === ($radar_rbk_contents = file_get_contents($radar_rbk_file)) ) {
-		print "error couldn't file_get_contents from $radar_rbk_file" . PHP_EOL;
-		exit;
+    if ( false === ($radar_rbk_contents = file_get_contents($radar_rbk_file)) ) {
+        die("error couldn't file_get_contents from $radar_rbk_file" . PHP_EOL);
+    }
+
+    $lat = $lon = ""; $radarGroundAltitude = 0; $values = array(); $radars = array();
+    // quita las terminaciones de línea msdos/unix y separa por líneas en un array
+    $radar_rbk_contents = preg_split("/[\r\n|\n\r|\n]/", $radar_rbk_contents, NULL, PREG_SPLIT_NO_EMPTY);
+
+    foreach($radar_rbk_contents as $line) {
+        //print $line . PHP_EOL;
+        if ( (($count2 = preg_match("/^radarLatitude: \"(\d+):(\d+):(\d+).(\d+)([N|S])\"/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
+            $lat = $m2[1][0] + $m2[2][0]/60 + ($m2[3][0] + $m2[4][0]/100)/3600;
+	    if ($m2[5][0]=="N") $lat *=1; else if ($m2[5][0]=="S") $lat *=-1;
+	    continue;
+        }
+        if ( (($count2 = preg_match("/^radarLongitude: \"(\d+):(\d+):(\d+).(\d+)([E|W])\"/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
+	    $lon = $m2[1][0] + $m2[2][0]/60 + ($m2[3][0] + $m2[4][0]/100)/3600;
+	    if ($m2[5][0]=="E") $lon *=1; else if ($m2[5][0]=="W") $lon *=-1;
+	    continue;
+        }
+        /*
+        // Vamos a capturar las alturas en el grupo genÃ©rico, y luego
+        // sumarlas cuando calculemos la cobertura
+        if ( (($count2 = preg_match("/^radarGroundAltitude: \"([-+]?[0-9]*\.?[0-9]+)/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
+	    $radarGroundAltitude = $m2[1][0];
+	    continue;
+        }
+	if ( (($count2 = preg_match("/^secondaryElectricalHeight: \"([-+]?[0-9]*\.?[0-9]+)/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
+	    $h += $m2[1][0];
+	    continue;
 	}
-
-	$lat = $lon = ""; $h = 0; $values = array(); $radars = array();
-	// quita las terminaciones de línea msdos/unix y separa por líneas en un array
-	$radar_rbk_contents = preg_split("/[\r\n|\n\r|\n]/", $radar_rbk_contents, NULL, PREG_SPLIT_NO_EMPTY);
-
-	foreach($radar_rbk_contents as $line) {
-		//print $line . PHP_EOL;
-		if ( (($count2 = preg_match("/^radarLatitude: \"(\d+):(\d+):(\d+).(\d+)([N|S])\"/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
-			$lat = $m2[1][0] + $m2[2][0]/60 + ($m2[3][0] + $m2[4][0]/100)/3600;
-			if ($m2[5][0]=="N") $lat *=1; else if ($m2[5][0]=="S") $lat *=-1;
-			continue;
-		}
-		if ( (($count2 = preg_match("/^radarLongitude: \"(\d+):(\d+):(\d+).(\d+)([E|W])\"/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
-			$lon = $m2[1][0] + $m2[2][0]/60 + ($m2[3][0] + $m2[4][0]/100)/3600;
-			if ($m2[5][0]=="E") $lon *=1; else if ($m2[5][0]=="W") $lon *=-1;
-			continue;
-		}
-		if ( (($count2 = preg_match("/^radarGroundAltitude: \"([-+]?[0-9]*\.?[0-9]+)/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
-			$h += $m2[1][0];
-			continue;
-		}
-		if ( (($count2 = preg_match("/^secondaryElectricalHeight: \"([-+]?[0-9]*\.?[0-9]+)/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
-			$h += $m2[1][0];
-			continue;
-		}
-
-		// este grupo captura el resto de valores que no necesitan transformación
-		if ( (($count2 = preg_match("/^(\w+): \"(.*)\"/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
-			$values[$m2[1][0]] = $m2[2][0];
-			continue;
-		}
+	if ( (($count2 = preg_match("/^primaryElectricalHeight: \"([-+]?[0-9]*\.?[0-9]+)/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
+	    $h += $m2[1][0];
+	    continue;
 	}
-	if ( !empty($lat) && !empty($lon) ) {
-		$radars[$name] = array(
-				'radar' => $name,
-				'lat' => $lat,
-				'lon' => $lon,
-				'h' => $h,
-				'sassc_id' => $sassc_id
-		);
-		$radars[$name] = array_merge($radars[$name], $values);
+	*/
+	// este grupo captura el resto de valores que no necesitan transformaciÃ³n
+	if ( (($count2 = preg_match("/^(\w+): \"(.*)\"/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
+            $values[$m2[1][0]] = $m2[2][0];
+	    continue;
 	}
-
-	return $radars;
+    }
+    if ( !empty($lat) && !empty($lon) ) {
+    	$radars[$name] = array(
+            'radar' => $name,
+	    'lat' => $lat,
+	    'lon' => $lon,
+	    'sassc_id' => $sassc_id
+	);
+	$radars[$name] = array_merge($radars[$name], $values);
+    }
+    return $radars;
 }
-
-
-

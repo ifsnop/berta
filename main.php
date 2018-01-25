@@ -72,16 +72,17 @@ function programaPrincipal(){
 	    // recorremos todas las localizaciones que nos ha dado el usuario
             foreach($lugares as $lugar) {
 		$coordenadas = cargarDatosCoordenadas($infoCoral, $lugar);
+
 		$radarOriginal = cargarDatosTerreno(
 		    $coordenadas['screening'],
-		    $radioTerrestreAumentado,
 		    $defaultRange = $infoCoral[strtolower($lugar)]['secondaryMaximumRange']
 		);
+		// print_r($radarOriginal);
 	        // para probar con una distancia más pequeña y forzar alcance a 20NM
 		// $radarOriginal['range'] = 20*1852;
-		$hA = $radarOriginal['towerHeight'] + $radarOriginal['terrainHeight'];
+
 		for ($fl = $flMin; $fl <= $flMax; $fl += $paso){
-		    $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+                    $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
 		    if ( $ordenarPorRadar ) {
                         $ruta = $rutaResultados . $radarOriginal['site'] . DIRECTORY_SEPARATOR;
                     } else {
@@ -93,38 +94,50 @@ function programaPrincipal(){
                     }
 		    print "Generando: ${fl}00 feet" . PHP_EOL;
 		    $radar = $radarOriginal;
-		    $flm = $fl*100*FEET_TO_METERS;
+		    calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar);
 
-		    // DISTINCIÓN DE CASOS 
-                    if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
-                        $angulosApantallamiento = array();
-	                $distanciasCobertura = array();
-                        $coordenadasGeograficas = array();
-
-                        calculosFLencimaRadar($radar, $flm, $radioTerrestreAumentado, $angulosApantallamiento, $distanciasCobertura);
-			calculaCoordenadasGeograficasA($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
-			crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
-		    } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
-		        print "[calculosFLdebajoRadar]";
-			calculosFLdebajoRadar($radar, $flm, $radioTerrestreAumentado);
-			print "[generacionMallado]";
-                        $malla = generacionMallado($radar, $radioTerrestreAumentado);
-                        //printMalla($malla);
-                        storeMallaAsImage($malla, $ruta . $radar['site'] . "_FL" . $nivelVuelo);
-                        print "[mallaMarco]";
-	                $mallaGrande = mallaMarco($malla);
-	                print "[determinaContornos]";
-	        	determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
-			print "[calculaCoordenadasGeograficasB]";
-		        calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos);
-			print "[crearKmlB]" . PHP_EOL;
-    			crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
-                    }
                 } // for interno
 	    } // foreach
 	    break;
 	} // switch
     } while ($op != 0);
 
+    return;
+}
+
+/*
+ * @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
+ * @param bool $ordenarPorRadar para guardar por directorios por nivel de vuelo o por nombre de radar
+ */
+function calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar) {
+
+    $hA = $radar['towerHeight'] + $radar['terrainHeight'];
+    $flm = $fl*100*FEET_TO_METERS; // fl en metros
+    $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+
+    // DISTINCIÓN DE CASOS 
+    if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
+        $angulosApantallamiento = array();
+	$distanciasCobertura = array();
+        $coordenadasGeograficas = array();
+        calculosFLencimaRadar($radar, $flm, $angulosApantallamiento, $distanciasCobertura);
+	calculaCoordenadasGeograficasA($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
+	crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
+    } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
+        print "[calculosFLdebajoRadar]";
+	calculosFLdebajoRadar($radar, $flm);
+	print "[generacionMallado]";
+        $malla = generacionMallado($radar);
+        //printMalla($malla);
+        storeMallaAsImage($malla, $ruta . $radar['site'] . "_FL" . $nivelVuelo);
+        print "[mallaMarco]";
+	$mallaGrande = mallaMarco($malla);
+	print "[determinaContornos]";
+	determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
+	print "[calculaCoordenadasGeograficasB]";
+	calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos);
+	print "[crearKmlB]" . PHP_EOL;
+    	crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
+    }
     return;
 }
