@@ -598,7 +598,7 @@ function calculosFLdebajoRadar(&$radar, $flm, $radioTerrestreAumentado){
 function findNearestValue($value, $arr, $low, $high, $key) {
     $res = false;
     if ( ($high - $low) > 1 ) {
-        $mid = round($low + ($high - $low) / 2, 0, $mode = PHP_ROUND_HALF_UP );
+        $mid = round($low + ($high - $low) / 2, $precision = 0, $mode = PHP_ROUND_HALF_UP );
         if ( $arr[$mid][$key] > $value ) {
             $res = findNearestValue($value, $arr, $low, $mid, $key);
         } else if ( $arr[$mid][$key] < $value ) {
@@ -709,7 +709,7 @@ function generacionMallado($radar, $radioTerrestreAumentado){
 		        // CALCULAMOS EL AZIMUT DE CADA CELDA Y APROXIMAMOS
 			$azimutTeorico = calculaAcimut($x, $y); 
 			
-			$azimutCelda = round( $azimutTeorico * $ajusteAzimut );
+			$azimutCelda = round( $azimutTeorico * $ajusteAzimut, $precision = 0, $mode = PHP_ROUND_HALF_UP);
                         // Un último paso, por si acaso al redondear nos salimos de la lista de azimut, ajustamos al máximo.
                         // La lista va de 0 a 359 (o de 0 a 719)...
 			if ( $azimutCelda == $radar['totalAzimuths'] ) {
@@ -733,29 +733,15 @@ function generacionMallado($radar, $radioTerrestreAumentado){
 			    count($radar['listaAzimuths'][$azimutCelda]) - 1,
 			    $key = "angulo"
 			);
-			/*
-		        if ( $pos != $pos2 ) {
-		            print "azimutCelda: $azimutCelda" . PHP_EOL;
-		            print "$i,$j] total: " . count($radar['listaAzimuths'][$azimutCelda]) . ": values:" . $pos . " " . $pos2 . PHP_EOL;
-		            print "distancia: $distanciaCeldaAradar" . PHP_EOL;
-    		            for($jj=0;$jj<count($radar['listaAzimuths'][$azimutCelda]); $jj++) {
-    		                print $jj . ";" . number_format($radar['listaAzimuths'][$azimutCelda][$jj]['angulo'],10) . " " . number_format($radar['listaAzimuths'][$azimutCelda][$jj]['altura'],10) . PHP_EOL;
-    		                //print_r($radar['listaAzimuths'][$azimutCelda][$jj]);
-    		            }
-                            exit(-1);
-    		        }
-                        */
-			//print "(" . $pos . "/" . count($radar['listaAzimuths'][$azimutCelda]) . ")";
-
 			if ( ($radar['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false){
 			        // aqui trasponemos la matriz, no se si es sin querer o es a propósito
 				$malla[$j][$i] = 0;
 				//print "0";
 			}
 			else{
-				$malla[$j][$i] = 1; // entiendase el valor 1 para representar el caso en el que  hay cobertura y 0 para lo contrario
+				$malla[$j][$i] = 1; // entiendase el valor 1 para representar el caso en el que hay cobertura y 0 para lo contrario
 				//print "1";
-			}	
+			}
 		}
 		// print PHP_EOL . PHP_EOL;
 	}
