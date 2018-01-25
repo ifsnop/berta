@@ -43,9 +43,8 @@ function programaPrincipal(){
     $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
-    $lugares = array("canchoblanco");
-    $flMin = 13;
-    $flMax = 13;
+    $flMin = 1;
+    $flMax = 400;
     $paso = 1;
 
     if ( $argc > 1 ){ 
