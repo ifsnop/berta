@@ -52,12 +52,13 @@ function cargarDatosTerreno ($nombreFichero = NULL, $defaultRange = 0) {
         // insertamos el radar como primer obstaculo, para resolver el caso de que
         // el primer obstaculo este muy alejado. En matlab no se pinta nada hasta que no
         // llega al primer obstaculo.
+
         $listaObstaculos[] = array(
             'angulo' => 0,
             'altura' => $radar['towerHeight'] + $radar['terrainHeight'],
             'estePtoTieneCobertura' => false
         );
-        
+
         // recorre el numero de obstaculos para cada azimuths
 	for ($j = 0; $j < $contadorObstaculos; $j++) { 
 	    $pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';

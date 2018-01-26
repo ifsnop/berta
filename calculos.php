@@ -4,7 +4,7 @@ CONST FRONTERA_LATITUD = 90; // latitud complementaria
 CONST FEET_TO_METERS = 0.30480370641307;
 CONST PASO_A_GRADOS = 180.0;
 // CONST DISTANCIA_ENTRE_PUNTOS = 5; // maxima distancia q puede haber entre dos puntos de un acimut para saber si es necesario interpolar 
-CONST TAM_CELDA = 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que peque�o q no peta
+CONST TAM_CELDA = 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no desborda
 CONST TAM_CELDA_MITAD = 0.25; // NM
 CONST TAM_ANGULO_MAXIMO = 1; // NM (lo situamos al doble que tamaño celda)
 
@@ -671,8 +671,7 @@ function generacionMallado($radar) {
 
     // CENTRAMOS LA MALLA Y CALCULAMOS EL PTO MEDIO DE CADA CELDA
     $tamMallaMitad = $tamMalla / 2.0;
-    print "radar['range']: " . $radar['range'] . PHP_EOL;
-    print "Malla Mitad: " . $tamMallaMitad . PHP_EOL;
+    print PHP_EOL . "[tamMallaMitad: " . $tamMallaMitad . "]";
 
     // CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
     $x_fixed = -( $tamMallaMitad * TAM_CELDA ); // + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA) 
@@ -682,7 +681,7 @@ function generacionMallado($radar) {
     // según screening. Es decir, si hay 720 azimut, y nos sale un ángulo de 360, realmente será de 720.
 
     $ajusteAzimut = $radar['totalAzimuths'] / 360.0;
-    print "[Tamaño malla: " . $tamMalla . "]" . PHP_EOL;
+    print "[Tamaño malla: " . $tamMalla . "]";
     print "[00%]";
     $countPct_old = 0;
     for ($i = 0; $i <= $tamMalla; $i++){ // recorre las columnas de la malla 

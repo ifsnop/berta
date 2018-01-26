@@ -36,13 +36,15 @@ function programaPrincipal(){
 
     $path = "/home/eval/%rassv6%/spain.tsk";
     $rutaResultados = "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR;
-
     $radioTerrestreAumentado = 0;
     $poligono = false;
     $ordenarPorRadar = false;
     $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
+
+    // generateMatlabFiles($infoCoral, $rutaResultados);
+
     $flMin = 1;
     $flMax = 400;
     $paso = 1;
@@ -88,10 +90,7 @@ function programaPrincipal(){
                     } else {
                         $ruta = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
                     }
-                    if ( !is_dir( $ruta ) ) {
-                        crearCarpetaResultados($radarOriginal, $ruta);
-                        clearstatcache();
-                    }
+                    crearCarpetaResultados($ruta);
 		    print "Generando: ${fl}00 feet" . PHP_EOL;
 		    $radar = $radarOriginal;
 		    calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar);
@@ -140,4 +139,47 @@ function calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar
     	crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
     }
     return;
+}
+
+
+function generateMatlabFiles($infoCoral, $ruta) {
+    $rutaTerrenos = $ruta . DIRECTORY_SEPARATOR . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
+    $rutaCoordenadas = $ruta . DIRECTORY_SEPARATOR . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
+
+    print "Generando ficheros de Matlab" . PHP_EOL;
+
+    crearCarpetaResultados($rutaTerrenos);
+    crearCarpetaResultados($rutaCoordenadas);
+
+    foreach($infoCoral as $radar) {
+        if ( 0 == strlen($radar['screening']) ) {
+            continue;
+        }
+
+	$coordenadas = cargarDatosCoordenadas($infoCoral, $radar['radar']);
+	$radarOriginal = cargarDatosTerreno(
+	    $coordenadas['screening'],
+	    $defaultRange = $infoCoral[strtolower($radar['radar'])]['secondaryMaximumRange']
+	);
+        print "[" . $radar['radar'] . "=>" . $radarOriginal['site'] . "]";
+
+        @unlink($rutaTerrenos.$radarOriginal['site'].".txt");
+        if (false === copy($radar['screening'], $rutaTerrenos.$radarOriginal['site'] . ".txt") ) {
+            die("ERROR: copiando " . $radar['screening'] . " a " . $rutaTerrenos.$radarOriginal['site'] . ".txt" .PHP_EOL);
+        }
+        $coordenadas = $radarOriginal['site'] . "_Latitud=" . $radar['lat'] . ";\r\n" .
+            $radarOriginal['site'] . "_Longitud=" . $radar['lon'] . ";\r\n" .
+            $radarOriginal['site'] . "_Range=" . $radar['secondaryMaximumRange'] . ";";
+
+        @unlink($rutaCoordenadas.$radarOriginal['site'].".txt");
+        if ( false === file_put_contents($rutaCoordenadas.$radarOriginal['site'] . ".txt", $coordenadas) ) {
+            die("ERROR: escribiendo " . $rutaCoordenadas.$radarOriginal['site'] . ".txt" . PHP_EOL);
+        }
+
+    }
+    //print PHP_EOL;
+    //print_r($infoCoral);
+
+    exit();
+    return true;
 }

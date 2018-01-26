@@ -173,19 +173,19 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode, $ordenarPorRadar){
 /**
  * Funcion para crear una carpeta con los resultados para cada radar
  * 
- * @param array $radar  (ENTRADA)
  * @param string $ruta  (ENTRADA)
  * @return boolean, para comprobar si la funcion a tenido exito o no (SALIDA)
  */
-function crearCarpetaResultados($radar, $ruta){
+function crearCarpetaResultados($ruta){
 	
-	//$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
-	
-	if (mkdir($ruta, PERMISOS, true))
-		return true;
-	else
-		return false;
+    if ( !is_dir( $ruta ) ) {
+        clearstatcache();
+        //$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
+        if (mkdir($ruta, PERMISOS, true))
+            return true;
+        else
+            return false;
+    }
+
+    return true;
 }
-
-
-
