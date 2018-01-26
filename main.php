@@ -83,8 +83,8 @@ function programaPrincipal(){
 	        // para probar con una distancia más pequeña y forzar alcance a 20NM
 		// $radarOriginal['range'] = 20*1852;
 
-		for ($fl = $flMin; $fl <= $flMax; $fl += $paso){
-                    $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+		for ($fl = $flMin; $fl <= $flMax; $fl += $paso) {
+                    $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
 		    if ( $ordenarPorRadar ) {
                         $ruta = $rutaResultados . $radarOriginal['site'] . DIRECTORY_SEPARATOR;
                     } else {

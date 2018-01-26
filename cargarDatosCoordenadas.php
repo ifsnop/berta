@@ -22,13 +22,13 @@ function cargarDatosCoordenadas($infoCoral, $name){
 
 
 /**
- * Utilizando la lÛgica del SASS-C, busca un fichero recording_details.par y
- * obtiene los radares configurados para la evaluaciÛn. Luego busca en el
- * directorio donde est·n definidos todos los radares y extrae, dependiendo
- * de $parse_all, o bien de todos o bien de sÛlo los definidos en la
- * evaluaciÛn, un array con la informaciÛn.
+ * Utilizando la l√≥gica del SASS-C, busca un fichero recording_details.par y
+ * obtiene los radares configurados para la evaluaci√≥n. Luego busca en el
+ * directorio donde est√©n definidos todos los radares y extrae, dependiendo
+ * de $parse_all, o bien de todos o bien de s√≥lo los definidos en la
+ * evaluaci√≥n, un array con la informaci√≥n.
  *
- * @param string $eval_dir Directorio donde est· configurada la evaluaciÛn
+ * @param string $eval_dir Directorio donde est√° configurada la evaluaci√≥n
  * @param bool   $parse_all Ignora recording_details.par y lee todos los
  *   radares definidos
  *

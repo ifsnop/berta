@@ -64,7 +64,7 @@ function cargarDatosTerreno ($nombreFichero = NULL, $defaultRange = 0) {
 	    $pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';
 	    if ( false === ($cuenta = preg_match($pattern, $contenidoFichero[$lineaActual], $salida)) && (3 == $cuenta) ) {
 	        // $salida tiene 3 posiciones, las dos ultimas contienen los strings que necesitamos
-		die("Error durante la comparacion linea($lineaActual) contenido(" . $contenidoFichero[$lineaActual] . ")");
+		die("ERROR durante la comparacion linea($lineaActual) contenido(" . $contenidoFichero[$lineaActual] . ")");
 	    }
 	    // convierte el string a numero y los almacena en el array
 	    $listaObstaculos[] = array(
