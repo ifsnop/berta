@@ -43,8 +43,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 13;
-    $flMax = 13;
+    $flMin = 1;
+    $flMax = 400;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -105,7 +105,6 @@ function programaPrincipal(){
                     crearCarpetaResultados($ruta);
 		    print "Generando: ${fl}00 feet" . PHP_EOL;
 		    calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar);
-exit();
                 } // for interno
 	    } // foreach
 	    break;
@@ -129,9 +128,8 @@ function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
         $angulosApantallamiento = array();
 	$distanciasCobertura = array();
-        $coordenadasGeograficas = array();
         calculosFLencimaRadar($radar, $flm, $angulosApantallamiento, $distanciasCobertura);
-	calculaCoordenadasGeograficasA($radar, $distanciasCobertura, $flm, $coordenadasGeograficas);
+	$coordenadasGraficas = calculaCoordenadasGeograficasA($radar, $distanciasCobertura, $flm);
 	crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
         print "[calculosFLdebajoRadar]";

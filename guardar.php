@@ -54,7 +54,7 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode, $ordenarPorRadar
 	$cadena = toString($coordenadasG);
 	$rgb = "7d00ff00"; 
 	$nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
-	$radarWithFL = $radar['site']."_FL" .  $nivelVuelo;
+	$radarWithFL = $radar['screening']['site']."_FL" .  $nivelVuelo;
 	$fileName = $ruta . $radarWithFL; //  /home/eval/berta/RESULTADOS/LE_VALLADOLID/ LE_VALLADOLID.txt
 	
 	$contenido = "";

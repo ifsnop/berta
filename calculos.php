@@ -25,7 +25,7 @@ CONST RIGHT = 4;
  * @param float $anguloPrimerPtoSinCob (ENTRADA/SALIDA)
  * @param float $alturaUltimoPtoCob (ENTRADA/SALIDA)
  * @param float $anguloUltimoPtoCob (ENTRADA/SALIDA)
- * @return boolean, devuelve true si encontrado o false en caso contrario (SALIDA)
+ * @return boolean devuelve true si encontrado o false en caso contrario (SALIDA)
  */
 function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob, &$anguloPrimerPtoSinCob, &$alturaUltimoPtoCob, &$anguloUltimoPtoCob, $alturaCentroFasesAntena){
 
@@ -36,14 +36,14 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
         if ($flm < $listaObstaculos[$i]['altura']){ // la primera vez que se cumple esto tenemos el primer punto sin cobertura
             // siempre se va a dar el caso en el que el nivel de vuelo va a ser menor que la altura del obstáculo
 	    if ( $i == 0 ) {
-
         	$alturaPrimerPtoSinCob = $listaObstaculos[$i]['altura']; //+25000;
         	// garantizar que este angulo es siempre mayor que el anguloUltimoPtoCob (y en lugar de restar en el otro una
         	// cantidad fija, sumamos aquí para que siempre sea mayor que cero)
                 $anguloPrimerPtoSinCob = $listaObstaculos[$i]['angulo'] + 0.001;
 	        $alturaUltimoPtoCob    = $alturaCentroFasesAntena; // ajuste para evitar la división por cero 
 	        $anguloUltimoPtoCob    = $listaObstaculos[$i]['angulo'];
-	        print "el primer obstaculo no tiene cobertura, no tenemos ultimo punto con cobertura, revisar para probar solucion." . PHP_EOL;
+	        // esto antes era un warning
+	        die("ERROR el primer obstaculo no tiene cobertura, no tenemos ultimo punto con cobertura, revisar para probar solucion." . PHP_EOL);
 	        // constantina 2800 feet
 	    } else {
     	        $primerPtoSinCobertura = $listaObstaculos[$i];
@@ -54,15 +54,14 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
                 $alturaUltimoPtoCob    = $listaObstaculos[$i-1]['altura'];
 	        $anguloUltimoPtoCob    = $listaObstaculos[$i-1]['angulo'];
 	    }
-	    /*
-	    print "alturaPrimerPtoSinCob:" . $alturaPrimerPtoSinCob . PHP_EOL;
-	    print "alturaUltimoPtoConCob:" . $alturaUltimoPtoCob . PHP_EOL;
-	    print "anguloPrimerPtoSinCob:" . $anguloPrimerPtoSinCob . PHP_EOL;
-	    print "anguloUltimoPtoConCob:" . $anguloUltimoPtoCob . PHP_EOL;
-	    print "flm:" . $flm . PHP_EOL;
-            */
+	    if (false) {
+	        print "alturaPrimerPtoSinCob:" . $alturaPrimerPtoSinCob . PHP_EOL;
+	        print "alturaUltimoPtoConCob:" . $alturaUltimoPtoCob . PHP_EOL;
+	        print "anguloPrimerPtoSinCob:" . $anguloPrimerPtoSinCob . PHP_EOL;
+	        print "anguloUltimoPtoConCob:" . $anguloUltimoPtoCob . PHP_EOL;
+	        print "flm:" . $flm . PHP_EOL;
+            }
 	    $enc = true;
-
 	} else {
 	    $i++;
 	}
@@ -101,7 +100,7 @@ function calculaAnguloMaximaCobertura($radar, $flm){
  */
 function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanciasCobertura ){
 		
-    $radioTerrestreAumentado = $radar['radioTerrestreAumentado'];
+    $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $radioTerrestreAumentado, $flm);
     $earthToFl = $radioTerrestreAumentado + $flm;
     $earthToRadar = $radar['towerHeight'] + $radar['terrainHeight'] + $radioTerrestreAumentado;
@@ -109,23 +108,28 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
     // recorremos los azimuths
     for ($i=0; $i < $radar['screening']['totalAzimuths']; $i++) {
 
-        // obtenemos la ultima linea del array para cada azimut.
-	if ( !isset($radar['listaAzimuths'][$i]) ) {
+        // obtenemos la última linea del array para cada azimut.
+	if ( !isset($radar['screening']['listaAzimuths'][$i]) ) {
 	    print_r($radar);
 	    die("ERROR: el azimuth $i no existe" . PHP_EOL);
 	}
-	$tamano = count($radar['listaAzimuths'][$i]);
+	$count = count($radar['screening']['listaAzimuths'][$i]);
 
 	// obtenemos la altura del último punto para cada azimuth
-	$obstaculoLimitante = $radar['listaAzimuths'][$i][$tamano-1]['altura'];
+	$obstaculoLimitante = $radar['screening']['listaAzimuths'][$i][$count-1]['altura'];
 
         if ($flm >= $obstaculoLimitante){
 	    $earthToEvalPoint = $radioTerrestreAumentado + $obstaculoLimitante;
 	    // obtenemos el angulo del ultimo obstaculo de cada azimuth
-	    $angulo = $radar['listaAzimuths'][$i][$tamano-1]['angulo'];
+	    $angulo = $radar['screening']['listaAzimuths'][$i][$count-1]['angulo'];
 
             $distanciasCobertura[$i]= sqrt ((pow($earthToRadar,2) + pow($earthToEvalPoint,2)) - 2 * $earthToRadar * $earthToEvalPoint * cos($angulo));
-	    $gammaMax = acos((pow($distanciasCobertura[$i],2) + pow($earthToRadar,2) - pow($earthToEvalPoint,2)) / (2 * $earthToRadar * $distanciasCobertura[$i]));
+	    $gammaMax = acos(
+	        (pow($distanciasCobertura[$i],2) +
+	        pow($earthToRadar,2) -
+	        pow($earthToEvalPoint,2)) /
+	        (2 * $earthToRadar * $distanciasCobertura[$i])
+	    );
 	    $theta = asin($earthToRadar * sin($gammaMax) / $earthToFl);
 	    $epsilon = PI - $theta - $gammaMax;
 
@@ -143,14 +147,22 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
 	    $anguloPrimerPtoSinCob = 0;
 	    $alturaUltimoPtoCob = 0;
             $anguloUltimoPtoCob = 0;
-	 	 		
-            if(buscarPuntosLimitantes($radar['listaAzimuths'][$i], $flm, $alturaPrimerPtoSinCob, $anguloPrimerPtoSinCob, $alturaUltimoPtoCob, $anguloUltimoPtoCob, $alturaCentroFasesAntena = $radar['towerHeight'] + $radar['terrainHeight'])){
-	        $anguloLimitante = (($flm-$alturaUltimoPtoCob) * (($anguloPrimerPtoSinCob - $anguloUltimoPtoCob)  / ($alturaPrimerPtoSinCob - $alturaUltimoPtoCob))) + $anguloUltimoPtoCob;
-	    } else {
+            $ret = buscarPuntosLimitantes(
+                $radar['listaAzimuths'][$i],
+                $flm,
+                $alturaPrimerPtoSinCob,
+                $anguloPrimerPtoSinCob,
+                $alturaUltimoPtoCob,
+                $anguloUltimoPtoCob,
+                $alturaCentroFasesAntena = $radar['towerHeight'] + $radar['terrainHeight']
+            );
+            if ( !$ret ) {
 	        die("ERROR MALIGNO !! No deberias haber entrado aqui" . PHP_EOL);
-	    }
+            }
+	    $anguloLimitante = (($flm-$alturaUltimoPtoCob) * (($anguloPrimerPtoSinCob - $anguloUltimoPtoCob) / ($alturaPrimerPtoSinCob - $alturaUltimoPtoCob))) + $anguloUltimoPtoCob;
+
             if ($anguloLimitante > $anguloMaxCob) {
-	        $distanciasCobertura[$i] = $radioTerrestreAumentado * $anguloMaxCob/ MILLA_NAUTICA_EN_METROS;
+	        $distanciasCobertura[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
 	    } else {
                 $distanciasCobertura[$i] = $radioTerrestreAumentado * $anguloLimitante / MILLA_NAUTICA_EN_METROS;
 	    }
@@ -166,10 +178,12 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
  * @param array $radar (ENTRADA)
  * @param array $distanciasCobertura, en millas nauticas (ENTRADA)
  * @param int $flm, en metros (ENTRADA)
- * @param array $coordenadasGeograficas (ENTRADA/SALIDA)
+ * @return array $coordenadasGeograficas (SALIDA)
  */
-function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm, &$coordenadasGeograficas){
-	
+function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm){
+
+    $coordenadasGraficas = array();
+    
     // Calcula el paso en funcion del numero maximo de azimuth (puede ser desde 360 o 720)
     $paso = 360.0 / $radar['screening']['totalAzimuths'];
 
@@ -177,7 +191,7 @@ function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm, &$c
     for ($i = 0; $i < $radar['screening']['totalAzimuths']; $i++) {
  	// Calculo de la latitud
  	$anguloCentral = ($distanciasCobertura[$i] * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
- 	$latitudComplementaria = deg2rad(FRONTERA_LATITUD - $coordenadas['latitud']);
+ 	$latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
  	$r = rad2deg(acos (cos($latitudComplementaria) * cos($anguloCentral) + sin($latitudComplementaria) * sin($anguloCentral)
             * cos(deg2rad($i * $paso)))); // tenemos r en grados
 
@@ -193,16 +207,16 @@ function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm, &$c
 
  	// asignacion de valores a la estructura de datos
  	if ( $i < ($radar['screening']['totalAzimuths'] / 2) )
- 	    $coordenadasGeograficas[$i]['longitud'] = $coordenadas['longitud'] + $p;
+ 	    $coordenadasGeograficas[$i]['longitud'] = $radar['lon'] + $p;
  	else
- 	    $coordenadasGeograficas[$i]['longitud'] = $coordenadas['longitud'] - $p;
+ 	    $coordenadasGeograficas[$i]['longitud'] = $radar['lon'] - $p;
 
  	$coordenadasGeograficas[$i]['latitud'] = FRONTERA_LATITUD - $r;
 	$coordenadasGeograficas[$i]['altura'] = $flm;
 
     }
     
-    return;
+    return $coordenadasGraficas;
 }
 
 /**
@@ -351,7 +365,7 @@ function calculador($radar, $listaObstaculos, $flm, $obstaculoLimitante, &$gamma
     $theta0 = $earthToRadar * sin($gammaMax) / $earthToFl;
 
     if (false) {
-        print "Radio terrestre aumentado" . ":" . $radar['radioTerrestreAumentado'] . PHP_EOL;
+        print "Radio terrestre aumentado" . ":" . $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
         print "FL" . ":" . $flm . PHP_EOL;
         print "Obstaculo limitante" . ":" . $obstaculoLimitante . PHP_EOL;
         print "Distancia radar a superficie terrestre: $radarSupTierra" . PHP_EOL;
@@ -420,7 +434,15 @@ function calculosFLdebajoRadar(&$radar, $flm){
     $ptosNuevos = array();
     $ptoExtra = array( 'angulo' => 0, 'altura' => 0, 'estePtoTieneCobertura' => false);
     $ptoMaxCob = array('angulo'=> $anguloMaxCob, 'altura'=> 0,'estePtoTieneCobertura'=> true);
+
+    print "[00%]";
+    $countPct_old = 0;
+
     for ($i=0; $i < $radar['screening']['totalAzimuths']; $i++) {
+
+        $countPct = $i*100.0 / $radar['screening']['totalAzimuths'];
+        if ( ($countPct - $countPct_old) > 10 ) { print "[" . round($countPct) . "%]"; $countPct_old = $countPct; }
+
         // Interpolamos puntos terreno
 	$listaObstaculosAmpliada = interpolarPtosTerreno(
 	    $radar['screening']['listaAzimuths'][$i],
@@ -432,7 +454,6 @@ function calculosFLdebajoRadar(&$radar, $flm){
 
         // Se obtiene el punto limitante, último punto del terreno donde tenemos
         // información de los obstáculos
- 	$tamano = count( $listaObstaculosAmpliada );
  	$numPtosAzimut = count( $radar['screening']['listaAzimuths'][$i] );
  	$obstaculoLimitante = $radar['screening']['listaAzimuths'][$i][$numPtosAzimut-1]['altura'];
  	$anguloLimitante = $radar['screening']['listaAzimuths'][$i][$numPtosAzimut-1]['angulo'];
@@ -499,7 +520,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
                         $rangoSombra = array( $ptoLimitante, $ptoDos );
                         // print "RANGO SOMBRA (ptlimitante, epsilon2)" . PHP_EOL;
                         // print_r($rangoSombra);
-                        $ptosSombra = interpolarPtosTerreno( $rangoSombra, $radar['radioTerrestreAumentado'], 2);
+                        $ptosSombra = interpolarPtosTerreno( $rangoSombra, $radar['screening']['radioTerrestreAumentado'], 2);
                         // print "IFSNOP CASO B11" . PHP_EOL;
                         // print_r($ptosSombra);
                         $listaObstaculosAmpliada = array_merge( $listaObstaculosAmpliada, $ptosSombra );
@@ -586,7 +607,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
         }
         */
     } // for
-
+    print "[100%]";
     return;
 }
 
@@ -1223,6 +1244,7 @@ function determinaContornos($radar, $malla, $flm, &$listaContornos){
     // seran contornos de zonas CON cobertura
     $malla_original = $malla;
     while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 1 )) ) { // nos da el contorno de una isla
+        print ".";
         // mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
 	// este paso podra ser opcional, desde que floodfill funciona bien no es necesario delimitar la zona
 	// $nuevaMalla = mergeContorno($malla, $contorno, $value = 2);
@@ -1248,6 +1270,7 @@ function determinaContornos($radar, $malla, $flm, &$listaContornos){
     $malla = $floodFiller->Scan($malla, array( 'x' => 0, 'y' => 0 ), $floodValue = 2, $searchValue = 0);
 
     while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 0 )) ) { // nos da el contorno de una isla
+        print ",";
 	// mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
 	// este paso podra ser opcional
 
@@ -1263,6 +1286,7 @@ function determinaContornos($radar, $malla, $flm, &$listaContornos){
 	// $contorno = eliminaPuntosRepetidos($contorno);
 	$listaContornos[] = $contorno;
     }
+    print PHP_EOL;
     return true;
 }
 
