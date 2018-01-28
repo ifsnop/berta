@@ -43,10 +43,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    // generateMatlabFiles($infoCoral, $rutaResultados);
-
-    $flMin = 1;
-    $flMax = 400;
+    $flMin = 13;
+    $flMax = 13;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -73,12 +71,26 @@ function programaPrincipal(){
 	    // $infoCoral['canchoblanco']['secondaryMaximumRange'] = 20;
 	    // recorremos todas las localizaciones que nos ha dado el usuario
             foreach($lugares as $lugar) {
-		$coordenadas = cargarDatosCoordenadas($infoCoral, $lugar);
+                $lugar = strtolower($lugar);
+                // carga el fichero de screening en memoria
+		$radar = cargarDatosTerreno(
+		    $infoCoral[$lugar],
+		    $infoCoral[$lugar]['secondaryMaximumRange']
+		);
 
+                if (false) {
+                    generateMatlabFiles($radar, $rutaResultados);
+                    continue;
+                }
+/*
+		exit();
+                $coordenadas = cargarDatosCoordenadas($infoCoral, $lugar);
+		
 		$radarOriginal = cargarDatosTerreno(
 		    $coordenadas['screening'],
 		    $defaultRange = $infoCoral[strtolower($lugar)]['secondaryMaximumRange']
 		);
+*/
 		// print_r($radarOriginal);
 	        // para probar con una distancia más pequeña y forzar alcance a 20NM
 		// $radarOriginal['range'] = 20*1852;
@@ -92,9 +104,8 @@ function programaPrincipal(){
                     }
                     crearCarpetaResultados($ruta);
 		    print "Generando: ${fl}00 feet" . PHP_EOL;
-		    $radar = $radarOriginal;
-		    calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar);
-
+		    calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar);
+exit();
                 } // for interno
 	    } // foreach
 	    break;
@@ -108,9 +119,9 @@ function programaPrincipal(){
  * @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
  * @param bool $ordenarPorRadar para guardar por directorios por nivel de vuelo o por nombre de radar
  */
-function calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar) {
+function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
 
-    $hA = $radar['towerHeight'] + $radar['terrainHeight'];
+    $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
     $flm = $fl*100*FEET_TO_METERS; // fl en metros
     $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
 
@@ -120,7 +131,7 @@ function calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar
 	$distanciasCobertura = array();
         $coordenadasGeograficas = array();
         calculosFLencimaRadar($radar, $flm, $angulosApantallamiento, $distanciasCobertura);
-	calculaCoordenadasGeograficasA($radar, $coordenadas, $distanciasCobertura, $flm, $coordenadasGeograficas);
+	calculaCoordenadasGeograficasA($radar, $distanciasCobertura, $flm, $coordenadasGeograficas);
 	crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
         print "[calculosFLdebajoRadar]";
@@ -128,13 +139,13 @@ function calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar
 	print "[generacionMallado]";
         $malla = generacionMallado($radar);
         //printMalla($malla);
-        storeMallaAsImage($malla, $ruta . $radar['site'] . "_FL" . $nivelVuelo);
+        storeMallaAsImage($malla, $ruta . $radar['screening']['site'] . "_FL" . $nivelVuelo);
         print "[mallaMarco]";
 	$mallaGrande = mallaMarco($malla);
 	print "[determinaContornos]";
 	determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
 	print "[calculaCoordenadasGeograficasB]";
-	calculaCoordenadasGeograficasB($radar, $flm, $coordenadas, $listaContornos);
+	calculaCoordenadasGeograficasB($radar, $flm, $listaContornos);
 	print "[crearKmlB]" . PHP_EOL;
     	crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
     }
@@ -142,44 +153,30 @@ function calculosFL($radar, $fl, $ruta, $coordenadas, $altMode, $ordenarPorRadar
 }
 
 
-function generateMatlabFiles($infoCoral, $ruta) {
-    $rutaTerrenos = $ruta . DIRECTORY_SEPARATOR . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
-    $rutaCoordenadas = $ruta . DIRECTORY_SEPARATOR . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
+function generateMatlabFiles($radar, $rutaResultados) {
+    $rutaTerrenos = $rutaResultados . DIRECTORY_SEPARATOR . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
+    $rutaCoordenadas = $rutaResultados . DIRECTORY_SEPARATOR . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
 
-    print "Generando ficheros de Matlab" . PHP_EOL;
+    print "Generando fichero de Matlab para " .
+        "[" . $radar['radar'] . "=>" . $radar['screening']['site'] . "]" . PHP_EOL;
 
     crearCarpetaResultados($rutaTerrenos);
     crearCarpetaResultados($rutaCoordenadas);
 
-    foreach($infoCoral as $radar) {
-        if ( 0 == strlen($radar['screening']) ) {
-            continue;
-        }
+    if ( 0 == strlen($radar['screening_file']) )
+        continue;
 
-	$coordenadas = cargarDatosCoordenadas($infoCoral, $radar['radar']);
-	$radarOriginal = cargarDatosTerreno(
-	    $coordenadas['screening'],
-	    $defaultRange = $infoCoral[strtolower($radar['radar'])]['secondaryMaximumRange']
-	);
-        print "[" . $radar['radar'] . "=>" . $radarOriginal['site'] . "]";
+    @unlink($rutaTerrenos.$radar['screening_file']['site'].".txt");
+    if ( false === copy($radar['screening_file'], $rutaTerrenos.$radar['screening']['site'] . ".txt") )
+        die("ERROR: copiando " . $radar['screening_file'] . " a " . $rutaTerrenos.$radarOriginal['site'] . ".txt" .PHP_EOL);
+    
+    $coordenadas = $radar['screening']['site'] . "-Latitud=" . $radar['lat'] . ";\r\n" .
+        $radar['screening']['site'] . "-Longitud=" . $radar['lon'] . ";\r\n" .
+        $radar['screening']['site'] . "-Range=" . ($radar['range']/MILLA_NAUTICA_EN_METROS) . ";";
 
-        @unlink($rutaTerrenos.$radarOriginal['site'].".txt");
-        if (false === copy($radar['screening'], $rutaTerrenos.$radarOriginal['site'] . ".txt") ) {
-            die("ERROR: copiando " . $radar['screening'] . " a " . $rutaTerrenos.$radarOriginal['site'] . ".txt" .PHP_EOL);
-        }
-        $coordenadas = $radarOriginal['site'] . "_Latitud=" . $radar['lat'] . ";\r\n" .
-            $radarOriginal['site'] . "_Longitud=" . $radar['lon'] . ";\r\n" .
-            $radarOriginal['site'] . "_Range=" . $radar['secondaryMaximumRange'] . ";";
+    @unlink($rutaCoordenadas.$radarOriginal['site'].".txt");
+    if ( false === file_put_contents($rutaCoordenadas.$radar['screening']['site'] . ".txt", $coordenadas) )
+        die("ERROR: escribiendo " . $rutaCoordenadas.$radar['screening']['site'] . ".txt" . PHP_EOL);
 
-        @unlink($rutaCoordenadas.$radarOriginal['site'].".txt");
-        if ( false === file_put_contents($rutaCoordenadas.$radarOriginal['site'] . ".txt", $coordenadas) ) {
-            die("ERROR: escribiendo " . $rutaCoordenadas.$radarOriginal['site'] . ".txt" . PHP_EOL);
-        }
-
-    }
-    //print PHP_EOL;
-    //print_r($infoCoral);
-
-    exit();
     return true;
 }

@@ -10,19 +10,19 @@ CONST DISTANCIA_A_TERRAIN_HEIGHT = 14;
 
 /**
  * Esta funcion se encarga de abrir el fichero de terrenos y leer la informacion para almacenarla en memoria.
- * 
- * @int $defaultRange Alcance por defecto del radar en caso de no existir dato en el fichero de screening
- * @return array $radar con la informacion del radar leido de fichero
+ * @param array $radar información del radar que vamos a procesar
+ * @param int $forzarAlance Alcance por defecto del radar en caso de no existir dato en el fichero de screening
+ * @return array $radar datos del radar con la información del fichero de screening incorporado
  */
-function cargarDatosTerreno ($nombreFichero = NULL, $defaultRange = 0) {
+function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 
     // esta funcion guarda el contenido del fichero en un array 
-    if ( false === ($contenidoFichero = file($nombreFichero, FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
-        die("ERROR no ha sido posible leer el fichero" . PHP_EOL);
+    if ( false === ($contenidoFichero = file($radar['screening'], FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
+        die("ERROR no ha sido posible leer el fichero: " . $radar['screening'] . PHP_EOL);
     }
 
     // TRATAMIENTO DE LA INFORMACION CAPTURADA (Primera parte del fichero)
-    $radar = array(
+    $screening = array(
         'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
 	'k-factor' 	=> doubleval(substr(trim($contenidoFichero[1]), DISTANCIA_A_K_FACTOR)),
 	'method'   	=> doubleval(substr(trim($contenidoFichero[2]), DISTANCIA_A_METHOD)),
@@ -37,8 +37,8 @@ function cargarDatosTerreno ($nombreFichero = NULL, $defaultRange = 0) {
     $lineaActual = 7; // primera línea donde comienzan los AZIMUT
 
     // recorremos los azimuths
-    print "cargando contenido de >$nombreFichero< totalAzimuths(" . $radar['totalAzimuths'] . ")" . PHP_EOL;
-    for($i = 0; $i < $radar['totalAzimuths']; $i++){
+    print "cargando contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")" . PHP_EOL;
+    for($i = 0; $i < $screening['totalAzimuths']; $i++){
         $listaObstaculos = array();
 	// buscamos el bloque que comienza por AZIMUTH
 	while ( "AZIMUTH" != substr($contenidoFichero[$lineaActual], 0, 7) ){
@@ -52,10 +52,9 @@ function cargarDatosTerreno ($nombreFichero = NULL, $defaultRange = 0) {
         // insertamos el radar como primer obstaculo, para resolver el caso de que
         // el primer obstaculo este muy alejado. En matlab no se pinta nada hasta que no
         // llega al primer obstaculo.
-
         $listaObstaculos[] = array(
             'angulo' => 0,
-            'altura' => $radar['towerHeight'] + $radar['terrainHeight'],
+            'altura' => $screening['towerHeight'] + $screening['terrainHeight'],
             'estePtoTieneCobertura' => false
         );
 
@@ -74,28 +73,31 @@ function cargarDatosTerreno ($nombreFichero = NULL, $defaultRange = 0) {
 		$lineaActual++;
 	}
 	// anadimos un obstaculo mas por que hemos insertado el radar como primer obstaculo
-	$radar['listaAzimuths'][$acimutActual] = $listaObstaculos;	
+	$screening['listaAzimuths'][$acimutActual] = $listaObstaculos;	
     } // end for exterior
-	
     print PHP_EOL;
+
     // Camprobacion extra para algunos valores
-    if ($radar['k-factor'] <= 0) {
-        $radar['radioTerrestreAumentado'] = (4/3) * RADIO_TERRESTRE;
+    if ($screening['k-factor'] <= 0) {
+        $screening['radioTerrestreAumentado'] = (4/3) * RADIO_TERRESTRE;
     } else {
-        $radar['radioTerrestreAumentado'] = $radar['k-factor'] * RADIO_TERRESTRE;
+        $screening['radioTerrestreAumentado'] = $screening['k-factor'] * RADIO_TERRESTRE;
     }
 
-    if ($radar['range']<=0) {
-        // echo 'Introduce el alcance del radar (NM): ';
-	// $rango = fscanf(STDIN, "%d\n");
-	// echo "El alcance del radar es de " . $rango[0] . "NM" . PHP_EOL;
-        // $radar['range']= $rango[0] * MILLA_NAUTICA_EN_METROS;
-	$radar['range'] = $defaultRange * MILLA_NAUTICA_EN_METROS;
-	echo "El alcance del radar es de " . $defaultRange . "NM / " . $radar['range'] . "m" . PHP_EOL;
+    if ( $forzarAlcance > 0 ) {
+        // utiliza el alcance que pasamos a la función
+	$radar['range'] = $forzarAlcance * MILLA_NAUTICA_EN_METROS;
     } else {
-        echo "El alcance del radar es de " . $radar['range'] . "NM" . PHP_EOL;
-        $radar['range'] = $radar['range'] * MILLA_NAUTICA_EN_METROS;
+        // utiliza el alcance definido en el fichero de screening
+        $radar['range'] = $screening['range'] * MILLA_NAUTICA_EN_METROS;
     }
 
-    return $radar;	
+    echo "El alcance del radar es de " .
+        ($radar['range'] / MILLA_NAUTICA_EN_METROS) . 
+        "NM / " . $radar['range'] . "m" . PHP_EOL;
+
+    $radar['screening_file'] = $radar['screening'];
+    $radar['screening'] = $screening;
+
+    return $radar;
 }

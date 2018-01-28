@@ -116,7 +116,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode, $ordenarPorRadar){
 
     $numIslas = count($listaC);
     $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
-    $radarWithFL = $radar['site']."_FL" .  $nivelVuelo;
+    $radarWithFL = $radar['screening']['site']."_FL" .  $nivelVuelo;
     $fileName = $ruta . $radarWithFL;
     if ( count($listaC) == 0 ) {
         print "No se genera fichero para FL $nivelVuelo porque no hay cobertura" . PHP_EOL;

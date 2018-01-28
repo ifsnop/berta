@@ -8,6 +8,7 @@
  * @param string $name, nombre del lugar donde esta el radar (ENTRADA)
  * @return $coordenadas[] array con la informacion que necesitamos para generar los kml del radar con el que estamos trabajando (SALIDA)
  */
+ /*
 function cargarDatosCoordenadas($infoCoral, $name){
 	
     $name = strtolower($name);
@@ -19,7 +20,7 @@ function cargarDatosCoordenadas($infoCoral, $name){
     );
     return $coordenadas;
 }
-
+*/
 
 /**
  * Utilizando la lógica del SASS-C, busca un fichero recording_details.par y
