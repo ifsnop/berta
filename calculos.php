@@ -83,10 +83,20 @@ function calculaAnguloMaximaCobertura($radar, $flm){
         $radar['screening']['radioTerrestreAumentado'];
     $earthToFl = $radar['screening']['radioTerrestreAumentado'] + $flm;
 
-    return $anguloMaxCob = acos(
+    $anguloMaxCob = acos(
         (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range'],2))
         / (2 * $earthToRadar * $earthToFl)
     );
+    if (false) {
+        print "radioTerrestreAumentado: " . $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
+        print "flm: " . $flm . PHP_EOL;
+        print "earthToRadar: " . $earthToRadar . PHP_EOL;
+        print "earthToFl: " . $earthToFl . PHP_EOL;
+        print "radar['range']: " . $radar['range'] . PHP_EOL;
+        print "radar['screening']['range']: " . $radar['screening']['range'] . PHP_EOL;
+        print "anguloMaxCob: " . $anguloMaxCob . PHP_EOL;
+    }
+    return $anguloMaxCob;
 }
 
 /**
@@ -101,9 +111,9 @@ function calculaAnguloMaximaCobertura($radar, $flm){
 function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanciasCobertura ){
 		
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
-    $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $radioTerrestreAumentado, $flm);
+    $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm);
     $earthToFl = $radioTerrestreAumentado + $flm;
-    $earthToRadar = $radar['towerHeight'] + $radar['terrainHeight'] + $radioTerrestreAumentado;
+    $earthToRadar = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'] + $radioTerrestreAumentado;
 	
     // recorremos los azimuths
     for ($i=0; $i < $radar['screening']['totalAzimuths']; $i++) {
@@ -130,15 +140,34 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
 	        pow($earthToEvalPoint,2)) /
 	        (2 * $earthToRadar * $distanciasCobertura[$i])
 	    );
+	    
 	    $theta = asin($earthToRadar * sin($gammaMax) / $earthToFl);
-	    $epsilon = PI - $theta - $gammaMax;
+	    $epsilon = M_PI - $theta - $gammaMax;
+
+            if (false) {
+                print "radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
+                print "count: " . $count . PHP_EOL;
+                print "obstaculoLimitante: " . $obstaculoLimitante . PHP_EOL;
+                print "earthToEvalPoint: " . $earthToEvalPoint . PHP_EOL;
+                print "angulo:" . $angulo . PHP_EOL;
+                print "distanciasCobertura[" . $i . "]: " . $distanciasCobertura[$i] . PHP_EOL;
+                print "gammaMax: " . $gammaMax . PHP_EOL;
+	        print "theta: " . $theta . PHP_EOL;
+	        print "epsilon: " . $epsilon . PHP_EOL;
+                print "anguloMaxCob: " . $anguloMaxCob . PHP_EOL;
+            }
 
             if ($epsilon >  $anguloMaxCob)
 	        $distanciasCobertura[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
 	    else
 	 	$distanciasCobertura[$i] = $radioTerrestreAumentado * $epsilon / MILLA_NAUTICA_EN_METROS;
 
-            $angulosApantallamiento[$i] = ($gammaMax * PASO_A_GRADOS / PI) - FRONTERA_LATITUD;
+            $angulosApantallamiento[$i] = ($gammaMax * PASO_A_GRADOS / M_PI) - FRONTERA_LATITUD;
+
+	    if (false) {
+	        print "distanciasCobertura[" . $i . "]: " . $distanciasCobertura[$i] . PHP_EOL;
+                print "angulosApantallamiento[" . $i . "]: " . $angulosApantallamiento[$i] . PHP_EOL;
+            }
 
 	 } else { // $fl < $obstaculoLimitante
 	 	 	
@@ -148,13 +177,13 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
 	    $alturaUltimoPtoCob = 0;
             $anguloUltimoPtoCob = 0;
             $ret = buscarPuntosLimitantes(
-                $radar['listaAzimuths'][$i],
+                $radar['screening']['listaAzimuths'][$i],
                 $flm,
                 $alturaPrimerPtoSinCob,
                 $anguloPrimerPtoSinCob,
                 $alturaUltimoPtoCob,
                 $anguloUltimoPtoCob,
-                $alturaCentroFasesAntena = $radar['towerHeight'] + $radar['terrainHeight']
+                $alturaCentroFasesAntena = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight']
             );
             if ( !$ret ) {
 	        die("ERROR MALIGNO !! No deberias haber entrado aqui" . PHP_EOL);
@@ -168,6 +197,7 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
 	    }
 	 }// else
     }// fin for para recorrer los azimuths
+    return;
 }// fin function
 
 
@@ -182,28 +212,29 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
  */
 function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm){
 
-    $coordenadasGraficas = array();
+    $coordenadasGeograficas = array();
     
     // Calcula el paso en funcion del numero maximo de azimuth (puede ser desde 360 o 720)
     $paso = 360.0 / $radar['screening']['totalAzimuths'];
 
+    $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
+    $cosLatitudComplementaria = cos($latitudComplementaria);
+    $sinLatitudComplementaria = sin($latitudComplementaria);
     // Recorrido de los acimuts 
     for ($i = 0; $i < $radar['screening']['totalAzimuths']; $i++) {
  	// Calculo de la latitud
  	$anguloCentral = ($distanciasCobertura[$i] * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
- 	$latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
- 	$r = rad2deg(acos (cos($latitudComplementaria) * cos($anguloCentral) + sin($latitudComplementaria) * sin($anguloCentral)
+ 	$r = rad2deg(acos ($cosLatitudComplementaria * cos($anguloCentral) + $sinLatitudComplementaria * sin($anguloCentral)
             * cos(deg2rad($i * $paso)))); // tenemos r en grados
-
  	// Calculo de la longitud
- 	$rEnRadianes = deg2rad($r);
+ 	$rEnRadianes = deg2rad($r); // OPTIMIZAR
  	$numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($rEnRadianes);
  	$denominador = sin($latitudComplementaria) * sin($rEnRadianes);
 
  	if ($numerador > $denominador)
  	    $p = 0;
  	else
- 	    $p =  rad2deg( acos($numerador / $denominador) );
+            $p =  rad2deg( acos($numerador / $denominador) );
 
  	// asignacion de valores a la estructura de datos
  	if ( $i < ($radar['screening']['totalAzimuths'] / 2) )
@@ -215,8 +246,7 @@ function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm){
 	$coordenadasGeograficas[$i]['altura'] = $flm;
 
     }
-    
-    return $coordenadasGraficas;
+    return $coordenadasGeograficas;
 }
 
 /**
@@ -406,10 +436,10 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
 	$theta1 = asin ($numerador / $denominador);
 	
     // Ángulo central del punto de corte más alejado de la línea de vista(del último punto de cada azimuth) con el nivel de vuelo
-    $epsilon1 = PI - $theta1 - $gammaMax;
+    $epsilon1 = M_PI - $theta1 - $gammaMax;
 
     // Ángulo central del punto de corte más cercano de la línea de vista(del último punto de cada azimuth)  con el nivel de vuelo
-    $epsilon2 = PI - (PI-$theta1) - $gammaMax;
+    $epsilon2 = M_PI - (M_PI-$theta1) - $gammaMax;
     $ptosCorte[0] = $epsilon1 * $radioTerrestreAumentado;
     $ptosCorte[1] = $epsilon2 * $radioTerrestreAumentado;
 
@@ -657,18 +687,18 @@ function calculaAcimut($x, $y){
     $acimut = 0;
 
     if ($x < 0){
-    	$acimut = rad2deg( atan($y / $x) + PI );
+        $acimut = rad2deg( atan($y / $x) + M_PI );
     } elseif ($x > 0){
         if ($y < 0){
-            $acimut = rad2deg( atan($y / $x) + 2 * PI );
+            $acimut = rad2deg( atan($y / $x) + 2 * M_PI );
         } else{ // $y>= 0
             $acimut = rad2deg( atan($y / $x) );
         }
     } elseif ($x == 0) {
         if ($y < 0) {
-            $acimut = rad2deg( ( 3 * PI ) / 2 );
+            $acimut = rad2deg( ( 3 * M_PI ) / 2 );
 	} elseif ($y > 0) {
-            $acimut = rad2deg( PI / 2 );
+            $acimut = rad2deg( M_PI / 2 );
 	}
     }
 

@@ -14,11 +14,8 @@ include 'guardar.php';
 $path = "/home/eval/%rassv6%/spain.tsk";
 
 // DEFINICIÓN DE CONSTANTES
-CONST PI = M_PI;
 CONST RADIO_TERRESTRE = 6371000;
 CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
-CONST TOTAL_AZIMUTHS = 360;
-CONST MAX_AZIMUTHS = 720;
 
 /*
 $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
@@ -43,8 +40,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 1;
-    $flMax = 400;
+    $flMin = 46;
+    $flMax = 47;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -82,23 +79,15 @@ function programaPrincipal(){
                     generateMatlabFiles($radar, $rutaResultados);
                     continue;
                 }
-/*
-		exit();
-                $coordenadas = cargarDatosCoordenadas($infoCoral, $lugar);
-		
-		$radarOriginal = cargarDatosTerreno(
-		    $coordenadas['screening'],
-		    $defaultRange = $infoCoral[strtolower($lugar)]['secondaryMaximumRange']
-		);
-*/
-		// print_r($radarOriginal);
+
+		// print_r($radar);
 	        // para probar con una distancia más pequeña y forzar alcance a 20NM
-		// $radarOriginal['range'] = 20*1852;
+		// $radar['screening']['range'] = 20*1852;
 
 		for ($fl = $flMin; $fl <= $flMax; $fl += $paso) {
                     $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
 		    if ( $ordenarPorRadar ) {
-                        $ruta = $rutaResultados . $radarOriginal['site'] . DIRECTORY_SEPARATOR;
+                        $ruta = $rutaResultados . $radar['screening']['site'] . DIRECTORY_SEPARATOR;
                     } else {
                         $ruta = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
                     }
@@ -129,7 +118,7 @@ function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
         $angulosApantallamiento = array();
 	$distanciasCobertura = array();
         calculosFLencimaRadar($radar, $flm, $angulosApantallamiento, $distanciasCobertura);
-	$coordenadasGraficas = calculaCoordenadasGeograficasA($radar, $distanciasCobertura, $flm);
+	$coordenadasGeograficas = calculaCoordenadasGeograficasA($radar, $distanciasCobertura, $flm);
 	crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
         print "[calculosFLdebajoRadar]";
@@ -170,7 +159,7 @@ function generateMatlabFiles($radar, $rutaResultados) {
     
     $coordenadas = $radar['screening']['site'] . "-Latitud=" . $radar['lat'] . ";\r\n" .
         $radar['screening']['site'] . "-Longitud=" . $radar['lon'] . ";\r\n" .
-        $radar['screening']['site'] . "-Range=" . ($radar['range']/MILLA_NAUTICA_EN_METROS) . ";";
+        $radar['screening']['site'] . "-Range=" . ($radar['screening']['range']) . ";";
 
     @unlink($rutaCoordenadas.$radarOriginal['site'].".txt");
     if ( false === file_put_contents($rutaCoordenadas.$radar['screening']['site'] . ".txt", $coordenadas) )

@@ -9,18 +9,15 @@ CONST PERMISOS = 0775;
  * @return string
  */
 function toString ($coordenadasG){
-	$cadena = "";
-	$size = count ($coordenadasG);
-
-	for ($i = 0; $i < $size; $i++){
-		$cadena .= implode("," , $coordenadasG[$i]). PHP_EOL; // une elementos de un array en un string
-	}
-	// cerramos el polígono, incluyendo de nuevo el primer punto de la lista
-	$cadena .= implode(",", $coordenadasG[0]) . PHP_EOL; 
-
-	return $cadena;
+    $cadena = "";
+    $size = count($coordenadasG);
+    for ($i = 0; $i < $size; $i++) {
+        $cadena .= implode("," , $coordenadasG[$i]). PHP_EOL; // une elementos de un array en un string
+    }
+    // cerramos el polÃ­gono, incluyendo de nuevo el primer punto de la lista
+    $cadena .= implode(",", $coordenadasG[0]) . PHP_EOL; 
+    return $cadena;
 }
-
 
 /**
  * Funcion que da formato al array de coordenadas para poderlas escribir en el fichero (CASO B)
@@ -29,14 +26,12 @@ function toString ($coordenadasG){
  * @return string (SALIDA)
  */
 function toStringB ($isla){
-	$cadena = "";
-
-		for ($pto = 0; $pto < count($isla); $pto++){
-			$cadena .= implode("," , $isla[$pto]). PHP_EOL; // une elementos de un array en un string
-		}
-	return $cadena;
+    $cadena = "";
+    for ($pto = 0; $pto < count($isla); $pto++){
+        $cadena .= implode("," , $isla[$pto]). PHP_EOL; // une elementos de un array en un string
+    }
+    return $cadena;
 }
-
 
 /**
  * Funcion para crear el fichero kml con los resultados del calculo de la cobertura del radar (CASO A: fl por encima del radar)
