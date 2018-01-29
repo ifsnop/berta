@@ -58,7 +58,7 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
             'estePtoTieneCobertura' => false
         );
 
-        // recorre el numero de obstaculos para cada azimuths
+        // recorre el numero de obstaculos para cada azimut
 	for ($j = 0; $j < $contadorObstaculos; $j++) { 
 	    $pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';
 	    if ( false === ($cuenta = preg_match($pattern, $contenidoFichero[$lineaActual], $salida)) && (3 == $cuenta) ) {
@@ -99,5 +99,11 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
     $radar['screening_file'] = $radar['screening'];
     $radar['screening'] = $screening;
 
+    //print_r($radar);
+    
+    if ( false !== strpos($radar['radar'], "-psr") ) {
+        print "Detectado PSR" . PHP_EOL;
+        $radar['screening']['site'] = $radar['screening']['site'] . "_PSR";
+    }
     return $radar;
 }

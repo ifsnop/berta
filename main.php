@@ -36,12 +36,12 @@ function programaPrincipal(){
     $radioTerrestreAumentado = 0;
     $poligono = false;
     $ordenarPorRadar = false;
-    $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
+    $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona barcelona-psr begas begas-psr biarritz canchoblanco eljudio eljudio-psr erillas espineiras espineiras-psr foia fuerteventura gazules girona grancanaria grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montejunto montpellier motril palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto pozonieves randa randa-psr sierraespuna soller solorzano taborno tenerifesur tenerifesur-psr turrillas valdespina valencia valencia-psr valladolid villatobas");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 46;
-    $flMax = 47;
+    $flMin = 1;
+    $flMax = 400;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -50,9 +50,6 @@ function programaPrincipal(){
             $lugares[] =$argv[$i];
         }
     }
-
-    // Definicion de la estructura de datos que guarda las coordenadas del kml.
-    $coordenadasGeograficas = array ( array('longitud' => 0, 'latitud' => 0, 'altura' => 0) );
 
     $op = 1;
     do{
@@ -70,9 +67,16 @@ function programaPrincipal(){
             foreach($lugares as $lugar) {
                 $lugar = strtolower($lugar);
                 // carga el fichero de screening en memoria
+                // tener en cuenta que si es un $lugar acabado en psr, hay que poner el range del psr
+                $range = $infoCoral[$lugar]['secondaryMaximumRange'];
+                if ( false !== strpos($lugar, "psr") ) {
+                    print "cargando alcance del psr" . PHP_EOL;
+                    $range = $infoCoral[$lugar]['primaryMaximumRange'];
+                }
+
 		$radar = cargarDatosTerreno(
 		    $infoCoral[$lugar],
-		    $infoCoral[$lugar]['secondaryMaximumRange']
+		    $range
 		);
 
                 if (false) {
