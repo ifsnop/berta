@@ -246,6 +246,8 @@ function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm){
 	$coordenadasGeograficas[$i]['altura'] = $flm;
 
     }
+    // cerramos el polígono, repitiendo como último punto el primero
+    $coordenadasGeograficas[] = $coordenadasGeograficas[0];
     return $coordenadasGeograficas;
 }
 
@@ -897,7 +899,7 @@ function calculaCoordenadasGeograficasB($radar, $flm, &$listaC){
 /////////////////////////////////////////////// FUNCIONES NECESARIAS PARA PODER APLICAR EL ALGORITMO MARCHING SQUARES ////////////////////////////////////////////////////////////// 
 
 /**
- * Funcion que dada una malla y la posici�n de una fila, nos devuelve la fila en un array
+ * Funcion que dada una malla y la posición de una fila, nos devuelve la fila en un array
  * 
  * @param int $y (ENTRADA)
  * @param array $malla (ENTRADA)

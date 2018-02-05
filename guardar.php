@@ -14,8 +14,6 @@ function toString ($coordenadasG){
     for ($i = 0; $i < $size; $i++) {
         $cadena .= implode("," , $coordenadasG[$i]). PHP_EOL; // une elementos de un array en un string
     }
-    // cerramos el polígono, incluyendo de nuevo el primer punto de la lista
-    $cadena .= implode(",", $coordenadasG[0]) . PHP_EOL; 
     return $cadena;
 }
 
@@ -32,6 +30,9 @@ function toStringB ($isla){
     }
     return $cadena;
 }
+
+// la diferencia entre las funciones anteriores es que toStringA tiene que cerrar el polígono,
+// y toStringB no lo necesita.
 
 /**
  * Funcion para crear el fichero kml con los resultados del calculo de la cobertura del radar (CASO A: fl por encima del radar)
@@ -82,16 +83,8 @@ function crearKML ($coordenadasG, $radar, $ruta, $fl, $altMode, $ordenarPorRadar
  		</Document>
 	</kml>';
 
-	print "NOMBRE FICHERO: " . $fileName . ".kmz" . PHP_EOL;
-	$zip = new ZipArchive();
-        if ( false === $zip->open(
-            $fileName . ".kmz",
-            ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE)
-        ) {
-            print "ERROR can't create " . $fileName . ".kmz" . PHP_EOL; exit;
-        }
-        $zip->addFromString($radarWithFL . ".kml", $contenido);
-        $zip->close();
+    writeKMZ($fileName, $radarWithFL, $contenido);
+    return;
 }
 
 /**
@@ -114,7 +107,7 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode, $ordenarPorRadar){
     $radarWithFL = $radar['screening']['site']."_FL" .  $nivelVuelo;
     $fileName = $ruta . $radarWithFL;
     if ( count($listaC) == 0 ) {
-        print "No se genera fichero para FL $nivelVuelo porque no hay cobertura" . PHP_EOL;
+        print "INFO No se genera fichero para FL $nivelVuelo porque no hay cobertura" . PHP_EOL;
         return false;
     }
     $cadenaOuter = toStringB($listaC[0]);
@@ -151,18 +144,26 @@ function crearKmlB($listaC, $radar, $ruta, $fl, $altMode, $ordenarPorRadar){
             </MultiGeometry>
         </Placemark>
         </Document></kml>';
+        
+    writeKMZ($fileName, $radarWithFL, $contenido);
+    return;
 
+}
 
-    print "NOMBRE FICHERO: " . $fileName . ".kmz" . PHP_EOL;
+function writeKMZ($fileName, $radarWithFL, $content) {
+
+    print "INFO NOMBRE FICHERO: " . $fileName . ".kmz" . PHP_EOL;
     $zip = new ZipArchive();
     if ( false === $zip->open(
         $fileName . ".kmz",
         ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE)
     ) {
-        print "ERROR can't create " . $fileName . ".kmz" . PHP_EOL; exit;
+        die("ERROR can't create " . $fileName . ".kmz" . PHP_EOL);
     }
-    $zip->addFromString($radarWithFL . ".kml", $contenido);
+    $zip->addFromString($radarWithFL . ".kml", $content);
     $zip->close();
+
+    return;
 }
 
 /**
@@ -181,6 +182,43 @@ function crearCarpetaResultados($ruta){
         else
             return false;
     }
+
+    return true;
+}
+
+function storeMallaAsImage($malla, $nombre) {
+    $im = imagecreatetruecolor(count($malla), count($malla[0]));
+    if ( false === $im ) {
+        die ("ERROR imagecreatetruecolor" . PHP_EOL);
+    }
+    imagealphablending($im, true); // setting alpha blending on
+    imagesavealpha($im, true);
+    if ( false === ($p = imagecolorallocate($im, 0, 148, 255)) ) {
+        die ("ERROR imagecolorallocate" . PHP_EOL);
+    }
+    if ( false === ($bg = imagecolorallocatealpha($im, 0, 0, 0, 127)) ) {
+        die ("ERROR imagecolorallocatealpha" . PHP_EOL);
+    }
+    if ( false === imagefill($im, 0, 0, $bg) ) {
+        die ("ERROR imagefill" . PHP_EOL);
+    }
+
+    for($i = 0; $i < count($malla); $i++) {
+        for($j = 0; $j < count($malla[$i]); $j++) {
+            if ( $malla[$j][$i] != "0" ) {
+                imagesetpixel($im, $i, $j, $p);
+            }
+        }
+    }
+
+    if ( false === imagepng( $im, $nombre . ".png" ) ) {
+        die("ERROR imagepng ${nombre}.png" . PHP_EOL);
+    }
+
+    if ( false === imagedestroy( $im ) ) {
+        die("ERROR imagedestroy" . PHP_EOL);
+    }
+    print "INFO NOMBRE FICHERO: ${nombre}.png" . PHP_EOL;
 
     return true;
 }

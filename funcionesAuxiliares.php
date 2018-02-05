@@ -126,26 +126,6 @@ function printMalla($malla, $relleno = " ") {
     }
 }
 
-function storeMallaAsImage($malla, $nombre) {
-    $im = imagecreatetruecolor(count($malla), count($malla[0]));
-    imagealphablending($im, true); // setting alpha blending on
-    imagesavealpha($im, true);
-    $p = imagecolorallocate($im, 0, 148, 255);
-    $bg = imagecolorallocatealpha($im, 0, 0, 0, 127);
-    imagefill($im, 0, 0, $bg);
-    for($i = 0; $i < count($malla); $i++) {
-        for($j = 0; $j < count($malla[$i]); $j++) {
-            if ( $malla[$j][$i] != "0" ) {
-                imagesetpixel($im, $i, $j, $p);
-            }
-        }
-    }
-
-    imagepng( $im, $nombre . ".png" );
-    imagedestroy( $im );
-
-}
-
 function printContornos($contornos, $malla) {
 /*
     $malla = array();

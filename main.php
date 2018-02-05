@@ -10,9 +10,6 @@ include 'funcionesAuxiliares.php';
 include 'calculos.php';
 include 'guardar.php';
 
-// DEFINICIÓN DE RUTAS
-$path = "/home/eval/%rassv6%/spain.tsk";
-
 // DEFINICIÓN DE CONSTANTES
 CONST RADIO_TERRESTRE = 6371000;
 CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
@@ -24,7 +21,13 @@ foreach($lugares as $l) {
 }
 exit();
 */
-
+/*
+print roundE("40.1") . PHP_EOL;
+print roundE("1") . PHP_EOL;
+print roundE("32.123456789") . PHP_EOL;
+print roundE("2.123456789") . PHP_EOL;
+print roundE("2.12345678") . PHP_EOL;
+*/
 programaPrincipal();
 exit(0);
 
@@ -40,8 +43,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 1;
-    $flMax = 400;
+    $flMin = 300;
+    $flMax = 300;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -129,12 +132,17 @@ function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
 	calculosFLdebajoRadar($radar, $flm);
 	print "[generacionMallado]";
         $malla = generacionMallado($radar);
-        //printMalla($malla);
-        storeMallaAsImage($malla, $ruta . $radar['screening']['site'] . "_FL" . $nivelVuelo);
         print "[mallaMarco]";
 	$mallaGrande = mallaMarco($malla);
 	print "[determinaContornos]";
 	determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
+	if ( 0 == count($listaContornos) ) {
+	    print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+	    return;
+	}
+	//printMalla($malla);
+        storeMallaAsImage($malla, $ruta . $radar['screening']['site'] . "_FL" . $nivelVuelo);
+        storeListaObstaculos($ruta, $radar, $nivelVuelo);
 	print "[calculaCoordenadasGeograficasB]";
 	calculaCoordenadasGeograficasB($radar, $flm, $listaContornos);
 	print "[crearKmlB]" . PHP_EOL;
@@ -143,7 +151,32 @@ function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
     return;
 }
 
+function storeListaObstaculos($ruta, $radar, $nivelVuelo) {
 
+    $obstaculosAzStr = "";
+    foreach($radar['screening']['listaAzimuths'] as $az => $obstaculosAz) {
+        //$obstaculosAzStr .= $az . ",";
+        $obstaculosAzStr .= strtolower(roundE(
+            $obstaculosAz[0]['angulo']*$radar['screening']['radioTerrestreAumentado']/MILLA_NAUTICA_EN_METROS
+            )). ",";
+        foreach($obstaculosAz as $arr) {
+            $obstaculosAzStr .= strtolower(roundE(
+                $arr['angulo']*$radar['screening']['radioTerrestreAumentado']/MILLA_NAUTICA_EN_METROS
+                )). ",";
+        }
+        $obstaculosAzStr = substr($obstaculosAzStr, 0, -1) . PHP_EOL;
+    }
+    if ( false === file_put_contents($ruta.$radar['screening']['site'] . "_FL" . $nivelVuelo . ".txt", $obstaculosAzStr)) {
+        die("ERROR file_put_contents " . $ruta.$radar['screening']['site'] . "_FL" . $nivelVuelo . ".txt" . PHP_EOL);
+    }
+    print "INFO NOMBRE FICHERO: " . $ruta.$radar['screening']['site'] . "_FL" . $nivelVuelo . ".txt" . PHP_EOL;
+    return;
+}
+
+/*
+ * Genera ficheros para comparar la lista de obstáculos en PHP con la de Matlab
+ *
+ */
 function generateMatlabFiles($radar, $rutaResultados) {
     $rutaTerrenos = $rutaResultados . DIRECTORY_SEPARATOR . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
     $rutaCoordenadas = $rutaResultados . DIRECTORY_SEPARATOR . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
@@ -169,5 +202,34 @@ function generateMatlabFiles($radar, $rutaResultados) {
     if ( false === file_put_contents($rutaCoordenadas.$radar['screening']['site'] . ".txt", $coordenadas) )
         die("ERROR: escribiendo " . $rutaCoordenadas.$radar['screening']['site'] . ".txt" . PHP_EOL);
 
+    print "INFO NOMBRE FICHERO: " . $rutaTerrenos.$radar['screening_file']['site'].".txt" . PHP_EOL;
     return true;
 }
+
+/*
+ * Redondea estilo MATLAB, dejando 10 números después del punto decimal.
+ *
+ */
+function roundE($n) {
+    $val = round($n, 10);
+    if ($val == 0) {
+        $val = '0.0000000000';
+    }
+    $pos = strpos($val, '.');
+    if ( $pos === false ) {
+        $val = $val . ".";
+        $pos = strpos($val, '.');
+    }
+    if ( strlen($val)-$pos-1 < 10 ) {
+        $val = substr($val, 0, $pos+1) . str_pad((string)substr($val, $pos+1),10,"0", STR_PAD_RIGHT);
+    }
+    return $val;
+}
+/*
+
+    if ( strpos($n, "E") ) {
+        return round($n, 23);
+    } else {
+        return round($n, 6);
+    }
+*/
