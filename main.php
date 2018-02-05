@@ -43,8 +43,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 300;
-    $flMax = 300;
+    $flMin = 1;
+    $flMax = 400;
     $paso = 1;
 
     if ( $argc > 1 ){ 
