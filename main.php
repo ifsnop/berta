@@ -164,7 +164,7 @@ function storeListaObstaculos($ruta, $radar, $nivelVuelo) {
                 $arr['angulo']*$radar['screening']['radioTerrestreAumentado']/MILLA_NAUTICA_EN_METROS
                 )). ",";
         }
-        $obstaculosAzStr = substr($obstaculosAzStr, 0, -1) . PHP_EOL;
+        $obstaculosAzStr = substr($obstaculosAzStr, 0, -1) . "\r\n"; //PHP_EOL;
     }
     if ( false === file_put_contents($ruta.$radar['screening']['site'] . "_FL" . $nivelVuelo . ".txt", $obstaculosAzStr)) {
         die("ERROR file_put_contents " . $ruta.$radar['screening']['site'] . "_FL" . $nivelVuelo . ".txt" . PHP_EOL);
@@ -211,7 +211,7 @@ function generateMatlabFiles($radar, $rutaResultados) {
  *
  */
 function roundE($n) {
-    $val = round($n, 10);
+    $val = round($n, 10, PHP_ROUND_HALF_UP);
     if ($val == 0) {
         $val = '0.0000000000';
     }

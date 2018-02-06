@@ -462,7 +462,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
     // extra para una distancia de 0.1 NM. Es una pequeña distancia que se
     // le suma al ángulo de cada punto [0.1 NM]
     // para añadir un ptoExtra y poder aproximar el mallado
-    $anguloMinimo = (0.1 *  MILLA_NAUTICA_EN_METROS ) / ( RADIO_TERRESTRE * (4/3) );
+    $anguloMinimo = (0.1 *  MILLA_NAUTICA_EN_METROS ) / $radar['screening']['radioTerrestreAumentado'];
     $ptosNuevos = array();
     $ptoExtra = array( 'angulo' => 0, 'altura' => 0, 'estePtoTieneCobertura' => false);
     $ptoMaxCob = array('angulo'=> $anguloMaxCob, 'altura'=> 0,'estePtoTieneCobertura'=> true);
