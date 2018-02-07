@@ -44,7 +44,7 @@ function programaPrincipal(){
     $infoCoral = getRadars($path, $parse_all = true);
 
     $flMin = 1;
-    $flMax = 400;
+    $flMax = 2;
     $paso = 1;
 
     if ( $argc > 1 ){ 

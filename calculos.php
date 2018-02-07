@@ -265,7 +265,8 @@ function interpolarPtosTerreno($listaObstaculos, $radioTerrestreAumentado, $caso
 
     $diferencia = 0; $anguloNuevoPto = 0; $alturaNuevoPto = 0;
     $listaObstaculosAmpliada = array();
-    $ptoNuevo = array ('angulo' => 0, 'altura' => 0, 'estePtoTieneCobertura' => false); // inicializamos el punto nuevo
+    // este punto no se usa, quitar
+    // $ptoNuevo = array ('angulo' => 0, 'altura' => 0, 'estePtoTieneCobertura' => false); // inicializamos el punto nuevo
 
     // El paso para interpolar queda en función del tamaño de la celda.
     // Debería ser la mitad del tamaño de la celda, ponemos 1NM para simplificar el depurado
@@ -463,6 +464,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
     // le suma al ángulo de cada punto [0.1 NM]
     // para añadir un ptoExtra y poder aproximar el mallado
     $anguloMinimo = (0.1 *  MILLA_NAUTICA_EN_METROS ) / $radar['screening']['radioTerrestreAumentado'];
+    $anguloMaximo = (TAM_ANGULO_MAXIMO * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
     $ptosNuevos = array();
     $ptoExtra = array( 'angulo' => 0, 'altura' => 0, 'estePtoTieneCobertura' => false);
     $ptoMaxCob = array('angulo'=> $anguloMaxCob, 'altura'=> 0,'estePtoTieneCobertura'=> true);
@@ -502,15 +504,11 @@ function calculosFLdebajoRadar(&$radar, $flm){
  	    if ((abs($theta0)) <= 1){
 	 	obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radar['screening']['radioTerrestreAumentado'], $epsilon1, $epsilon2, $ptosCorte);
 		$ptoUno = array('angulo' => $epsilon1, 'altura'=> 0, 'estePtoTieneCobertura'=> true);
-
 		// A.1: se interpola desde el último punto del terreno hasta el punto 1
 		if ($epsilon1 < $anguloMaxCob) {
 	 	    $rangoLuz =  array ($ptoLimitante, $ptoUno);
 	 	    // devuelve una lista con los puntos que se han interpolado 
 	 	    $ptosLuz = interpolarPtosTerreno($rangoLuz, $radar['screening']['radioTerrestreAumentado'], 3);
-	 	    // print "IFSNOP CASO A1" . PHP_EOL;
-	 	    // print_r($ptosLuz);
-
 	 	    $listaObstaculosAmpliada = array_merge( $listaObstaculosAmpliada, $ptosLuz );
 	 	    $ptoExtra = array( 'angulo' => ($epsilon1 + $anguloMinimo), 'altura' => 0, 'estePtoTieneCobertura' => false );
 	 	    $listaObstaculosAmpliada= array_merge( $listaObstaculosAmpliada, array($ptoExtra) );
@@ -519,9 +517,6 @@ function calculosFLdebajoRadar(&$radar, $flm){
 	 	} else {
 	 	    $rangoLuz =  array ($ptoLimitante, $ptoMaxCob);
                     $ptosLuz = interpolarPtosTerreno($rangoLuz, $radar['screening']['radioTerrestreAumentado'], 3);
-                    // print "IFSNOP CASO A2" . PHP_EOL;
-	 	    // print_r($ptosLuz);
-
                     $listaObstaculosAmpliada = array_merge( $listaObstaculosAmpliada, $ptosLuz );
 	 	    $ptoExtra = array( 'angulo' => ($anguloMaxCob + $anguloMinimo), 'altura' => 0, 'estePtoTieneCobertura' => false );
 	 	    $listaObstaculosAmpliada = array_merge( $listaObstaculosAmpliada, array($ptoExtra) );
@@ -529,8 +524,6 @@ function calculosFLdebajoRadar(&$radar, $flm){
             // A.3: El corte con el nivel de vuelo se traduce en angulos negativos
             } elseif ( abs($theta0) > 1 ) {
 	        $ptoExtra = array( 'angulo' => ($anguloLimitante + $anguloMinimo), 'altura' => 0, 'estePtoTieneCobertura' => false );
-	        // print "IFSNOP CASO A3" . PHP_EOL;
- 	        // print_r($ptoExtra);
 	        $listaObstaculosAmpliada= array_merge( $listaObstaculosAmpliada, array($ptoExtra) );
 	    }
 	// fin if caso A
@@ -540,6 +533,8 @@ function calculosFLdebajoRadar(&$radar, $flm){
                 obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radar['screening']['radioTerrestreAumentado'], $epsilon1, $epsilon2, $ptosCorte);
 		$ptoUno = array( 'angulo'=> $epsilon1, 'altura'=> 0, 'estePtoTieneCobertura'=> true ); // epsilon1
 		$ptoDos = array( 'angulo'=> $epsilon2, 'altura'=> 0, 'estePtoTieneCobertura'=> true ); // epsilon2
+		$anguloMedio = ($epsilon2 + $anguloLimitante) / 2.0; //punto medio entre el ultimo obstaculo y epsilon2
+		$ptoMedio = array( 'angulo'=> $anguloMedio, 'altura'=> 0, 'estePtoTieneCobertura'=> false );
 		// B.1: se interpola desde el último punto del terreno hasta el punto 1 pasando por el punto 2
 	 	if ( ($epsilon1 < $anguloMaxCob) && ($epsilon2 < $anguloMaxCob) ) {
 	 	    // rango sombra
@@ -549,22 +544,19 @@ function calculosFLdebajoRadar(&$radar, $flm){
 	 	    // PROBLEMA 1
 	 	    // B.1.1: se interpola desde el último punto del terreno hasta el punto 2 (rango SOMBRA)
                     if ( ($epsilon1 > $anguloLimitante) ) {
-                        $rangoSombra = array( $ptoLimitante, $ptoDos );
-                        // print "RANGO SOMBRA (ptlimitante, epsilon2)" . PHP_EOL;
-                        // print_r($rangoSombra);
-                        $ptosSombra = interpolarPtosTerreno( $rangoSombra, $radar['screening']['radioTerrestreAumentado'], 2);
-                        // print "IFSNOP CASO B11" . PHP_EOL;
-                        // print_r($ptosSombra);
+                        // En el caso en que la zona de sombra sea menor de una milla, añadimos un punto
+                        // intermedio entre el último obstáculo y el epsilon2, sin cobertura, para que en
+                        // la malla haya una discontinuidad.
+                        if ($epsilon2 - $anguloLimitante <= $anguloMaximo){
+                            $ptosSombra = array($ptoMedio, $ptoDos);
+                        } else {
+                            $rangoSombra = array( $ptoLimitante, $ptoDos );
+                            $ptosSombra = interpolarPtosTerreno( $rangoSombra, $radar['screening']['radioTerrestreAumentado'], 2);
+                        }
                         $listaObstaculosAmpliada = array_merge( $listaObstaculosAmpliada, $ptosSombra );
-
                         // B.1.2: Se interpola desde el punto 2 al punto 1 (rango LUZ)
                         $rangoLuz =  array( $ptoDos, $ptoUno );
-                        // print "RANGO LUZ(epsilon2, epsilon1)" . PHP_EOL;
-                        // print_r($rangoLuz);
                         $ptosLuz = interpolarPtosTerreno( $rangoLuz, $radar['screening']['radioTerrestreAumentado'], 3 );
-                        // print "IFSNOP CASO B12" . PHP_EOL;
-                        // print_r($ptosLuz);
-
                         $listaObstaculosAmpliada = array_merge( $listaObstaculosAmpliada, $ptosLuz );
                         $ptoExtra = array('angulo' => ($epsilon1 + $anguloMinimo), 'altura' => 0, 'estePtoTieneCobertura' => false );
                         $listaObstaculosAmpliada= array_merge( $listaObstaculosAmpliada, array($ptoExtra) );
@@ -578,23 +570,19 @@ function calculosFLdebajoRadar(&$radar, $flm){
 	 	// B.2: se interpola desde el último punto del terreno hasta el punto de máxima cobertura pasando por el punto 2
 	 	} elseif ( ($epsilon1 > $anguloMaxCob) && ($epsilon2 < $anguloMaxCob) ) { // B.2
                     // B.2.1: se interpola desde el último punto del terreno hasta el punto 2 (rango SOMBRA)
-                    $ptoDos = array ('angulo' => $epsilon2, 'altura' => 0,  'estePtoTieneCobertura'=> true);
-	 	    $rangoSombra = array ($ptoLimitante, $ptoDos);
-                    //print "RANGO SOMBRA (ptlimitante, epsilon2)" . PHP_EOL;
-                    //print_r($rangoSombra);
-                    $ptosSombra = interpolarPtosTerreno($rangoSombra, $radar['screening']['radioTerrestreAumentado'], 2);
-	 	    //print "IFSNOP CASO B21" . PHP_EOL;
-	 	    //print_r($ptosSombra);
+                    // En el caso en que la zona de sombra sea menor de una milla, añadimos un punto
+                    // intermedio entre el último obstáculo y el epsilon2, sin cobertura, para que en
+                    // la malla haya una discontinuidad.
+                    if ($epsilon2 - $anguloLimitante <= $anguloMaximo){
+                        $ptosSombra = array($ptoMedio, $ptoDos);
+                    } else {
+                        $rangoSombra = array ($ptoLimitante, $ptoDos);
+                        $ptosSombra = interpolarPtosTerreno($rangoSombra, $radar['screening']['radioTerrestreAumentado'], 2);
+                    }
                     $listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, $ptosSombra);
-
                     // B.2.2: Se interpola desde el punto 2 hasta el punto de máxima cobertura (rango LUZ)
                     $rangoLuz =  array ($ptoDos, $ptoMaxCob);
-                    //print "RANGO LUZ (epsilon2, maxcobertura)" . PHP_EOL;
-                    //print_r($rangoLuz);
                     $ptosLuz = interpolarPtosTerreno($rangoLuz, $radar['screening']['radioTerrestreAumentado'], 3);
-                    //print "IFSNOP CASO B22" . PHP_EOL;
-                    //print_r($ptosLuz);
-
                     $listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, $ptosLuz);
                     $ptoExtra = array ('angulo' => ($anguloMaxCob + $anguloMinimo), 'altura' => 0, 'estePtoTieneCobertura' => false);
                     $listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, array($ptoExtra));
@@ -603,16 +591,11 @@ function calculosFLdebajoRadar(&$radar, $flm){
 	 	// B.3: Los cortes con el nivel de vuelo están más allá del punto de máxima cobertura
 	 	} elseif ( (($epsilon1 > $anguloMaxCob) && ($epsilon2 > $anguloMaxCob)) ) { // caseo B.3
                     $ptoExtra = array ('angulo' => ($anguloLimitante + $anguloMinimo), 'altura' => 0, 'estePtoTieneCobertura' => false);
-	 	    //print "IFSNOP CASO B3, maxima cobertura" . PHP_EOL;
- 		    //print_r($ptoExtra);
                     $listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, array($ptoExtra));
 	 	}
 	    // B.4: Los cortes con el nivel de vuelo se traducen en angulos negativos
 	    } elseif ( abs($theta0) > 1 ) {
 	 	$ptoExtra = array ('angulo' => ($anguloLimitante + $anguloMinimo), 'altura' => 0, 'estePtoTieneCobertura' => false);
-	 	//print "IFSNOP CASO B4" . PHP_EOL;
- 		//print_r($ptoExtra);
-
 	 	$listaObstaculosAmpliada = array_merge($listaObstaculosAmpliada, array($ptoExtra));
 	    
             } // Fin CASO B
@@ -629,7 +612,8 @@ function calculosFLdebajoRadar(&$radar, $flm){
 	if ( !isset($listaObstaculosAmpliada) || !is_array($listaObstaculosAmpliada) ) {
             die ("buscaDistanciaMenor: $$listaObstaculos debería ser un array");
         }
-        $radar['screening']['listaAzimuths'][$i] = $listaObstaculosAmpliada; // metemos la lista de obstaculos nueva en la estructura
+        // metemos la lista de obstaculos nueva en la estructura
+        $radar['screening']['listaAzimuths'][$i] = $listaObstaculosAmpliada;
 
         /*
         for($jj=0;$jj<count($radar['listaAzimuths'][$i]); $jj++) {
@@ -906,7 +890,7 @@ function calculaCoordenadasGeograficasB($radar, $flm, &$listaC){
  * @return array[] (SALIDA)
  */
 // FUNCION SUSCEPTIBLE DE ELIMINACION
-function getFila($y, $malla){
+/*function getFila($y, $malla){
 
     $rowData = array();
 
@@ -915,7 +899,7 @@ function getFila($y, $malla){
     }
     return $rowData;
 }
-
+*/
 /**
  * Funcion que copia una matriz en un vector
  * 
@@ -942,7 +926,7 @@ function matrixToVector ($malla){
  * @param int $y (ENTRADA/SALIDA)
  */
 // FUNCION SUSCEPTIBLE DE MEJORA
-function getFirstPoint($malla, &$x, &$y, $searchValue){
+/*function getFirstPoint($malla, &$x, &$y, $searchValue){
 
     $x = -1; $y = -1;
     $rowData = array();
@@ -964,6 +948,31 @@ function getFirstPoint($malla, &$x, &$y, $searchValue){
 	    }
 	}
 	$fila++;
+    }
+
+    return $enc;
+}
+*/
+
+/**
+ * Busca la primera ocurrencia de searchValue en la malla para empezar a contornear
+ *
+ * @param array $malla (ENTRADA)
+ * @param int $searchValue (ENTRADA)
+ * @param int $i (ENTRADA/SALIDA)
+ * @param int $j (ENTRADA/SALIDA)
+ */
+function getFirstPoint($malla, &$i, &$j, $searchValue){
+
+    $enc = false;
+
+    for( $j=0;$j<count($malla); $j++ ) {
+        for( $i=0; $i < count($malla[$j]); $i++ ) {
+            if ( $malla[$j][$i] == $searchValue ) {
+                $enc = true;
+                break(2);
+            }
+        }
     }
 
     return $enc;
@@ -1130,14 +1139,37 @@ function marchingSquares($radar, $malla, $flm, $searchValue){
 
     $contorno = array();
     // Find the starting point
-    getFirstPoint($malla, $x,$y, $searchValue);
+//    $time_start = microtime(true);
+    if ( false === ($ret1 = getFirstPoint($malla, $x, $y, $searchValue)) ) {
+        return false;
+    };
+//    print "[A" . round(microtime(true) - $time_start,3) ."]" . PHP_EOL;
+//    $time_start = microtime(true);
+//    $ret2 = getFirstPoint2($malla, $x1,$y1, $searchValue);
+//    print "[B" . round(microtime(true) - $time_start,3) ."]" . PHP_EOL;
 
-    if ( $x == -1 || $y == -1 )
+//    if ( $ret1 != $ret2 ) {
+//        die("MUERTE VERGONZOSA1" . var_dump($ret1) . "_" . var_dump($ret2) . PHP_EOL);
+//    }
+    
+//    if ( $x != $x1 || $y != $y1 ) {
+//        print  "MUERTE VERGONZOSA2 $x $x1 $y $y1" . PHP_EOL;
+//    }
+    
+/*
+    if ($ret1 === false)
+        return false;
+    if ($ret2 === false)
+        return false;
+    if ( $x == -1 || $y == -1 ) {
+        die("NO DEBERíAS ESTAR AQUI" . PHP_EOL);
     	return false;
-
+    }
+*/
     $vector = matrixToVector($malla);
+
     // Return list of x and y positions
-    $contorno = walkPerimeter($radar,$x, $y, $malla, $vector, $flm, $searchValue); // nos devuelve la isla
+    $contorno = walkPerimeter($radar, $x, $y, $malla, $vector, $flm, $searchValue); // nos devuelve la isla
 
     return $contorno;
 }
