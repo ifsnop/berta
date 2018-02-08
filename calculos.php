@@ -528,7 +528,8 @@ function calculosFLdebajoRadar(&$radar, $flm){
 	    }
 	// fin if caso A
 	// CASO B: Último punto del acimut por encima del nivel de vuelo y por debajo del radar
-        } elseif ( ( $obstaculoLimitante > $flm ) && ( $radarSupTierra > $obstaculoLimitante ) ) {
+	// incluye el caso en el que la altura del radar esté al mismo nivel que el último obstáculo
+        } elseif ( ( $obstaculoLimitante > $flm ) && ( $radarSupTierra >= $obstaculoLimitante ) ) {
 	    if ( (abs($theta0)) <= 1 ) {
                 obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radar['screening']['radioTerrestreAumentado'], $epsilon1, $epsilon2, $ptosCorte);
 		$ptoUno = array( 'angulo'=> $epsilon1, 'altura'=> 0, 'estePtoTieneCobertura'=> true ); // epsilon1

@@ -44,7 +44,7 @@ function programaPrincipal(){
     $infoCoral = getRadars($path, $parse_all = true);
 
     $flMin = 1;
-    $flMax = 2;
+    $flMax = 400;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -212,6 +212,7 @@ function generateMatlabFiles($radar, $rutaResultados) {
  */
 function roundE($n) {
     $val = round($n, 10, PHP_ROUND_HALF_UP);
+/*
     if ($val == 0) {
         $val = '0.0000000000';
     }
@@ -223,6 +224,7 @@ function roundE($n) {
     if ( strlen($val)-$pos-1 < 10 ) {
         $val = substr($val, 0, $pos+1) . str_pad((string)substr($val, $pos+1),10,"0", STR_PAD_RIGHT);
     }
+*/
     return $val;
 }
 /*
