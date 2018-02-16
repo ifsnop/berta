@@ -17,6 +17,7 @@ if ( false === ($php = @file($phpFile)) ) {
 }
 
 //print $argv[1] . " " . $argv[2] . PHP_EOL;
+print ".";
 
 $i=0;
 foreach($matlab as $lineMatlab) {

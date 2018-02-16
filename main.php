@@ -178,8 +178,8 @@ function storeListaObstaculos($ruta, $radar, $nivelVuelo) {
  *
  */
 function generateMatlabFiles($radar, $rutaResultados) {
-    $rutaTerrenos = $rutaResultados . DIRECTORY_SEPARATOR . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
-    $rutaCoordenadas = $rutaResultados . DIRECTORY_SEPARATOR . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
+    $rutaTerrenos = $rutaResultados . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
+    $rutaCoordenadas = $rutaResultados . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
 
     print "Generando fichero de Matlab para " .
         "[" . $radar['radar'] . "=>" . $radar['screening']['site'] . "]" . PHP_EOL;
@@ -196,13 +196,13 @@ function generateMatlabFiles($radar, $rutaResultados) {
     
     $coordenadas = $radar['screening']['site'] . "-Latitud=" . $radar['lat'] . ";\r\n" .
         $radar['screening']['site'] . "-Longitud=" . $radar['lon'] . ";\r\n" .
-        $radar['screening']['site'] . "-Range=" . ($radar['screening']['range']) . ";";
+        $radar['screening']['site'] . "-Range=" . ($radar['range']/MILLA_NAUTICA_EN_METROS) . ";";
 
     @unlink($rutaCoordenadas.$radarOriginal['site'].".txt");
     if ( false === file_put_contents($rutaCoordenadas.$radar['screening']['site'] . ".txt", $coordenadas) )
         die("ERROR: escribiendo " . $rutaCoordenadas.$radar['screening']['site'] . ".txt" . PHP_EOL);
 
-    print "INFO NOMBRE FICHERO: " . $rutaTerrenos.$radar['screening_file']['site'].".txt" . PHP_EOL;
+    print "INFO NOMBRE FICHERO: " . $rutaTerrenos.$radar['screening']['site'].".txt" . PHP_EOL;
     return true;
 }
 
@@ -212,26 +212,5 @@ function generateMatlabFiles($radar, $rutaResultados) {
  */
 function roundE($n) {
     $val = round($n, 10, PHP_ROUND_HALF_UP);
-/*
-    if ($val == 0) {
-        $val = '0.0000000000';
-    }
-    $pos = strpos($val, '.');
-    if ( $pos === false ) {
-        $val = $val . ".";
-        $pos = strpos($val, '.');
-    }
-    if ( strlen($val)-$pos-1 < 10 ) {
-        $val = substr($val, 0, $pos+1) . str_pad((string)substr($val, $pos+1),10,"0", STR_PAD_RIGHT);
-    }
-*/
     return $val;
 }
-/*
-
-    if ( strpos($n, "E") ) {
-        return round($n, 23);
-    } else {
-        return round($n, 6);
-    }
-*/
