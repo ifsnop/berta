@@ -14,6 +14,29 @@ include 'guardar.php';
 CONST RADIO_TERRESTRE = 6371000;
 CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
 
+
+$malla2 = array(
+array(0,0,0,0,0,0,0,0),
+array(0,0,1,0,0,0,0,0),
+array(0,0,0,1,0,0,0,0),
+array(0,0,0,1,1,1,0,0),
+array(0,0,0,1,0,1,0,0),
+array(0,0,0,1,1,1,0,0),
+array(0,0,0,0,0,0,0,0),
+array(0,0,0,0,0,0,0,0),
+);
+/*
+$contornos = determinaContornos2($malla2);
+print_r($contornos);
+
+foreach($contornos as $contorno) {
+    foreach($contorno as $p) {
+        print $p['fila'] . ";" . $p['col'] . PHP_EOL;    
+    }
+}
+exit(-1);
+*/
+
 /*
 $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
 foreach($lugares as $l) {
@@ -43,8 +66,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 1;
-    $flMax = 400;
+    $flMin = 13;
+    $flMax = 13;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -135,18 +158,26 @@ function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
         print "[mallaMarco]";
 	$mallaGrande = mallaMarco($malla);
 	print "[determinaContornos]";
-	determinaContornos($radar, $mallaGrande, $flm, $listaContornos);
+        $start_timer = microtime(true);
+	determinaContornos($mallaGrande, $flm, $listaContornos);
+	print_r($listaContornos[0][0]);
+	print "time: " . round(microtime(true) - $start_timer, 4) . PHP_EOL;
 	if ( 0 == count($listaContornos) ) {
 	    print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
 	    return;
 	}
-	//printMalla($malla);
+	//print_r($listaContornos);
+        $start_timer = microtime(true);
+	$listaContornos2 = determinaContornos2($mallaGrande);
+	print_r($listaContornos2[0][0]);
+	print "time: " . round(microtime(true) - $start_timer, 4) . PHP_EOL;
+	// printMalla($malla);
         storeMallaAsImage($malla, $ruta . $radar['screening']['site'] . "_FL" . $nivelVuelo);
         storeListaObstaculos($ruta, $radar, $nivelVuelo);
 	print "[calculaCoordenadasGeograficasB]";
-	calculaCoordenadasGeograficasB($radar, $flm, $listaContornos);
+	calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
 	print "[crearKmlB]" . PHP_EOL;
-    	crearKmlB($listaContornos, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
+    	crearKmlB($listaContornos2, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
     }
     return;
 }

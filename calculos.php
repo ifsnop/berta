@@ -1,14 +1,16 @@
 <?php
 
+include_once("conrec.php");
+
 CONST FRONTERA_LATITUD = 90; // latitud complementaria
 CONST FEET_TO_METERS = 0.30480370641307;
 CONST PASO_A_GRADOS = 180.0;
 // CONST DISTANCIA_ENTRE_PUNTOS = 5; // maxima distancia q puede haber entre dos puntos de un acimut para saber si es necesario interpolar 
-CONST TAM_CELDA = 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no desborda
-CONST TAM_CELDA_MITAD = 0.25; // NM
-CONST TAM_ANGULO_MAXIMO = 1; // NM (lo situamos al doble que tamaño celda)
+CONST TAM_CELDA = 0.5; //10; // 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no desborda
+CONST TAM_CELDA_MITAD = 0.25; // 5; // 0.25; // NM
+CONST TAM_ANGULO_MAXIMO = 1; //20; // 1; // NM (lo situamos al doble que tamaño celda)
 
-//// CONSTANTES PARA LA DETECCION DE CONTRONOS /////
+//// CONSTANTES PARA LA DETECCION DE CONTORNOS /////
 CONST NONE = 0;
 CONST UP = 1;
 CONST LEFT = 2;
@@ -1048,7 +1050,6 @@ function step($index, $vector, $tamMalla, &$nextStep, &$state, $searchValue){
 /**
  * Recorre la malla delineando el contorno desde el punto inicial que le entra por parametro.
  * 
- * @param array $radar (ENTRADA)
  * @param int $startX (ENTRADA)
  * @param int $startY (ENTRADA)
  * @param array $malla (ENTRADA)
@@ -1057,7 +1058,7 @@ function step($index, $vector, $tamMalla, &$nextStep, &$state, $searchValue){
  * @param int $searchValue (ENTRADA)
  * @return number[][]|unknown[][] (SALIDA)
  */
-function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm, $searchValue){ // empezamos desde la primera posicion y recorremos la malla
+function walkPerimeter($startX, $startY, $malla, $vector, $flm, $searchValue) { // empezamos desde la primera posicion y recorremos la malla
 
     // set up our return list
     $pointList = array();
@@ -1130,47 +1131,23 @@ function walkPerimeter($radar, $startX, $startY, $malla, $vector, $flm, $searchV
  * https://en.wikipedia.org/wiki/Marching_squares
  * 
  *
- * @param array $radar (ENTRADA)
  * @param array $malla (ENTRADA)
  * @param int $flm (ENTRADA)
  * @param int $searchValue (ENTRADA)
  * @return (SALIDA)
  */
-function marchingSquares($radar, $malla, $flm, $searchValue){
+function marchingSquares($malla, $flm, $searchValue){
 
     $contorno = array();
     // Find the starting point
-//    $time_start = microtime(true);
     if ( false === ($ret1 = getFirstPoint($malla, $x, $y, $searchValue)) ) {
         return false;
     };
-//    print "[A" . round(microtime(true) - $time_start,3) ."]" . PHP_EOL;
-//    $time_start = microtime(true);
-//    $ret2 = getFirstPoint2($malla, $x1,$y1, $searchValue);
-//    print "[B" . round(microtime(true) - $time_start,3) ."]" . PHP_EOL;
 
-//    if ( $ret1 != $ret2 ) {
-//        die("MUERTE VERGONZOSA1" . var_dump($ret1) . "_" . var_dump($ret2) . PHP_EOL);
-//    }
-    
-//    if ( $x != $x1 || $y != $y1 ) {
-//        print  "MUERTE VERGONZOSA2 $x $x1 $y $y1" . PHP_EOL;
-//    }
-    
-/*
-    if ($ret1 === false)
-        return false;
-    if ($ret2 === false)
-        return false;
-    if ( $x == -1 || $y == -1 ) {
-        die("NO DEBERíAS ESTAR AQUI" . PHP_EOL);
-    	return false;
-    }
-*/
     $vector = matrixToVector($malla);
 
     // Return list of x and y positions
-    $contorno = walkPerimeter($radar, $x, $y, $malla, $vector, $flm, $searchValue); // nos devuelve la isla
+    $contorno = walkPerimeter($x, $y, $malla, $vector, $flm, $searchValue); // nos devuelve la isla
 
     return $contorno;
 }
@@ -1294,21 +1271,143 @@ private function CheckSquare( $checkX, $checkY ) {
   return $nuevaMalla;
 } */
 	
+
 /**
  * Funcion que determina los contornos de cobertura que hay en una matriz
  * 
+ * @url http://paulbourke.net/papers/conrec/
  * @param array $radar (ENTRADA)
+ * @param array $malla (ENTRADA)
+ * @return array $listaContornos (SALIDA)
+ */
+function determinaContornos2($malla){
+    $listaContornos = array();
+    $d = array();
+    $x = array();
+    $y = array();
+    // inicializamos los arrays de coordenadas necesarios para CONREC_contour
+    for($i=0; $i<count($malla); $i++) {
+        $d[$i] = array();
+        for($j=0; $j<count($malla[$i]); $j++) {
+            $d[$i][$j] = $malla[(count($malla)-1) - $j][$i];
+        }
+    }
+    // nuestra malla siempre es cuadrada
+    for($i=0; $i<count($malla); $i++) {
+        $x[$i] = $i; $y[$i] = $i;
+    }
+
+    print ".";
+    $contornos = CONREC_contour($malla, $x, $y, $numContornos = 2);
+    print ".";
+
+/*
+    foreach($contornos as $contorno) {
+        foreach($contorno['segments'] as $segmento) {
+            fwrite(STDERR,  $segmento['x1'] . ";" . $segmento['y1'] . ";" . $segmento['x2'] . ";" . $segmento['y2'] . PHP_EOL);
+        }
+        exit(-1);
+    }
+*/
+    // para quedarnos con el primer contorno generado, que siempre será el más conservador
+        $c = $contornos[1];
+
+        $contornoFixed = array();
+        $sgm = array_shift($c['segments']);
+        $x1 = $sgm['x1']; $y1 = $sgm['y1'];
+        $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
+        $yMinVal = $y1; $yMinKey = 0;
+
+        $x2 = $sgm['x2']; $y2 = $sgm['y2'];
+        $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
+        if ( $yMinVal > $y2 ) { $yMinVal = $y2; $yMinKey = count($contornoFixed)-1; }
+
+        print "[00%]";
+        $countPct_old = 0;
+        $cuentaTotal = count($c['segments']);
+        $cuentaActual_old = -1;
+
+        while(count($c['segments'])>0) {
+            $cuentaActual = count($c['segments']);
+
+            if ( $cuentaActual_old == $cuentaActual ) {
+                // si no hemos conseguido encontrar ningún segmento que contine al último, es que el segmento
+                // se ha cerrado, así que abriremos otro segmento
+                /*
+                foreach($c['segments'] as $segmento) {
+                    fwrite(STDERR,  $segmento['x1'] . ";" . $segmento['y1'] . ";" . $segmento['x2'] . ";" . $segmento['y2'] . PHP_EOL);
+                }
+                print_r($c['segments']);
+                print_r($contornoFixed);
+                die("ERROR determinaContornos2: no se ha encontrado punto siguiente" . PHP_EOL);
+                */
+                $listaContornos[] = $contornoFixed;
+                $contornoFixed = array();
+                $sgm = array_shift($c['segments']);
+                $x1 = $sgm['x1']; $y1 = $sgm['y1'];
+                $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
+                $yMinVal = $y1; $yMinKey = 0;
+                $x2 = $sgm['x2']; $y2 = $sgm['y2'];
+                $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
+                if ( $yMinVal > $y2 ) { $yMinVal = $y2; $yMinKey = count($contornoFixed)-1; }   
+            }
+            $cuentaActual_old = $cuentaActual;
+            $countPct = ($cuentaTotal - $cuentaActual)*100.0 / $cuentaTotal;
+            if ( ($countPct - $countPct_old) > 10 ) { print "[" . round($countPct) . "%]"; $countPct_old = $countPct; }
+
+            $oldx = $contornoFixed[count($contornoFixed)-1]['fila'];
+            $oldy = $contornoFixed[count($contornoFixed)-1]['col'];
+            // print "count: " . count($c['segments']) . PHP_EOL;
+            foreach($c['segments'] as $k => $sgm) {
+                // print $k . PHP_EOL;
+                $x1 = $sgm['x1']; $y1 = $sgm['y1'];
+                $x2 = $sgm['x2']; $y2 = $sgm['y2'];
+                if ( (abs($oldx - $x1) < 0.0001) &&
+                    (abs($oldy - $y1) < 0.0001) ) {
+                    // print "found $k para oldx,oldy,x1,y1" . PHP_EOL;
+                    // print "oldx: $oldx oldy: $oldy x1: $x1 y1: $y1" . PHP_EOL;
+                    // $contornoFixed[] = array('fila'=>$x1, 'col' => $y1);
+                    $contornoFixed[] = array('fila'=>$x2, 'col' => $y2);
+                    unset($c['segments'][$k]);
+                    if ( $yMinVal > $y2 ) {
+                        $yMinVal = $y2; $yMinKey = count($contornoFixed) - 1;
+                    }
+                    break;
+                } elseif ( (abs($oldx - $x2) < 0.0001) &&
+                    (abs($oldy - $y2) < 0.0001) ) {
+                    // print "found $k para oldx,oldy,x2,y2" . PHP_EOL;
+                    // print "oldx: $oldx oldy: $oldy x2: $x2 y2: $y2" . PHP_EOL;
+                    // $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
+                    $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
+                    unset($c['segments'][$k]);
+                    if ( $yMinVal > $y1 ) {
+                        $yMinVal = $y1; $yMinKey = count($contornoFixed) - 1;
+                    }
+                    break;
+                }
+            }
+        }
+        print "[100%]";
+        $listaContornos[] = $contornoFixed;
+        //print "yMinVal: " . $yMinVal . " yMinKey: " . $yMinKey . PHP_EOL;
+
+    return $listaContornos;
+}
+
+/**
+ * Funcion que determina los contornos de cobertura que hay en una matriz
+ * 
  * @param array $malla (ENTRADA)
  * @param int $flm (ENTRADA)
  * @param array $listaContornos (ENTRADA/SALIDA)
  */
-function determinaContornos($radar, $malla, $flm, &$listaContornos){
+function determinaContornos($malla, $flm, &$listaContornos){
     $listaContornos = array();
     // busca todos los contornos "externos" de las zonas con cobertura
     // rellenando el interior con el mismo valor que ponemos para marcar el contorno
     // seran contornos de zonas CON cobertura
     $malla_original = $malla;
-    while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 1 )) ) { // nos da el contorno de una isla
+    while ( false !== ($contorno = marchingSquares($malla, $flm, $searchValue = 1 )) ) { // nos da el contorno de una isla
         print ".";
         // mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
 	// este paso podra ser opcional, desde que floodfill funciona bien no es necesario delimitar la zona
@@ -1334,7 +1433,7 @@ function determinaContornos($radar, $malla, $flm, &$listaContornos){
     $floodFiller = new FloodFiller();
     $malla = $floodFiller->Scan($malla, array( 'x' => 0, 'y' => 0 ), $floodValue = 2, $searchValue = 0);
 
-    while ( false !== ($contorno = marchingSquares($radar, $malla, $flm, $searchValue = 0 )) ) { // nos da el contorno de una isla
+    while ( false !== ($contorno = marchingSquares($malla, $flm, $searchValue = 0 )) ) { // nos da el contorno de una isla
         print ",";
 	// mezclamos el contorno con el mapa original, para luego rellenar DENTRO del contorno con un flood fill
 	// este paso podra ser opcional
