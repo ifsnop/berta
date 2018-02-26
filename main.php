@@ -2,6 +2,7 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('memory_limit', '16G');
 
 // INCLUSIÓN DE FICHEROS
 include 'cargarDatosTerreno.php';
@@ -66,8 +67,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 13;
-    $flMax = 13;
+    $flMin = 1;
+    $flMax = 460;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -158,19 +159,24 @@ function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
         print "[mallaMarco]";
 	$mallaGrande = mallaMarco($malla);
 	print "[determinaContornos]";
-        $start_timer = microtime(true);
-	determinaContornos($mallaGrande, $flm, $listaContornos);
-	print_r($listaContornos[0][0]);
-	print "time: " . round(microtime(true) - $start_timer, 4) . PHP_EOL;
-	if ( 0 == count($listaContornos) ) {
-	    print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+        //$start_timer = microtime(true);
+	//determinaContornos($mallaGrande, $flm, $listaContornos);
+	//print_r($listaContornos[0][0]);
+	//print "time: " . round(microtime(true) - $start_timer, 4) . PHP_EOL;
+	//if ( 0 == count($listaContornos) ) {
+	//    print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+	//    return;
+	//}
+	//print_r($listaContornos);
+        // $start_timer = microtime(true);
+        $listaContornos2 = determinaContornos2($mallaGrande);
+	if ( 0 == count($listaContornos2) ) {
+	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
 	    return;
 	}
-	//print_r($listaContornos);
-        $start_timer = microtime(true);
-	$listaContornos2 = determinaContornos2($mallaGrande);
-	print_r($listaContornos2[0][0]);
-	print "time: " . round(microtime(true) - $start_timer, 4) . PHP_EOL;
+
+	// print_r($listaContornos2[0][0]);
+	// print "time: " . round(microtime(true) - $start_timer, 4) . PHP_EOL;
 	// printMalla($malla);
         storeMallaAsImage($malla, $ruta . $radar['screening']['site'] . "_FL" . $nivelVuelo);
         storeListaObstaculos($ruta, $radar, $nivelVuelo);

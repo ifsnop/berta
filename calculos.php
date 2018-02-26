@@ -721,7 +721,7 @@ function generacionMallado($radar) {
 
     // CENTRAMOS LA MALLA Y CALCULAMOS EL PTO MEDIO DE CADA CELDA
     $tamMallaMitad = $tamMalla / 2.0;
-    print PHP_EOL . "[tamMallaMitad: " . $tamMallaMitad . "]";
+    print "[tamMallaMitad: " . $tamMallaMitad . "]";
 
     // CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
     $x_fixed = -( $tamMallaMitad * TAM_CELDA ); // + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA) 
@@ -734,6 +734,7 @@ function generacionMallado($radar) {
     print "[Tamaño malla: " . $tamMalla . "]";
     print "[00%]";
     $countPct_old = 0;
+    // la malla tiene tamMalla + 1, para que el centro siempre quede en una celda
     for ($i = 0; $i <= $tamMalla; $i++){ // recorre las columnas de la malla 
         //print "[$i]";
 	$countPct = $i*100.0 / $tamMalla;
@@ -789,7 +790,7 @@ function generacionMallado($radar) {
 	}
 	// print PHP_EOL . PHP_EOL;
     }
-    print "[100%]" . PHP_EOL;
+    print "[100%]";
     return $malla;
 }
 
@@ -840,9 +841,10 @@ function calculaCoordenadasGeograficasB($radar, $flm, &$listaC){
 	$n = count($listaC[$isla]);
 
         for($i = 0; $i < $n; $i++) { // recorre la lista de puntos del contorno
-            // DUDA ¿por qué se utiliza el -1?
-	    $x = ( (($listaC[$isla][$i]['col']-1) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA) + TAM_CELDA_MITAD );
-	    $y = ( ( $tamMallaMitad * TAM_CELDA) - (($listaC[$isla][$i]['fila']-1) * TAM_CELDA) - TAM_CELDA_MITAD );
+            // DUDA ¿por qué se utiliza el -1? : RESPUESTA porque le hemos añadido un 1 a la malla cuando
+            // la generábamos, para hacer la malla impar y que la celda del centro es la que contenga al radar
+	    $x = ( (($listaC[$isla][$i]['col']-1) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA)/* + TAM_CELDA_MITAD*/ );
+	    $y = ( ( $tamMallaMitad * TAM_CELDA) - (($listaC[$isla][$i]['fila']-1) * TAM_CELDA)/* - TAM_CELDA_MITAD*/ );
 
 	    // CALCULO DE LA DISTANCIA
 	    // DUDA ¿es necesario $xR e $yR?
@@ -1285,21 +1287,33 @@ function determinaContornos2($malla){
     $d = array();
     $x = array();
     $y = array();
+    $empty = 0;
     // inicializamos los arrays de coordenadas necesarios para CONREC_contour
-    for($i=0; $i<count($malla); $i++) {
+    $iMalla = count($malla);
+    for($i=0; $i<$iMalla; $i++) {
         $d[$i] = array();
-        for($j=0; $j<count($malla[$i]); $j++) {
-            $d[$i][$j] = $malla[(count($malla)-1) - $j][$i];
+        $jMalla = count($malla[$i]);
+        for($j=0; $j < $jMalla; $j++) {
+            $val = $malla[($iMalla-1) - $j][$i];
+            // cálculo para saber si la malla está toda a 0, y
+            // por lo tanto no habrá cobertura
+            $empty += $val;
+            $d[$i][$j] = $val;
         }
     }
+    
+    if ($empty == 0) {
+        // sanity check. si no hay ningún 1 en toda la malla,
+        // abortar porque significa que la malla está vacía.
+        return array();
+    }
+    
     // nuestra malla siempre es cuadrada
     for($i=0; $i<count($malla); $i++) {
         $x[$i] = $i; $y[$i] = $i;
     }
 
-    print ".";
     $contornos = CONREC_contour($malla, $x, $y, $numContornos = 2);
-    print ".";
 
 /*
     foreach($contornos as $contorno) {
@@ -1310,86 +1324,89 @@ function determinaContornos2($malla){
     }
 */
     // para quedarnos con el primer contorno generado, que siempre será el más conservador
-        $c = $contornos[1];
+    $c = $contornos[1];
+    print "[conrec: " . count($c) . "]";
 
-        $contornoFixed = array();
-        $sgm = array_shift($c['segments']);
-        $x1 = $sgm['x1']; $y1 = $sgm['y1'];
-        $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
-        $yMinVal = $y1; $yMinKey = 0;
+    $contornoFixed = array();
+    $sgm = array_shift($c['segments']);
+    $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
+    $yMinVal = $y1; $yMinKey = 0;
+    $x2 = $sgm['x2']; $y2 = $sgm['y2']; $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
+    if ( $yMinVal > $y2 ) { $yMinVal = $y2; $yMinKey = count($contornoFixed)-1; }
 
-        $x2 = $sgm['x2']; $y2 = $sgm['y2'];
-        $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
-        if ( $yMinVal > $y2 ) { $yMinVal = $y2; $yMinKey = count($contornoFixed)-1; }
+    print "[00%]";
+    $countPct_old = 0; $cuentaTotal = count($c['segments']); $cuentaActual_old = -1;
 
-        print "[00%]";
-        $countPct_old = 0;
-        $cuentaTotal = count($c['segments']);
-        $cuentaActual_old = -1;
+    while(count($c['segments'])>0) {
+        $cuentaActual = count($c['segments']);
 
-        while(count($c['segments'])>0) {
-            $cuentaActual = count($c['segments']);
+        print "[cuentaActual:" . $cuentaActual . "] " .
+            "[cuentaActual_old:" . $cuentaActual_old ."] " .
+            "[listaContornos:" . count($listaContornos) . "] " .
+            "[contornoFixed:" . count($contornoFixed) . "] " .
+            PHP_EOL;
 
-            if ( $cuentaActual_old == $cuentaActual ) {
-                // si no hemos conseguido encontrar ningún segmento que contine al último, es que el segmento
-                // se ha cerrado, así que abriremos otro segmento
-                /*
-                foreach($c['segments'] as $segmento) {
-                    fwrite(STDERR,  $segmento['x1'] . ";" . $segmento['y1'] . ";" . $segmento['x2'] . ";" . $segmento['y2'] . PHP_EOL);
-                }
-                print_r($c['segments']);
-                print_r($contornoFixed);
-                die("ERROR determinaContornos2: no se ha encontrado punto siguiente" . PHP_EOL);
-                */
-                $listaContornos[] = $contornoFixed;
-                $contornoFixed = array();
-                $sgm = array_shift($c['segments']);
-                $x1 = $sgm['x1']; $y1 = $sgm['y1'];
-                $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
-                $yMinVal = $y1; $yMinKey = 0;
-                $x2 = $sgm['x2']; $y2 = $sgm['y2'];
-                $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
-                if ( $yMinVal > $y2 ) { $yMinVal = $y2; $yMinKey = count($contornoFixed)-1; }   
+        if ( $cuentaActual_old == $cuentaActual ) {
+            // si no hemos conseguido encontrar ningún segmento que contine al último, es que el segmento
+            // se ha cerrado, así que abriremos otro segmento
+
+            /*
+            foreach($c['segments'] as $segmento) {
+                fwrite(STDERR,  $segmento['x1'] . ";" . $segmento['y1'] . ";" . $segmento['x2'] . ";" . $segmento['y2'] . PHP_EOL);
             }
-            $cuentaActual_old = $cuentaActual;
-            $countPct = ($cuentaTotal - $cuentaActual)*100.0 / $cuentaTotal;
-            if ( ($countPct - $countPct_old) > 10 ) { print "[" . round($countPct) . "%]"; $countPct_old = $countPct; }
+            print_r($c['segments']);
+            print_r($contornoFixed);
+            die("ERROR determinaContornos2: no se ha encontrado punto siguiente" . PHP_EOL);
+            */
 
-            $oldx = $contornoFixed[count($contornoFixed)-1]['fila'];
-            $oldy = $contornoFixed[count($contornoFixed)-1]['col'];
-            // print "count: " . count($c['segments']) . PHP_EOL;
-            foreach($c['segments'] as $k => $sgm) {
-                // print $k . PHP_EOL;
-                $x1 = $sgm['x1']; $y1 = $sgm['y1'];
-                $x2 = $sgm['x2']; $y2 = $sgm['y2'];
-                if ( (abs($oldx - $x1) < 0.0001) &&
-                    (abs($oldy - $y1) < 0.0001) ) {
-                    // print "found $k para oldx,oldy,x1,y1" . PHP_EOL;
-                    // print "oldx: $oldx oldy: $oldy x1: $x1 y1: $y1" . PHP_EOL;
-                    // $contornoFixed[] = array('fila'=>$x1, 'col' => $y1);
-                    $contornoFixed[] = array('fila'=>$x2, 'col' => $y2);
-                    unset($c['segments'][$k]);
-                    if ( $yMinVal > $y2 ) {
-                        $yMinVal = $y2; $yMinKey = count($contornoFixed) - 1;
-                    }
-                    break;
-                } elseif ( (abs($oldx - $x2) < 0.0001) &&
-                    (abs($oldy - $y2) < 0.0001) ) {
-                    // print "found $k para oldx,oldy,x2,y2" . PHP_EOL;
-                    // print "oldx: $oldx oldy: $oldy x2: $x2 y2: $y2" . PHP_EOL;
-                    // $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
-                    $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
-                    unset($c['segments'][$k]);
-                    if ( $yMinVal > $y1 ) {
-                        $yMinVal = $y1; $yMinKey = count($contornoFixed) - 1;
-                    }
-                    break;
+            // antes de añadir, mirar si el contorno está generado en counter-clockwise
+            $listaContornos[] = $contornoFixed;
+            $contornoFixed = array();
+            $sgm = array_shift($c['segments']);
+            $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
+            $yMinVal = $y1; $yMinKey = 0;
+            $x2 = $sgm['x2']; $y2 = $sgm['y2']; $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
+            if ( $yMinVal > $y2 ) { $yMinVal = $y2; $yMinKey = count($contornoFixed)-1; }   
+        }
+        $cuentaActual_old = $cuentaActual;
+        $countPct = ($cuentaTotal - $cuentaActual)*100.0 / $cuentaTotal;
+        if ( ($countPct - $countPct_old) > 10 ) { print "[" . round($countPct) . "%]"; $countPct_old = $countPct; }
+
+        $oldx = $contornoFixed[count($contornoFixed)-1]['fila'];
+        $oldy = $contornoFixed[count($contornoFixed)-1]['col'];
+        // print "count: " . count($c['segments']) . PHP_EOL;
+        foreach($c['segments'] as $k => $sgm) {
+        // print $k . PHP_EOL;
+            $x1 = $sgm['x1']; $y1 = $sgm['y1'];
+            $x2 = $sgm['x2']; $y2 = $sgm['y2'];
+            if ( (abs($oldx - $x1) < 0.0001) &&
+                (abs($oldy - $y1) < 0.0001) ) {
+                // print "found $k para oldx,oldy,x1,y1" . PHP_EOL;
+                // print "oldx: $oldx oldy: $oldy x1: $x1 y1: $y1" . PHP_EOL;
+                // $contornoFixed[] = array('fila'=>$x1, 'col' => $y1);
+                $contornoFixed[] = array('fila'=>$x2, 'col' => $y2);
+                unset($c['segments'][$k]);
+                if ( $yMinVal > $y2 ) {
+                    $yMinVal = $y2; $yMinKey = count($contornoFixed) - 1;
                 }
+                break;
+            } elseif ( (abs($oldx - $x2) < 0.0001) &&
+                (abs($oldy - $y2) < 0.0001) ) {
+                // print "found $k para oldx,oldy,x2,y2" . PHP_EOL;
+                // print "oldx: $oldx oldy: $oldy x2: $x2 y2: $y2" . PHP_EOL;
+                // $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
+                $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
+                unset($c['segments'][$k]);
+                if ( $yMinVal > $y1 ) { $yMinVal = $y1; $yMinKey = count($contornoFixed) - 1; }
+                break;
             }
         }
-        print "[100%]";
-        $listaContornos[] = $contornoFixed;
-        //print "yMinVal: " . $yMinVal . " yMinKey: " . $yMinKey . PHP_EOL;
+    }
+    print "[100%]";
+    
+    // antes de añadir, mirar si el contorno está generado en counter-clockwise
+    $listaContornos[] = $contornoFixed;
+    //print "yMinVal: " . $yMinVal . " yMinKey: " . $yMinKey . PHP_EOL;
 
     return $listaContornos;
 }
