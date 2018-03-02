@@ -15,6 +15,9 @@ include 'guardar.php';
 CONST RADIO_TERRESTRE = 6371000;
 CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
 
+//$v = array(array(1,1), array(1,0), array(0,0), array(0,1), array(1,1));
+//print (is_in_polygon($v, array(0.5,0.5)) ? "SI" : "NO") . PHP_EOL;
+//exit();
 
 $malla2 = array(
 array(0,0,0,0,0,0,0,0),
@@ -67,8 +70,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 1;
-    $flMax = 460;
+    $flMin = 32;
+    $flMax = 32;
     $paso = 1;
 
     if ( $argc > 1 ){ 

@@ -1329,10 +1329,10 @@ function determinaContornos2($malla){
 
     $contornoFixed = array();
     $sgm = array_shift($c['segments']);
-    $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
-    $yMinVal = $y1; $yMinKey = 0;
-    $x2 = $sgm['x2']; $y2 = $sgm['y2']; $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
-    if ( $yMinVal > $y2 ) { $yMinVal = $y2; $yMinKey = count($contornoFixed)-1; }
+    $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array( 'fila'=>$x1, 'col'=>$y1 );
+    $leftCorner = array( 'xMin' => $x1, 'yMin' => $y1, 'key' => 0 );
+    $x2 = $sgm['x2']; $y2 = $sgm['y2']; $contornoFixed[] = array( 'fila'=>$x2, 'col'=>$y2 );
+    $leftCorner = findLeftCorner( $x2, $y2, $leftCorner, $contornoFixed );
 
     print "[00%]";
     $countPct_old = 0; $cuentaTotal = count($c['segments']); $cuentaActual_old = -1;
@@ -1340,11 +1340,11 @@ function determinaContornos2($malla){
     while(count($c['segments'])>0) {
         $cuentaActual = count($c['segments']);
 
-        print "[cuentaActual:" . $cuentaActual . "] " .
-            "[cuentaActual_old:" . $cuentaActual_old ."] " .
-            "[listaContornos:" . count($listaContornos) . "] " .
-            "[contornoFixed:" . count($contornoFixed) . "] " .
-            PHP_EOL;
+        //print "[cuentaActual:" . $cuentaActual . "] " .
+        //    "[cuentaActual_old:" . $cuentaActual_old ."] " .
+        //    "[listaContornos:" . count($listaContornos) . "] " .
+        //    "[contornoFixed:" . count($contornoFixed) . "] " .
+        //    PHP_EOL;
 
         if ( $cuentaActual_old == $cuentaActual ) {
             // si no hemos conseguido encontrar ningún segmento que contine al último, es que el segmento
@@ -1360,13 +1360,20 @@ function determinaContornos2($malla){
             */
 
             // antes de añadir, mirar si el contorno está generado en counter-clockwise
-            $listaContornos[] = $contornoFixed;
+            $orientacion = comprobarOrientacion($contornoFixed, $leftCorner);
+            //foreach($contornoFixed as $s) {
+            //    print $s['fila'] . ";" . $s['col'] . PHP_EOL;
+            //}
+            if ($orientacion) print "CCW:" . count($contornoFixed) . PHP_EOL; else print "CW:" . count($contornoFixed) . PHP_EOL;
+            
+            $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner);
             $contornoFixed = array();
             $sgm = array_shift($c['segments']);
-            $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
-            $yMinVal = $y1; $yMinKey = 0;
-            $x2 = $sgm['x2']; $y2 = $sgm['y2']; $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
-            if ( $yMinVal > $y2 ) { $yMinVal = $y2; $yMinKey = count($contornoFixed)-1; }   
+            $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array( 'fila'=>$x1, 'col'=>$y1 );
+            $leftCorner = array( 'xMin' => $x1, 'yMin' => $y1, 'key' => 0 );
+            $x2 = $sgm['x2']; $y2 = $sgm['y2']; $contornoFixed[] = array( 'fila'=>$x2, 'col'=>$y2 );
+            $leftCorner = findLeftCorner( $x2, $y2, $leftCorner, $contornoFixed );
+
         }
         $cuentaActual_old = $cuentaActual;
         $countPct = ($cuentaTotal - $cuentaActual)*100.0 / $cuentaTotal;
@@ -1386,9 +1393,7 @@ function determinaContornos2($malla){
                 // $contornoFixed[] = array('fila'=>$x1, 'col' => $y1);
                 $contornoFixed[] = array('fila'=>$x2, 'col' => $y2);
                 unset($c['segments'][$k]);
-                if ( $yMinVal > $y2 ) {
-                    $yMinVal = $y2; $yMinKey = count($contornoFixed) - 1;
-                }
+                $leftCorner = findLeftCorner( $x2, $y2, $leftCorner, $contornoFixed );
                 break;
             } elseif ( (abs($oldx - $x2) < 0.0001) &&
                 (abs($oldy - $y2) < 0.0001) ) {
@@ -1397,7 +1402,7 @@ function determinaContornos2($malla){
                 // $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
                 $contornoFixed[] = array('fila'=>$x1, 'col'=>$y1);
                 unset($c['segments'][$k]);
-                if ( $yMinVal > $y1 ) { $yMinVal = $y1; $yMinKey = count($contornoFixed) - 1; }
+                $leftCorner = findLeftCorner( $x1, $y1, $leftCorner, $contornoFixed );
                 break;
             }
         }
@@ -1405,10 +1410,146 @@ function determinaContornos2($malla){
     print "[100%]";
     
     // antes de añadir, mirar si el contorno está generado en counter-clockwise
-    $listaContornos[] = $contornoFixed;
+    //$listaContornos[] = $contornoFixed;
+    $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner);
+
     //print "yMinVal: " . $yMinVal . " yMinKey: " . $yMinKey . PHP_EOL;
+    $listaContornosActualizada = array();
+    while ( count($listaContornos) > 1 ) {
+        $c = array_shift($listaContornos);
+        foreach($listaContornos as $l) {
+            $is_in_polygon = is_in_polygon2($c['polygon'], $l[0]['polygon'][0]);
+            if ( false === $is_in_polygon ) {
+                $c['level'] = 0;
+                $listaContornosActualizada[] = $c;
+            } else {
+                // insertar $c en actualizada pero dependiendo de $l !, dos pájaros de un tiro.
+            }
+        print_r($listaContornos[0]['polygon']);
+        exit();
+    }
 
     return $listaContornos;
+}
+
+/*
+ * Point Inclusion in Polygon Test
+ *
+ * @url https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html
+ * @param $vertices de la forma array((0,0), (0,1), (1,1), (1,0), (0,0)) <- cerrado!
+ * @param $point de la forma array(x,y)
+ * @return boolean true if inside polygon
+ */
+function is_in_polygon($v, $p) {
+    $inside = false;
+    for ($i = 0, $j = count($v) - 1; $i < count($v); $j = $i++) {
+        if ( (($v[$i][1] > $p[1] != ($v[$j][1] > $p[1])) &&
+            ($p[0] < ($v[$j][0] - $v[$i][0]) * ($p[1] - $v[$i][1]) / ($v[$j][1] - $v[$i][1]) + $v[$i][0]) ) ) {
+            $inside = !$inside;
+        }
+    }
+    return $inside;
+}
+// cambiamos fila por x = [0] y col por y = [1]
+function is_in_polygon2($v, $p) {
+    $inside = false;
+    for ($i = 0, $j = count($v) - 1; $i < count($v); $j = $i++) {
+        if ( (($v[$i]['col'] > $p['col'] != ($v[$j]['col'] > $p['col'])) &&
+            ($p['fila'] < ($v[$j]['fila'] - $v[$i]['fila']) * ($p['col'] - $v[$i]['col']) / ($v[$j]['col'] - $v[$i]['col']) + $v[$i]['fila']) ) ) {
+            $inside = !$inside;
+        }
+    }
+    return $inside;
+}
+
+/**
+ * Find point with lower x value, if equal, choose the point with lower y value
+ *
+ * @param int $x new x
+ * @param int $y new y
+ * @param array $leftCorner array with lower x & y until call
+ * @param array $arr to get key count if new point is found
+ * @return $leftCorner
+ */
+function findLeftCorner( $x, $y, $leftCorner, $arr ) {
+
+    if ( ($x < $leftCorner['xMin']) || 
+        (($x == $leftCorner['xMin']) &&
+        ($y < $leftCorner['yMin'])) ) {
+    
+        $leftCorner['xMin'] = $x;
+        $leftCorner['yMin'] = $y;
+        $leftCorner['key'] = count($arr) - 1;
+    }
+    return $leftCorner;
+}
+
+/**
+ *
+ *
+ * @url https://en.wikipedia.org/wiki/Curve_orientation
+ */
+function comprobarOrientacion($contornoFixed, $leftCorner) {
+/* 
+ One does not need to construct the convex hull of a polygon to find
+ a suitable vertex. A common choice is the vertex of the polygon with
+ the smallest X-coordinate. If there are several of them, the one with
+ the smallest Y-coordinate is picked. It is guaranteed to be the vertex
+ of the convex hull of the polygon. Alternatively, the vertex with the
+ smallest Y-coordinate among the ones with the largest X-coordinates or
+ the vertex with the smallest X-coordinate among the ones with the
+ largest Y-coordinates (or any other of 8 "smallest, largest" X/Y
+ combinations) will do as well.
+
+ If the orientation of a convex polygon is sought, then, of course, any
+ vertex may be picked.
+
+ For numerical reasons, the following equivalent formula for the
+ determinant is commonly used:
+
+    det ( O ) = ( x B − x A ) ( y C − y A ) − ( x C − x A ) ( y B − y A )
+    
+ If the determinant is negative, then the polygon is oriented clockwise.
+ If the determinant is positive, the polygon is oriented counterclockwise.
+ The determinant is non-zero if points A, B, and C are non-collinear.
+
+*/ 
+
+    $n = count($contornoFixed);
+    if ( $n < 2 ) {
+        die("ERROR un polígono debería estar formado por dos puntos!");
+    }
+    $k = $leftCorner['key'];
+    // 0 1 2 3 4 5 6 7   8
+    //               ^
+    $xA = $contornoFixed[(($k-1) + $n) % $n]['fila']; $yA = $contornoFixed[(($k-1) + $n) % $n]['col'];
+    
+    $xB = $contornoFixed[$k]['fila']; $yB = $contornoFixed[$k]['col'];
+    
+    $xC = $contornoFixed[($k+1) % $n]['fila']; $yC = $contornoFixed[($k+1) % $n]['col'];
+    
+    $det = (( $xB - $xA )*( $yC - $yA )) - (( $xC - $xA )*( $yB - $yA ));
+    
+    if ( $det>0 )
+        return true;
+    else
+        return false;
+
+}
+
+
+/**
+ * Simple Feature Access (ISO 19125-1) also used in WKT/GML/KML and various SQL implementations:
+ * exterior rings: counter-clockwise
+ * interior rings (holes): clockwise direction.
+ *     
+ * @url https://gis.stackexchange.com/questions/119150/order-of-polygon-vertices-in-general-gis-clockwise-or-counterclockwise
+ */
+function kmlReverseCoordinates($coordinates) {
+    $coordinates = explode(" ", $coordinates);
+    $coordinates = array_reverse($coordinates);
+    $coordinates = implode(" ", $coordinates);
+    return $coordinates;
 }
 
 /**
