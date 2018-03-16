@@ -17,8 +17,9 @@ CONST DISTANCIA_A_TERRAIN_HEIGHT = 14;
 function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 
     // esta funcion guarda el contenido del fichero en un array 
-    if ( false === ($contenidoFichero = file($radar['screening'], FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
-        die("ERROR no ha sido posible leer el fichero: " . $radar['screening'] . PHP_EOL);
+    if ( false === ($contenidoFichero = @file($radar['screening'], FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
+        print_r($radar);
+        die("ERROR no ha sido posible leer el fichero: >" . $radar['screening'] . "<" . PHP_EOL);
     }
 
     // TRATAMIENTO DE LA INFORMACION CAPTURADA (Primera parte del fichero)

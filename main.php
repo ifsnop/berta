@@ -14,6 +14,8 @@ include 'guardar.php';
 // DEFINICIÓN DE CONSTANTES
 CONST RADIO_TERRESTRE = 6371000;
 CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
+CONST GUARDAR_POR_NIVEL = 0;
+CONST GUARDAR_POR_RADAR = 1;
 
 //$v = array(array(1,1), array(1,0), array(0,0), array(0,1), array(1,1));
 //print (is_in_polygon($v, array(0.5,0.5)) ? "SI" : "NO") . PHP_EOL;
@@ -65,19 +67,18 @@ function programaPrincipal(){
     $rutaResultados = "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR;
     $radioTerrestreAumentado = 0;
     $poligono = false;
-    $ordenarPorRadar = false;
     $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona barcelona-psr begas begas-psr biarritz canchoblanco eljudio eljudio-psr erillas espineiras espineiras-psr foia fuerteventura gazules girona grancanaria grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montejunto montpellier motril palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto pozonieves randa randa-psr sierraespuna soller solorzano taborno tenerifesur tenerifesur-psr turrillas valdespina valencia valencia-psr valladolid villatobas");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 32;
-    $flMax = 32;
+    $flMin = 1;
+    $flMax = 450;
     $paso = 1;
 
     if ( $argc > 1 ){ 
         $lugares = array();
         for($i = 1; $i < $argc; $i++) {
-            $lugares[] =$argv[$i];
+            $lugares[] = $argv[$i];
         }
     }
 
@@ -89,7 +90,7 @@ function programaPrincipal(){
 	    echo "Hasta la vista!". PHP_EOL;
 	    break;
 	case 1:
-    	    //pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares, $ordenarPorRadar);
+            //pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
             $op = 0;
             // para probar con una distancia más pequeña y forzar alcance a 20NM
 	    // $infoCoral['canchoblanco']['secondaryMaximumRange'] = 20;
@@ -98,6 +99,9 @@ function programaPrincipal(){
                 $lugar = strtolower($lugar);
                 // carga el fichero de screening en memoria
                 // tener en cuenta que si es un $lugar acabado en psr, hay que poner el range del psr
+                if ( !isset($infoCoral[$lugar]) ) {
+                    die("ERROR: el radar $lugar no está configurado en la bbdd del SASS-C" . PHP_EOL);
+                }
                 $range = $infoCoral[$lugar]['secondaryMaximumRange'];
                 if ( false !== strpos($lugar, "psr") ) {
                     print "cargando alcance del psr" . PHP_EOL;
@@ -109,9 +113,9 @@ function programaPrincipal(){
 		    $range
 		);
 
-                if (false) {
+                if (true) {
                     generateMatlabFiles($radar, $rutaResultados);
-                    continue;
+                    // continue;
                 }
 
 		// print_r($radar);
@@ -120,14 +124,13 @@ function programaPrincipal(){
 
 		for ($fl = $flMin; $fl <= $flMax; $fl += $paso) {
                     $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
-		    if ( $ordenarPorRadar ) {
-                        $ruta = $rutaResultados . $radar['screening']['site'] . DIRECTORY_SEPARATOR;
-                    } else {
-                        $ruta = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
-                    }
-                    crearCarpetaResultados($ruta);
-		    print "Generando: ${fl}00 feet" . PHP_EOL;
-		    calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar);
+                    $ruta = array();
+                    $ruta[GUARDAR_POR_RADAR] = $rutaResultados . $radar['screening']['site'] . DIRECTORY_SEPARATOR;
+                    $ruta[GUARDAR_POR_NIVEL] = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
+                    crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
+                    crearCarpetaResultados($ruta[GUARDAR_POR_RADAR]);
+                    print "Generando: ${fl}00 feet" . PHP_EOL;
+		    calculosFL($radar, $fl, $ruta, $altMode);
                 } // for interno
 	    } // foreach
 	    break;
@@ -139,21 +142,16 @@ function programaPrincipal(){
 
 /*
  * @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
- * @param bool $ordenarPorRadar para guardar por directorios por nivel de vuelo o por nombre de radar
  */
-function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
+function calculosFL($radar, $fl, $ruta, $altMode) {
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
     $flm = $fl*100*FEET_TO_METERS; // fl en metros
-    $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
 
     // DISTINCIÓN DE CASOS 
     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
-        $angulosApantallamiento = array();
-	$distanciasCobertura = array();
-        calculosFLencimaRadar($radar, $flm, $angulosApantallamiento, $distanciasCobertura);
-	$coordenadasGeograficas = calculaCoordenadasGeograficasA($radar, $distanciasCobertura, $flm);
-	crearKML($coordenadasGeograficas, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
+        $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
+	$listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
         print "[calculosFLdebajoRadar]";
 	calculosFLdebajoRadar($radar, $flm);
@@ -162,95 +160,19 @@ function calculosFL($radar, $fl, $ruta, $altMode, $ordenarPorRadar) {
         print "[mallaMarco]";
 	$mallaGrande = mallaMarco($malla);
 	print "[determinaContornos]";
-        //$start_timer = microtime(true);
-	//determinaContornos($mallaGrande, $flm, $listaContornos);
-	//print_r($listaContornos[0][0]);
-	//print "time: " . round(microtime(true) - $start_timer, 4) . PHP_EOL;
-	//if ( 0 == count($listaContornos) ) {
-	//    print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
-	//    return;
-	//}
-	//print_r($listaContornos);
-        // $start_timer = microtime(true);
         $listaContornos2 = determinaContornos2($mallaGrande);
 	if ( 0 == count($listaContornos2) ) {
 	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
 	    return;
 	}
-
-	// print_r($listaContornos2[0][0]);
-	// print "time: " . round(microtime(true) - $start_timer, 4) . PHP_EOL;
-	// printMalla($malla);
-        storeMallaAsImage($malla, $ruta . $radar['screening']['site'] . "_FL" . $nivelVuelo);
-        storeListaObstaculos($ruta, $radar, $nivelVuelo);
-	print "[calculaCoordenadasGeograficasB]";
-	calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
-	print "[crearKmlB]" . PHP_EOL;
-    	crearKmlB($listaContornos2, $radar, $ruta, $fl, $altMode, $ordenarPorRadar);
+        // printMalla($malla);
+        // $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+        // storeMallaAsImage($malla, $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "_FL" . $nivelVuelo);
+        // storeListaObstaculos($radar, $ruta[GUARDAR_POR_RADAR], $nivelVuelo);
+        print "[calculaCoordenadasGeograficasB]";
+        $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
+        print "[crearKmlB]" . PHP_EOL;
     }
+    creaKml2($listaContornos2, $radar, $ruta, $fl, $altMode);
     return;
-}
-
-function storeListaObstaculos($ruta, $radar, $nivelVuelo) {
-
-    $obstaculosAzStr = "";
-    foreach($radar['screening']['listaAzimuths'] as $az => $obstaculosAz) {
-        //$obstaculosAzStr .= $az . ",";
-        $obstaculosAzStr .= strtolower(roundE(
-            $obstaculosAz[0]['angulo']*$radar['screening']['radioTerrestreAumentado']/MILLA_NAUTICA_EN_METROS
-            )). ",";
-        foreach($obstaculosAz as $arr) {
-            $obstaculosAzStr .= strtolower(roundE(
-                $arr['angulo']*$radar['screening']['radioTerrestreAumentado']/MILLA_NAUTICA_EN_METROS
-                )). ",";
-        }
-        $obstaculosAzStr = substr($obstaculosAzStr, 0, -1) . "\r\n"; //PHP_EOL;
-    }
-    if ( false === file_put_contents($ruta.$radar['screening']['site'] . "_FL" . $nivelVuelo . ".txt", $obstaculosAzStr)) {
-        die("ERROR file_put_contents " . $ruta.$radar['screening']['site'] . "_FL" . $nivelVuelo . ".txt" . PHP_EOL);
-    }
-    print "INFO NOMBRE FICHERO: " . $ruta.$radar['screening']['site'] . "_FL" . $nivelVuelo . ".txt" . PHP_EOL;
-    return;
-}
-
-/*
- * Genera ficheros para comparar la lista de obstáculos en PHP con la de Matlab
- *
- */
-function generateMatlabFiles($radar, $rutaResultados) {
-    $rutaTerrenos = $rutaResultados . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
-    $rutaCoordenadas = $rutaResultados . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
-
-    print "Generando fichero de Matlab para " .
-        "[" . $radar['radar'] . "=>" . $radar['screening']['site'] . "]" . PHP_EOL;
-
-    crearCarpetaResultados($rutaTerrenos);
-    crearCarpetaResultados($rutaCoordenadas);
-
-    if ( 0 == strlen($radar['screening_file']) )
-        continue;
-
-    @unlink($rutaTerrenos.$radar['screening_file']['site'].".txt");
-    if ( false === copy($radar['screening_file'], $rutaTerrenos.$radar['screening']['site'] . ".txt") )
-        die("ERROR: copiando " . $radar['screening_file'] . " a " . $rutaTerrenos.$radarOriginal['site'] . ".txt" .PHP_EOL);
-    
-    $coordenadas = $radar['screening']['site'] . "-Latitud=" . $radar['lat'] . ";\r\n" .
-        $radar['screening']['site'] . "-Longitud=" . $radar['lon'] . ";\r\n" .
-        $radar['screening']['site'] . "-Range=" . ($radar['range']/MILLA_NAUTICA_EN_METROS) . ";";
-
-    @unlink($rutaCoordenadas.$radarOriginal['site'].".txt");
-    if ( false === file_put_contents($rutaCoordenadas.$radar['screening']['site'] . ".txt", $coordenadas) )
-        die("ERROR: escribiendo " . $rutaCoordenadas.$radar['screening']['site'] . ".txt" . PHP_EOL);
-
-    print "INFO NOMBRE FICHERO: " . $rutaTerrenos.$radar['screening']['site'].".txt" . PHP_EOL;
-    return true;
-}
-
-/*
- * Redondea estilo MATLAB, dejando 10 números después del punto decimal.
- *
- */
-function roundE($n) {
-    $val = round($n, 10, PHP_ROUND_HALF_UP);
-    return $val;
 }

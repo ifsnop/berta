@@ -5,7 +5,6 @@ include_once("conrec.php");
 CONST FRONTERA_LATITUD = 90; // latitud complementaria
 CONST FEET_TO_METERS = 0.30480370641307;
 CONST PASO_A_GRADOS = 180.0;
-// CONST DISTANCIA_ENTRE_PUNTOS = 5; // maxima distancia q puede haber entre dos puntos de un acimut para saber si es necesario interpolar 
 CONST TAM_CELDA = 0.5; //10; // 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no desborda
 CONST TAM_CELDA_MITAD = 0.25; // 5; // 0.25; // NM
 CONST TAM_ANGULO_MAXIMO = 1; //20; // 1; // NM (lo situamos al doble que tamaño celda)
@@ -106,12 +105,13 @@ function calculaAnguloMaximaCobertura($radar, $flm){
  *  Funcion que calcula las distancias a las que hay cobertura y los angulos de apantallamiento cuando el FL esta por encima del radar
  *  
  * @param array $radar (ENTRADA)
- * @param int $flm (ENTRADA)
- * @param float $angulosApantallamiento (ENTRADA/SALIDA)
- * @param array $distanciasCobertura (ENTRADA/SALIDA)
+ * @param int $flm nivel de vuelo en metros (ENTRADA)
+ * @return array distancias a los alcances máximos por cada azimut (SALIDA)
  */
-function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanciasCobertura ){
+function calculosFLencimaRadar($radar, $flm ){
 		
+    // $angulosApantallamiento = array();
+    $distanciasAlcances = array();
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm);
     $earthToFl = $radioTerrestreAumentado + $flm;
@@ -135,12 +135,12 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
 	    // obtenemos el angulo del ultimo obstaculo de cada azimuth
 	    $angulo = $radar['screening']['listaAzimuths'][$i][$count-1]['angulo'];
 
-            $distanciasCobertura[$i]= sqrt ((pow($earthToRadar,2) + pow($earthToEvalPoint,2)) - 2 * $earthToRadar * $earthToEvalPoint * cos($angulo));
+            $distanciasAlcances[$i]= sqrt ((pow($earthToRadar,2) + pow($earthToEvalPoint,2)) - 2 * $earthToRadar * $earthToEvalPoint * cos($angulo));
 	    $gammaMax = acos(
-	        (pow($distanciasCobertura[$i],2) +
+	        (pow($distanciasAlcances[$i],2) +
 	        pow($earthToRadar,2) -
 	        pow($earthToEvalPoint,2)) /
-	        (2 * $earthToRadar * $distanciasCobertura[$i])
+	        (2 * $earthToRadar * $distanciasAlcances[$i])
 	    );
 	    
 	    $theta = asin($earthToRadar * sin($gammaMax) / $earthToFl);
@@ -152,23 +152,24 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
                 print "obstaculoLimitante: " . $obstaculoLimitante . PHP_EOL;
                 print "earthToEvalPoint: " . $earthToEvalPoint . PHP_EOL;
                 print "angulo:" . $angulo . PHP_EOL;
-                print "distanciasCobertura[" . $i . "]: " . $distanciasCobertura[$i] . PHP_EOL;
+                print "distanciasAlcances[" . $i . "]: " . $distanciasAlcances[$i] . PHP_EOL;
                 print "gammaMax: " . $gammaMax . PHP_EOL;
 	        print "theta: " . $theta . PHP_EOL;
 	        print "epsilon: " . $epsilon . PHP_EOL;
                 print "anguloMaxCob: " . $anguloMaxCob . PHP_EOL;
             }
 
-            if ($epsilon >  $anguloMaxCob)
-	        $distanciasCobertura[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
-	    else
-	 	$distanciasCobertura[$i] = $radioTerrestreAumentado * $epsilon / MILLA_NAUTICA_EN_METROS;
+            if ($epsilon >  $anguloMaxCob) {
+                $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
+	    } else {
+                $distanciasAlcances[$i] = $radioTerrestreAumentado * $epsilon / MILLA_NAUTICA_EN_METROS;
+            }
 
-            $angulosApantallamiento[$i] = ($gammaMax * PASO_A_GRADOS / M_PI) - FRONTERA_LATITUD;
+            // $angulosApantallamiento[$i] = ($gammaMax * PASO_A_GRADOS / M_PI) - FRONTERA_LATITUD;
 
 	    if (false) {
-	        print "distanciasCobertura[" . $i . "]: " . $distanciasCobertura[$i] . PHP_EOL;
-                print "angulosApantallamiento[" . $i . "]: " . $angulosApantallamiento[$i] . PHP_EOL;
+	        print "distanciasAlcances[" . $i . "]: " . $distanciasAlcances[$i] . PHP_EOL;
+                // print "angulosApantallamiento[" . $i . "]: " . $angulosApantallamiento[$i] . PHP_EOL;
             }
 
 	 } else { // $fl < $obstaculoLimitante
@@ -193,28 +194,29 @@ function calculosFLencimaRadar($radar, $flm, &$angulosApantallamiento, &$distanc
 	    $anguloLimitante = (($flm-$alturaUltimoPtoCob) * (($anguloPrimerPtoSinCob - $anguloUltimoPtoCob) / ($alturaPrimerPtoSinCob - $alturaUltimoPtoCob))) + $anguloUltimoPtoCob;
 
             if ($anguloLimitante > $anguloMaxCob) {
-	        $distanciasCobertura[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
+	        $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
 	    } else {
-                $distanciasCobertura[$i] = $radioTerrestreAumentado * $anguloLimitante / MILLA_NAUTICA_EN_METROS;
+                $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloLimitante / MILLA_NAUTICA_EN_METROS;
 	    }
 	 }// else
     }// fin for para recorrer los azimuths
-    return;
-}// fin function
 
+    return $distanciasAlcances;
+
+}
 
 /**
  * Funcion que calcula las coordenadas geograficas de cobertura de un fichero kml para un determinado
  * radar a partir de las coordenadas, el nivel de vuelo y el array de distancias de cobertura.
  * 
  * @param array $radar (ENTRADA)
- * @param array $distanciasCobertura, en millas nauticas (ENTRADA)
  * @param int $flm, en metros (ENTRADA)
+ * @param array $distanciasAlcances, distancia en millas nauticas al borde de la cobertura, por cada acimut (ENTRADA)
  * @return array $coordenadasGeograficas (SALIDA)
  */
-function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm){
+function calculaCoordenadasGeograficasA( $radar, $flm, $distanciasAlcances ){
 
-    $coordenadasGeograficas = array();
+    $listaContornos = array();
     
     // Calcula el paso en funcion del numero maximo de azimuth (puede ser desde 360 o 720)
     $paso = 360.0 / $radar['screening']['totalAzimuths'];
@@ -225,32 +227,39 @@ function calculaCoordenadasGeograficasA( $radar, $distanciasCobertura, $flm){
     // Recorrido de los acimuts 
     for ($i = 0; $i < $radar['screening']['totalAzimuths']; $i++) {
  	// Calculo de la latitud
- 	$anguloCentral = ($distanciasCobertura[$i] * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
- 	$r = rad2deg(acos ($cosLatitudComplementaria * cos($anguloCentral) + $sinLatitudComplementaria * sin($anguloCentral)
-            * cos(deg2rad($i * $paso)))); // tenemos r en grados
- 	// Calculo de la longitud
- 	$rEnRadianes = deg2rad($r); // OPTIMIZAR
- 	$numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($rEnRadianes);
- 	$denominador = sin($latitudComplementaria) * sin($rEnRadianes);
+        $anguloCentral = ($distanciasAlcances[$i] * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
+        $r_rad = acos ($cosLatitudComplementaria * cos($anguloCentral) + $sinLatitudComplementaria * sin($anguloCentral)
+            * cos(deg2rad($i * $paso))); // tenemos r en radianes
+        $r_deg = rad2deg($r_rad);
+        $numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($r_rad);
+        $denominador = sin($latitudComplementaria) * sin($r_rad);
 
  	if ($numerador > $denominador)
  	    $p = 0;
  	else
             $p =  rad2deg( acos($numerador / $denominador) );
 
- 	// asignacion de valores a la estructura de datos
- 	if ( $i < ($radar['screening']['totalAzimuths'] / 2) )
- 	    $coordenadasGeograficas[$i]['longitud'] = $radar['lon'] + $p;
- 	else
- 	    $coordenadasGeograficas[$i]['longitud'] = $radar['lon'] - $p;
+        // asignacion de valores a la estructura de datos
+        if ( $i < ($radar['screening']['totalAzimuths'] / 2) ) {
+            $listaContornos[$i]['lon'] = $radar['lon'] + $p;
+        } else {
+            $listaContornos[$i]['lon'] = $radar['lon'] - $p;
+        }
 
- 	$coordenadasGeograficas[$i]['latitud'] = FRONTERA_LATITUD - $r;
-	$coordenadasGeograficas[$i]['altura'] = $flm;
-
+        $listaContornos[$i]['lat'] = FRONTERA_LATITUD - $r_deg;
+        $listaContornos[$i]['alt'] = $flm;
     }
     // cerramos el polígono, repitiendo como último punto el primero
-    $coordenadasGeograficas[] = $coordenadasGeograficas[0];
-    return $coordenadasGeograficas;
+    $listaContornos[] = $listaContornos[0];
+    // generamos la misma estructura que se hace en calculaCoordenadasGeograficasB
+    $listaContornos = array(
+        array(
+            'level' => 0,
+            'polygon' => $listaContornos,
+            'inside' => array(),
+        )
+    );
+    return $listaContornos;
 }
 
 /**
@@ -619,6 +628,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
         $radar['screening']['listaAzimuths'][$i] = $listaObstaculosAmpliada;
 
         /*
+        // OUTPUT DEBUG
         for($jj=0;$jj<count($radar['listaAzimuths'][$i]); $jj++) {
             print $radar['listaAzimuths'][$i][$jj]['angulo'] . "|" .
                 $radar['listaAzimuths'][$i][$jj]['angulo']*$radioTerrestreAumentado/MILLA_NAUTICA_EN_METROS . "|" .
@@ -826,63 +836,96 @@ function mallaMarco($malla){
  *
  * @param array $radar (ENTRADA)
  * @param int $flm (ENTRADA)
- * @param array $listaC (ENTRADA/SALIDA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
+ * @param array $listaC (ENTRADA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
+ * @return array filas asociadas con la longitud y columnas con latitud 
  */
-function calculaCoordenadasGeograficasB($radar, $flm, &$listaC){
+function calculaCoordenadasGeograficasB($radar, $flm, $listaContornos){
+/*
+$listaC = array(
+    array(
+        'level' => 0,
+        'polygon' => array(
+            0 => array('fila' => 444, 'col' => 333),
+            1 =>  array('fila' => 444, 'col' => 333)),
+        'inside' => array(
+            'level' => 1,
+            'polygon' => array(
+                0 => array('fila' => 444, 'col' => 333),
+                1 =>  array('fila' => 444, 'col' => 333)),
+            )
+        ),
+    );
+*/
     // DUDA ¿es necesario?
     // $xR = 0;
     // $yR = 0;
     // pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
     $tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
     $tamMallaMitad = $tamMalla / 2.0;
-    $islaCount = count($listaC);
-    for($isla = 0; $isla < $islaCount; $isla++) { // recorre la lista de islas/ contornos
 
-	$n = count($listaC[$isla]);
-
-        for($i = 0; $i < $n; $i++) { // recorre la lista de puntos del contorno
-            // DUDA ¿por qué se utiliza el -1? : RESPUESTA porque le hemos añadido un 1 a la malla cuando
-            // la generábamos, para hacer la malla impar y que la celda del centro es la que contenga al radar
-	    $x = ( (($listaC[$isla][$i]['col']-1) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA)/* + TAM_CELDA_MITAD*/ );
-	    $y = ( ( $tamMallaMitad * TAM_CELDA) - (($listaC[$isla][$i]['fila']-1) * TAM_CELDA)/* - TAM_CELDA_MITAD*/ );
-
-	    // CALCULO DE LA DISTANCIA
-	    // DUDA ¿es necesario $xR e $yR?
-	    // $distanciaCeldaAradar = (sqrt(pow(($xR- $x),2)+ pow(($yR - $y),2)) );
-	    $distanciaCeldaAradar = sqrt(pow($x,2) + pow($y,2));
-
-	    // CALCULO DEL ACIMUT
-	    $azimutTeorico = calculaAcimut($x, $y);
-
-	    // CALCULO DE LA LATITUD
-	    $anguloCentral = ($distanciaCeldaAradar * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
-	    $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
-	    $r = rad2deg(acos (cos($latitudComplementaria) * cos($anguloCentral) + sin($latitudComplementaria) * sin($anguloCentral)
-                * cos(deg2rad($azimutTeorico)))); // tenemos r en grados
-
-            // CALCULO DE LA LONGITUD
-	    $rEnRadianes = deg2rad($r);
-	    $numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($rEnRadianes);
-	    $denominador = sin($latitudComplementaria) * sin($rEnRadianes);
-
-	    if( $numerador > $denominador ) {
-                $p = 0;
-            } else {
-	        $p = rad2deg(acos($numerador/$denominador));
-	    }
-
-	    // asignacion de valores a la estructura de datos
-	    if ( $azimutTeorico < 180 ) {
-	        $listaC[$isla][$i]['fila'] = $radar['lon'] + $p;
-	    } else {
-	        $listaC[$isla][$i]['fila'] = $radar['lon'] - $p;
-	    }
-	    $listaC[$isla][$i]['col'] = FRONTERA_LATITUD - $r;
-	    $listaC[$isla][$i]['altura'] = $flm;
-	}
+    foreach( $listaContornos as &$contorno ) {
+        foreach ( $contorno['polygon'] as &$p ) {
+            // transforma las coordenadas del level 0
+            $p = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p);
+        }
+        foreach ( $contorno['inside'] as &$contorno_inside ) {
+            foreach ($contorno_inside['polygon'] as &$p_inside) {
+                // transforma las coordenadas del level 1
+                $p_inside = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p_inside);
+            }
+        }
     }
 
-    return;
+    return $listaContornos;
+}
+
+/**
+ * Transforma coordenadas X/Y (col/fila) en latitud/longitud (en grados)
+ *
+ * @param array $radar datos del centro de coordenadas, definidos por un radar (ENTRADA)
+ * @param float $flm nivel de vuelo que se va a poner a los puntos transformados (ENTRADA)
+ * @param int $tamMallaMitad distancia al centro de la malla (ENTRADA)
+ * @param array $p punto con col/fila de las coordenadas a transformar (ENTRADA)
+ * @return array nuevo punto con filas asociadas con la longitud y columnas con latitud en grados (SALIDA)
+ */
+function transformaCoordenadas($radar, $flm, $tamMallaMitad, $p) {
+    // ¿por qué se utiliza el -1? RESPUESTA porque le hemos añadido un 1 a la malla cuando
+    // la generábamos, para hacer la malla impar y que la celda del centro es la que contenga
+    // al radar
+    $x = (($p['col'] - 1) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA);
+    $y = ($tamMallaMitad * TAM_CELDA) - (($p['fila'] - 1) * TAM_CELDA);
+    // CALCULO DE LA DISTANCIA
+    // $distanciaCeldaAradar = (sqrt(pow(($xR- $x),2)+ pow(($yR - $y),2)) );
+    $distanciaCeldaAradar = sqrt(pow($x,2) + pow($y,2));
+    // CALCULO DEL ACIMUT
+    $azimutTeorico = calculaAcimut($x, $y);
+    // CALCULO DE LA LATITUD
+    $anguloCentral = ($distanciaCeldaAradar * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
+    $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
+    $r_rad = acos(
+            cos($latitudComplementaria) * cos($anguloCentral) +
+            sin($latitudComplementaria) * sin($anguloCentral) * cos(deg2rad($azimutTeorico))
+            );
+    // convertimos r a grados (estaba en radianes)
+    $r_deg = rad2deg($r_rad);
+    // CALCULO DE LA LONGITUD
+    $numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($r_rad);
+    $denominador = sin($latitudComplementaria) * sin($r_rad);
+    if( $numerador > $denominador ) {
+        $offsetLongitud = 0;
+    } else {
+        $offsetLongitud = rad2deg(acos($numerador/$denominador));
+    }
+    // asignacion de valores a la estructura de datos
+    if ( $azimutTeorico < 180 ) {
+        $p['lon'] = $radar['lon'] + $offsetLongitud;
+    } else {
+        $p['lon'] = $radar['lon'] - $offsetLongitud;
+    }
+    $p['lat'] = FRONTERA_LATITUD - $r_deg;
+    $p['alt'] = $flm;
+
+    return $p;
 }
 
 /////////////////////////////////////////////// FUNCIONES NECESARIAS PARA PODER APLICAR EL ALGORITMO MARCHING SQUARES ////////////////////////////////////////////////////////////// 
@@ -1360,13 +1403,13 @@ function determinaContornos2($malla){
             */
 
             // antes de añadir, mirar si el contorno está generado en counter-clockwise
-            $orientacion = comprobarOrientacion($contornoFixed, $leftCorner);
+            // $orientacion = comprobarOrientacion($contornoFixed, $leftCorner);
             //foreach($contornoFixed as $s) {
             //    print $s['fila'] . ";" . $s['col'] . PHP_EOL;
             //}
-            if ($orientacion) print "CCW:" . count($contornoFixed) . PHP_EOL; else print "CW:" . count($contornoFixed) . PHP_EOL;
+            // if ($orientacion) print "CCW:" . count($contornoFixed) . PHP_EOL; else print "CW:" . count($contornoFixed) . PHP_EOL;
             
-            $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner);
+            $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner, 'inside' => array());
             $contornoFixed = array();
             $sgm = array_shift($c['segments']);
             $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array( 'fila'=>$x1, 'col'=>$y1 );
@@ -1410,23 +1453,62 @@ function determinaContornos2($malla){
     print "[100%]";
     
     // antes de añadir, mirar si el contorno está generado en counter-clockwise
-    //$listaContornos[] = $contornoFixed;
-    $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner);
-
-    //print "yMinVal: " . $yMinVal . " yMinKey: " . $yMinKey . PHP_EOL;
-    $listaContornosActualizada = array();
-    while ( count($listaContornos) > 1 ) {
-        $c = array_shift($listaContornos);
-        foreach($listaContornos as $l) {
-            $is_in_polygon = is_in_polygon2($c['polygon'], $l[0]['polygon'][0]);
-            if ( false === $is_in_polygon ) {
-                $c['level'] = 0;
-                $listaContornosActualizada[] = $c;
-            } else {
-                // insertar $c en actualizada pero dependiendo de $l !, dos pájaros de un tiro.
+    $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner, 'inside' => array());
+    $listaContornosCount = count($listaContornos);
+    $salir = false;
+    while ( !$salir ) {
+        $c = array_shift( $listaContornos );
+        $is_in_polygon = false;
+        foreach( $listaContornos as $k => $l ) {
+            // comprobamos si el contorno tiene algún contorno dentro
+            $is_in_polygon = is_in_polygon2( $c['polygon'], $l['polygon'][0] );
+            // si lo tiene archivamos el interno y el externo, guardando su relación
+            if ( true === $is_in_polygon ) {
+                // actualizamos el nivel (quizás no nos haga falta nunca)
+                $l['level'] = 1;
+                // comprobamos la orientación
+                $orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
+                // al ser interior, debería ser CW
+                if ( true === $orientacion ) { // orientación es CCW, lo rotamos para dejarlo CW
+                    $l['polygon'] = array_reverse( $l['polygon'] );
+                }
+                // no lo vamos a necesitar mas, así que lo podemos borrar
+                unset($l['leftCorner']);
+                // metemos el que estaba dentro en su sitio
+                $c['inside'][] = $l;
+                // borramos $l de lista contornos (referenciado por $k)
+                unset($listaContornos[$k]);
+                break;
             }
-        print_r($listaContornos[0]['polygon']);
-        exit();
+        }
+        // el contorno no tiene a nadie dentro, es un level 0
+        if ( false === $is_in_polygon ) { // $c no tiene a nadie dentro
+            $c['level'] = 0;
+        }
+        $listaContornos[] = $c;
+
+        // si no existe ningún polígono de nivel -1, es que los hemos comprobado todos
+        // en ese caso, salir.
+        $salir = true;
+        foreach( $listaContornos as $l ) {
+            if ( $l['level'] == -1 ) {
+                $salir = false;
+                break;
+            }
+        }
+    }
+
+    $assertListaContornosCount = count($listaContornos);
+    foreach( $listaContornos as $k => $l ) {
+        // print $k . "] " . count($l['polygon']) . PHP_EOL;
+        // print "\t level:" . $l['level'] . PHP_EOL;
+        // print "\t inside:" . count($l['inside']) . PHP_EOL;
+        $assertListaContornosCount += count($l['inside']);
+    }
+
+    print "[assert listaContornos: " . $listaContornosCount . "=?" . $assertListaContornosCount . "]";
+    if ( $listaContornosCount != $assertListaContornosCount ) {
+        die("ERROR al reindexar los contornos" . PHP_EOL);
     }
 
     return $listaContornos;
@@ -1469,9 +1551,10 @@ function is_in_polygon2($v, $p) {
  * @param int $y new y
  * @param array $leftCorner array with lower x & y until call
  * @param array $arr to get key count if new point is found
+ * @param int $k index, if not set, get index from $arr count
  * @return $leftCorner
  */
-function findLeftCorner( $x, $y, $leftCorner, $arr ) {
+function findLeftCorner( $x, $y, $leftCorner, $arr, $k = false ) {
 
     if ( ($x < $leftCorner['xMin']) || 
         (($x == $leftCorner['xMin']) &&
@@ -1479,15 +1562,19 @@ function findLeftCorner( $x, $y, $leftCorner, $arr ) {
     
         $leftCorner['xMin'] = $x;
         $leftCorner['yMin'] = $y;
-        $leftCorner['key'] = count($arr) - 1;
+        if ( false === $k ) {
+            $leftCorner['key'] = count($arr) - 1;
+        } else {
+            $leftCorner['key'] = $k;
+        }
     }
     return $leftCorner;
 }
-
 /**
  *
  *
  * @url https://en.wikipedia.org/wiki/Curve_orientation
+ * @return bool true = CCW, false = CW
  */
 function comprobarOrientacion($contornoFixed, $leftCorner) {
 /* 
@@ -1520,21 +1607,18 @@ function comprobarOrientacion($contornoFixed, $leftCorner) {
         die("ERROR un polígono debería estar formado por dos puntos!");
     }
     $k = $leftCorner['key'];
+
     // 0 1 2 3 4 5 6 7   8
     //               ^
     $xA = $contornoFixed[(($k-1) + $n) % $n]['fila']; $yA = $contornoFixed[(($k-1) + $n) % $n]['col'];
-    
     $xB = $contornoFixed[$k]['fila']; $yB = $contornoFixed[$k]['col'];
-    
     $xC = $contornoFixed[($k+1) % $n]['fila']; $yC = $contornoFixed[($k+1) % $n]['col'];
-    
     $det = (( $xB - $xA )*( $yC - $yA )) - (( $xC - $xA )*( $yB - $yA ));
-    
-    if ( $det>0 )
-        return true;
-    else
-        return false;
 
+    if ( $det>0 )
+        return true; // CCW
+    else
+        return false; // CW
 }
 
 
