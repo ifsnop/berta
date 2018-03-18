@@ -1315,18 +1315,50 @@ private function CheckSquare( $checkX, $checkY ) {
 	
   return $nuevaMalla;
 } */
-	
+
+
+/**
+ * Helper de determinaContornos2. Wrapper para llamar a CONREC_contour
+ * @param array $malla (ENTRADA)
+ * @return array lista de segmentos de contornos
+ */
+function determinaContornos2_getContornos($malla) {
+
+}	
+
+/**
+ * Helper de determinaContornos2. Procesa la salida de CONREC_contour para obtener listas de polígonos
+ * @param array $contorno lista de segmentos de contornos (ENTRADA)
+ * @return array lista de contornos cerrados
+ */
+function determinaContornos2_joinContornos($contornos) {
+
+}
+
+/**
+ * Helper de determinaContornos2. Ordena la jerarquía de una lista de
+ * contornos cerrados, para saber quién depende de quién. También rota
+ *los contornos dependiendo de si están dentro o fuera de otro.
+ * @param array $contorno lista de contornos cerrados (ENTRADA)
+ * @return array jerarquía de contornos ya clasificados y rotados
+ */
+function determinaContornos2_sortContornos($contornos) {
+
+}
 
 /**
  * Funcion que determina los contornos de cobertura que hay en una matriz
  * 
  * @url http://paulbourke.net/papers/conrec/
- * @param array $radar (ENTRADA)
  * @param array $malla (ENTRADA)
  * @return array $listaContornos (SALIDA)
  */
 function determinaContornos2($malla){
+
     $listaContornos = array();
+
+//    if ( NULL === ($listaContornos = json_decode(file_get_contents("aitana.json"), true)) ) {
+
     $d = array();
     $x = array();
     $y = array();
@@ -1337,6 +1369,7 @@ function determinaContornos2($malla){
         $d[$i] = array();
         $jMalla = count($malla[$i]);
         for($j=0; $j < $jMalla; $j++) {
+            // cambiamos los valores de x y de y por los valores que CONREC espera.
             $val = $malla[($iMalla-1) - $j][$i];
             // cálculo para saber si la malla está toda a 0, y
             // por lo tanto no habrá cobertura
@@ -1351,11 +1384,19 @@ function determinaContornos2($malla){
         return array();
     }
     
-    // nuestra malla siempre es cuadrada
+    // nuestra malla siempre es cuadrada. CONREC necesita los índices de x y de y.
+    // al ser cuadrada, atajamos.
     for($i=0; $i<count($malla); $i++) {
         $x[$i] = $i; $y[$i] = $i;
     }
 
+    // se llama a CONREC pidiendo 2 contornos. Si pidiésemos uno, se calcularía al 50% entre
+    // la celda con valor a 1 y la celda con valor a 0, es decir, entre se interpola entre medias.
+    // Al pedir 2, se hacen dos contornos, uno al 33% y otro al 66%. Por como se ordenan, si
+    // elegimos el segundo, se queda más cerca de la celda con valor.
+    // Debería comprobar si es así o al revés, porque el comentario de más abajo me ha dejado
+    // la duda. Sea como sea, la salida que tenemos es la más correcta, uniendo agueros de
+    // no cobertura en zonas de cobertura, y nos interesa porque es más conservador.
     $contornos = CONREC_contour($malla, $x, $y, $numContornos = 2);
 
 /*
@@ -1366,7 +1407,7 @@ function determinaContornos2($malla){
         exit(-1);
     }
 */
-    // para quedarnos con el primer contorno generado, que siempre será el más conservador
+    // para quedarnos con el segundo contorno generado, que siempre será el más conservador
     $c = $contornos[1];
     print "[conrec: " . count($c) . "]";
 
@@ -1383,11 +1424,11 @@ function determinaContornos2($malla){
     while(count($c['segments'])>0) {
         $cuentaActual = count($c['segments']);
 
-        //print "[cuentaActual:" . $cuentaActual . "] " .
-        //    "[cuentaActual_old:" . $cuentaActual_old ."] " .
-        //    "[listaContornos:" . count($listaContornos) . "] " .
-        //    "[contornoFixed:" . count($contornoFixed) . "] " .
-        //    PHP_EOL;
+//        print "[cuentaActual:" . $cuentaActual . "] " .
+//            "[cuentaActual_old:" . $cuentaActual_old ."] " .
+//            "[listaContornos:" . count($listaContornos) . "] " .
+//            "[contornoFixed:" . count($contornoFixed) . "] " .
+//            PHP_EOL;
 
         if ( $cuentaActual_old == $cuentaActual ) {
             // si no hemos conseguido encontrar ningún segmento que contine al último, es que el segmento
@@ -1450,22 +1491,42 @@ function determinaContornos2($malla){
             }
         }
     }
+    // añadimos el último polígono que nos quedaba pendiente
+    $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner, 'inside' => array());
     print "[100%]";
     
-    // antes de añadir, mirar si el contorno está generado en counter-clockwise
-    $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner, 'inside' => array());
+    
+    
+        
+//    file_put_contents("aitana.json", json_encode($listaContornos));
+    
+//    }
+
+//    print "sin pasar por la casilla de salida" . PHP_EOL;
+    
+    
+    // calculamos la jerarquía de los polígonos y los rotamos según su profundidad
     $listaContornosCount = count($listaContornos);
     $salir = false;
     while ( !$salir ) {
+//        print count($listaContornos) . " ";
+//        print_r(array_keys($listaContornos));
+//        print PHP_EOL;
         $c = array_shift( $listaContornos );
+        if ( -1 != $c['level'] ) {
+            // nunca deberíamos comprobar dos veces si un polígono tiene elementos dentro
+            die("ERROR al analizar la jerarquía de contornos" . PHP_EOL . print_r($c, true) . PHP_EOL);
+        }
         $is_in_polygon = false;
         foreach( $listaContornos as $k => $l ) {
             // comprobamos si el contorno tiene algún contorno dentro
             $is_in_polygon = is_in_polygon2( $c['polygon'], $l['polygon'][0] );
-            // si lo tiene archivamos el interno y el externo, guardando su relación
+            // si lo tiene, archivamos el interno y el externo, guardando su relación
             if ( true === $is_in_polygon ) {
+//                print "polygono interior" . PHP_EOL;
                 // actualizamos el nivel (quizás no nos haga falta nunca)
                 $l['level'] = 1;
+                $c['level'] = 0;
                 // comprobamos la orientación
                 $orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
                 // al ser interior, debería ser CW
@@ -1477,12 +1538,15 @@ function determinaContornos2($malla){
                 // metemos el que estaba dentro en su sitio
                 $c['inside'][] = $l;
                 // borramos $l de lista contornos (referenciado por $k)
+//                print "inside count:" . count($c['inside']) . PHP_EOL;
+//                print "deleted $k" . PHP_EOL;
                 unset($listaContornos[$k]);
                 break;
             }
         }
         // el contorno no tiene a nadie dentro, es un level 0
         if ( false === $is_in_polygon ) { // $c no tiene a nadie dentro
+//            print "ponemos el que tiene count de: " . count($c['polygon']) . " como level 0" . PHP_EOL;
             $c['level'] = 0;
         }
         $listaContornos[] = $c;
@@ -1496,13 +1560,20 @@ function determinaContornos2($malla){
                 break;
             }
         }
+        
+//        foreach( $listaContornos as $k => $l ) {
+//            print $k . "] " . count($l['polygon']) . PHP_EOL;
+//            print "\t level:" . $l['level'] . PHP_EOL;
+//            print "\t inside:" . count($l['inside']) . PHP_EOL;
+//        }
+//        print "============================================" . PHP_EOL;
     }
 
     $assertListaContornosCount = count($listaContornos);
     foreach( $listaContornos as $k => $l ) {
-        // print $k . "] " . count($l['polygon']) . PHP_EOL;
-        // print "\t level:" . $l['level'] . PHP_EOL;
-        // print "\t inside:" . count($l['inside']) . PHP_EOL;
+//        print $k . "] " . count($l['polygon']) . PHP_EOL;
+//        print "\t level:" . $l['level'] . PHP_EOL;
+//        print "\t inside:" . count($l['inside']) . PHP_EOL;
         $assertListaContornosCount += count($l['inside']);
     }
 

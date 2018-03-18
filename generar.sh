@@ -7,14 +7,13 @@ php main.php aitana > logs/aitana.log 2>&1 &
 php main.php alcolea > logs/alcolea.log 2>&1 &
 php main.php alicante > logs/alicante.log 2>&1 &
 php main.php aspontes > logs/aspontes.log 2>&1 &
-php main.php asturiaswam > logs/asturiaswam.log 2>&1 &
 php main.php asturiaswam-rx00 > logs/asturiaswam-rx00.log 2>&1 &
 php main.php asturiaswam-rx01 > logs/asturiaswam-rx01.log 2>&1 &
 php main.php asturiaswam-rx02 > logs/asturiaswam-rx02.log 2>&1 &
 php main.php asturiaswam-rx04 > logs/asturiaswam-rx04.log 2>&1 &
+php main.php asturiaswam-rx05 > logs/asturiaswam-rx05.log 2>&1 &
 wait
 
-php main.php asturiaswam-rx05 > logs/asturiaswam-rx05.log 2>&1 &
 php main.php auchlias > logs/auchlias.log 2>&1 &
 php main.php barajas > logs/barajas.log 2>&1 &
 php main.php barcelona > logs/barcelona.log 2>&1 &
