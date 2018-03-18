@@ -171,8 +171,8 @@ function calculosFL($radar, $fl, $ruta, $altMode) {
         // storeListaObstaculos($radar, $ruta[GUARDAR_POR_RADAR], $nivelVuelo);
         print "[calculaCoordenadasGeograficasB]";
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
-        print "[crearKmlB]" . PHP_EOL;
     }
+    print "[crearKml]" . PHP_EOL;
     creaKml2($listaContornos2, $radar, $ruta, $fl, $altMode);
     return;
 }
