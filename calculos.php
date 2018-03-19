@@ -942,39 +942,6 @@ function transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp) {
  */
 function determinaContornos2_getContornos($malla) {
 
-}	
-
-/**
- * Helper de determinaContornos2. Procesa la salida de CONREC_contour para obtener listas de polígonos
- * @param array $contorno lista de segmentos de contornos (ENTRADA)
- * @return array lista de contornos cerrados
- */
-function determinaContornos2_joinContornos($contornos) {
-
-}
-
-/**
- * Helper de determinaContornos2. Ordena la jerarquía de una lista de
- * contornos cerrados, para saber quién depende de quién. También rota
- *los contornos dependiendo de si están dentro o fuera de otro.
- * @param array $contorno lista de contornos cerrados (ENTRADA)
- * @return array jerarquía de contornos ya clasificados y rotados
- */
-function determinaContornos2_sortContornos($contornos) {
-
-}
-
-/**
- * Funcion que determina los contornos de cobertura que hay en una matriz
- * 
- * @url http://paulbourke.net/papers/conrec/
- * @param array $malla (ENTRADA)
- * @return array $listaContornos (SALIDA)
- */
-function determinaContornos2($malla){
-
-    $listaContornos = array();
-
 //    if ( NULL === ($listaContornos = json_decode(file_get_contents("aitana.json"), true)) ) {
 
     $d = array();
@@ -1028,6 +995,17 @@ function determinaContornos2($malla){
     // para quedarnos con el segundo contorno generado, que siempre será el más conservador
     $c = $contornos[1];
     print "[conrec: " . count($c) . "]";
+
+    return $c;
+
+}
+
+/**
+ * Helper de determinaContornos2. Procesa la salida de CONREC_contour para obtener listas de polígonos
+ * @param array $contorno lista de segmentos de contornos (ENTRADA)
+ * @return array lista de contornos cerrados
+ */
+function determinaContornos2_joinContornos($c) {
 
     $contornoFixed = array();
     $sgm = array_shift($c['segments']);
@@ -1112,19 +1090,24 @@ function determinaContornos2($malla){
     // añadimos el último polígono que nos quedaba pendiente
     $listaContornos[] = array('level' => -1, 'polygon' =>$contornoFixed, 'leftCorner' => $leftCorner, 'inside' => array());
     print "[100%]";
-    
-    
-    
-        
-//    file_put_contents("aitana.json", json_encode($listaContornos));
-    
-//    }
 
+//    file_put_contents("aitana.json", json_encode($listaContornos));
+//    }
 //    print "sin pasar por la casilla de salida" . PHP_EOL;
-    
-    
+
+    return $listaContornos;
+}
+
+/**
+ * Helper de determinaContornos2. Ordena la jerarquía de una lista de
+ * contornos cerrados, para saber quién depende de quién. También rota
+ *los contornos dependiendo de si están dentro o fuera de otro.
+ * @param array $contorno lista de contornos cerrados (ENTRADA)
+ * @return array jerarquía de contornos ya clasificados y rotados
+ */
+function determinaContornos2_sortContornos($listaContornos) {
+
     // calculamos la jerarquía de los polígonos y los rotamos según su profundidad
-    $listaContornosCount = count($listaContornos);
     $salir = false;
     while ( !$salir ) {
 //        print count($listaContornos) . " ";
@@ -1181,7 +1164,7 @@ function determinaContornos2($malla){
                 break;
             }
         }
-        
+
 //        foreach( $listaContornos as $k => $l ) {
 //            print $k . "] " . count($l['polygon']) . PHP_EOL;
 //            print "\t level:" . $l['level'] . PHP_EOL;
@@ -1190,6 +1173,21 @@ function determinaContornos2($malla){
 //        print "============================================" . PHP_EOL;
     }
 
+    return $listaContornos;
+}
+
+/**
+ * Función que determina los contornos de cobertura que hay en una matriz
+ *
+ * @url http://paulbourke.net/papers/conrec/
+ * @param array $malla (ENTRADA)
+ * @return array $listaContornos (SALIDA)
+ */
+function determinaContornos2($malla){
+
+    $c = determinaContornos2_getContornos($malla);
+    $listaContornos = determinaContornos2_joinContornos($c);
+
     $assertListaContornosCount = count($listaContornos);
     foreach( $listaContornos as $k => $l ) {
 //        print $k . "] " . count($l['polygon']) . PHP_EOL;
@@ -1197,6 +1195,9 @@ function determinaContornos2($malla){
 //        print "\t inside:" . count($l['inside']) . PHP_EOL;
         $assertListaContornosCount += count($l['inside']);
     }
+
+    $listaContornosCount = count($listaContornos);
+    $listaContornos = determinaContornos2_sortContornos($listaContornos);
 
     print "[assert listaContornos: " . $listaContornosCount . "=?" . $assertListaContornosCount . "]";
     if ( $listaContornosCount != $assertListaContornosCount ) {
