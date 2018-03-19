@@ -9,14 +9,6 @@ CONST TAM_CELDA = 0.5; //10; // 0.5; // paso de la malla en NM 0.5 , 0.11 es lo 
 CONST TAM_CELDA_MITAD = 0.25; // 5; // 0.25; // NM
 CONST TAM_ANGULO_MAXIMO = 1; //20; // 1; // NM (lo situamos al doble que tamaño celda)
 
-//// CONSTANTES PARA LA DETECCION DE CONTORNOS /////
-CONST NONE = 0;
-CONST UP = 1;
-CONST LEFT = 2;
-CONST DOWN = 3;
-CONST RIGHT = 4;
-/////////////////////////////////////////////
-
 /**
  * Funcion que permite buscar los puntos limitantes necesarios para poder calcular la cobertura.
  * 
@@ -222,33 +214,21 @@ function calculaCoordenadasGeograficasA( $radar, $flm, $distanciasAlcances ){
     $paso = 360.0 / $radar['screening']['totalAzimuths'];
 
     $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
-    $cosLatitudComplementaria = cos($latitudComplementaria);
-    $sinLatitudComplementaria = sin($latitudComplementaria);
+    $latComp = array(
+        'cos' => cos($latitudComplementaria),
+        'sin' => sin($latitudComplementaria),
+    );
+
     // Recorrido de los acimuts 
     for ($i = 0; $i < $radar['screening']['totalAzimuths']; $i++) {
- 	// Calculo de la latitud
-        $anguloCentral = ($distanciasAlcances[$i] * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
-        $r_rad = acos ($cosLatitudComplementaria * cos($anguloCentral) + $sinLatitudComplementaria * sin($anguloCentral)
-            * cos(deg2rad($i * $paso))); // tenemos r en radianes
-        $r_deg = rad2deg($r_rad);
-        $numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($r_rad);
-        $denominador = sin($latitudComplementaria) * sin($r_rad);
 
- 	if ($numerador > $denominador)
- 	    $p = 0;
- 	else
-            $p =  rad2deg( acos($numerador / $denominador) );
+        $res = transformaFromPolarToLatLong($radar, $distanciasAlcances[$i], $i * $paso, $latComp);
 
-        // asignacion de valores a la estructura de datos
-        if ( $i < ($radar['screening']['totalAzimuths'] / 2) ) {
-            $listaContornos[$i]['lon'] = $radar['lon'] + $p;
-        } else {
-            $listaContornos[$i]['lon'] = $radar['lon'] - $p;
-        }
-
-        $listaContornos[$i]['lat'] = FRONTERA_LATITUD - $r_deg;
+        $listaContornos[$i]['lat'] = $res['lat'];
+        $listaContornos[$i]['lon'] = $res['lon'];
         $listaContornos[$i]['alt'] = $flm;
     }
+
     // cerramos el polígono, repitiendo como último punto el primero
     $listaContornos[] = $listaContornos[0];
     // generamos la misma estructura que se hace en calculaCoordenadasGeograficasB
@@ -260,6 +240,50 @@ function calculaCoordenadasGeograficasA( $radar, $flm, $distanciasAlcances ){
         )
     );
     return $listaContornos;
+}
+
+/**
+ * Transforma de coordenadas polares a latitud longitud en grados
+ * @param array $radar información sobre el radar
+ * @param float $rho distancia
+ * @param float $theta ángulo
+ * @param array $latComp seno y coseno de la latitud complementaria, en radianes.
+ *
+ */
+function transformaFromPolarToLatLong($radar, $rho, $theta, $latComp) {
+
+    $ret = array();
+
+    // CALCULO LATITUD
+    $anguloCentral = ($rho * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
+    $r_rad = acos(
+            $latComp['cos'] * cos($anguloCentral) +
+            $latComp['sin'] * sin($anguloCentral) * cos(deg2rad($theta))
+        ); // tenemos r en radianes
+    $r_deg = rad2deg($r_rad);
+
+    // CALCULO LONGITUD
+    $numerador = cos($anguloCentral) - $latComp['cos'] * cos($r_rad);
+    $denominador = $latComp['sin'] * sin($r_rad);
+
+    if ($numerador > $denominador) {
+        $offsetLongitud = 0;
+    } else {
+        $offsetLongitud = rad2deg( acos($numerador / $denominador) );
+    }
+
+    // asignacion de valores a la estructura de datos
+    // si el ángulo actuale es menor de 180, se le suma el offset.
+    // si es mayor de 180, se le resta el offset
+    if ( $theta < 180 ) {
+        $ret['lon'] = $radar['lon'] + $offsetLongitud;
+    } else {
+        $ret['lon'] = $radar['lon'] - $offsetLongitud;
+    }
+
+    $ret['lat'] = FRONTERA_LATITUD - $r_deg;
+
+    return $ret;
 }
 
 /**
@@ -838,7 +862,7 @@ function mallaMarco($malla){
  * @param array $listaC (ENTRADA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
  * @return array filas asociadas con la longitud y columnas con latitud 
  */
-function calculaCoordenadasGeograficasB($radar, $flm, $listaContornos){
+function calculaCoordenadasGeograficasB( $radar, $flm, $listaContornos ) {
 /*
 $listaC = array(
     array(
@@ -861,16 +885,21 @@ $listaC = array(
     // pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
     $tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
     $tamMallaMitad = $tamMalla / 2.0;
-
+    // CALCULO DE LA LATITUD COMPLEMENTARIA
+    $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
+    $latComp = array(
+        'cos' => cos($latitudComplementaria),
+        'sin' => sin($latitudComplementaria),
+    );
     foreach( $listaContornos as &$contorno ) {
         foreach ( $contorno['polygon'] as &$p ) {
             // transforma las coordenadas del level 0
-            $p = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p);
+            $p = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp);
         }
         foreach ( $contorno['inside'] as &$contorno_inside ) {
             foreach ($contorno_inside['polygon'] as &$p_inside) {
                 // transforma las coordenadas del level 1
-                $p_inside = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p_inside);
+                $p_inside = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p_inside, $latComp);
             }
         }
     }
@@ -887,44 +916,23 @@ $listaC = array(
  * @param array $p punto con col/fila de las coordenadas a transformar (ENTRADA)
  * @return array nuevo punto con filas asociadas con la longitud y columnas con latitud en grados (SALIDA)
  */
-function transformaCoordenadas($radar, $flm, $tamMallaMitad, $p) {
+function transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp) {
     // ¿por qué se utiliza el -1? RESPUESTA porque le hemos añadido un 1 a la malla cuando
     // la generábamos, para hacer la malla impar y que la celda del centro es la que contenga
     // al radar
     $x = (($p['col'] - 1) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA);
     $y = ($tamMallaMitad * TAM_CELDA) - (($p['fila'] - 1) * TAM_CELDA);
+
     // CALCULO DE LA DISTANCIA
     // $distanciaCeldaAradar = (sqrt(pow(($xR- $x),2)+ pow(($yR - $y),2)) );
     $distanciaCeldaAradar = sqrt(pow($x,2) + pow($y,2));
     // CALCULO DEL ACIMUT
     $azimutTeorico = calculaAcimut($x, $y);
-    // CALCULO DE LA LATITUD
-    $anguloCentral = ($distanciaCeldaAradar * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
-    $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
-    $r_rad = acos(
-            cos($latitudComplementaria) * cos($anguloCentral) +
-            sin($latitudComplementaria) * sin($anguloCentral) * cos(deg2rad($azimutTeorico))
-            );
-    // convertimos r a grados (estaba en radianes)
-    $r_deg = rad2deg($r_rad);
-    // CALCULO DE LA LONGITUD
-    $numerador = cos($anguloCentral) - cos($latitudComplementaria) * cos($r_rad);
-    $denominador = sin($latitudComplementaria) * sin($r_rad);
-    if( $numerador > $denominador ) {
-        $offsetLongitud = 0;
-    } else {
-        $offsetLongitud = rad2deg(acos($numerador/$denominador));
-    }
-    // asignacion de valores a la estructura de datos
-    if ( $azimutTeorico < 180 ) {
-        $p['lon'] = $radar['lon'] + $offsetLongitud;
-    } else {
-        $p['lon'] = $radar['lon'] - $offsetLongitud;
-    }
-    $p['lat'] = FRONTERA_LATITUD - $r_deg;
-    $p['alt'] = $flm;
 
-    return $p;
+    $res = transformaFromPolarToLatLong($radar, $distanciaCeldaAradar, $azimutTeorico, $latComp);
+
+    $res['alt'] = $flm;
+    return $res;
 }
 
 /**
