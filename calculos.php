@@ -1106,22 +1106,66 @@ function determinaContornos2_joinContornos($c) {
  * @return array jerarquía de contornos ya clasificados y rotados
  */
 function determinaContornos2_sortContornos($listaContornos) {
+/*
+    $new = array();
+    unset($listaContornos[0]);
+    unset($listaContornos[1]);
+    $listaContornos = array_values($listaContornos);
+    foreach( $listaContornos as $k => $l ) {
+        if ( count($l['polygon']) == 15 ) continue;
+        $new[] = $l;
+    }
+    $listaContornos = $new;
+    unset($listaContornos[count($listaContornos)-1]);
+    $listaContornos = array_values($listaContornos);
+    
+    foreach( $listaContornos as $k => $l ) {
+        foreach ( $l['polygon'] as $k2 => $l2) {
+            print $l2['fila'] . ";" . $l2['col'] . PHP_EOL;
+        }
+        print PHP_EOL;
+    }
+*/
 
     // calculamos la jerarquía de los polígonos y los rotamos según su profundidad
     $salir = false;
     while ( !$salir ) {
-//        print count($listaContornos) . " ";
-//        print_r(array_keys($listaContornos));
-//        print PHP_EOL;
+/*
+        print"STATUS" . PHP_EOL;
+        foreach( $listaContornos as $k => $l ) {
+            print $k . "] " . count($l['polygon']) . PHP_EOL;
+            print "\t level:" . $l['level'] . PHP_EOL;
+            print "\t inside:" . count($l['inside']) . PHP_EOL;
+        }
+        print "============================================" . PHP_EOL;
+*/
+        // print count($listaContornos) . " ";
+        // print_r(array_keys($listaContornos));
+        // print PHP_EOL;
         $c = array_shift( $listaContornos );
         if ( -1 != $c['level'] ) {
             // nunca deberíamos comprobar dos veces si un polígono tiene elementos dentro
             die("ERROR al analizar la jerarquía de contornos" . PHP_EOL . print_r($c, true) . PHP_EOL);
         }
         $is_in_polygon = false;
+/*
+        print "C:" . PHP_EOL;
+        print_r($c);
+        print PHP_EOL;
+*/
         foreach( $listaContornos as $k => $l ) {
             // comprobamos si el contorno tiene algún contorno dentro
+/*
+            print "L:" . PHP_EOL;
+            print_r($l['polygon']);
+            print PHP_EOL;
+*/
             $is_in_polygon = is_in_polygon2( $c['polygon'], $l['polygon'][0] );
+/*
+            if ( true === $is_in_polygon ) {
+                print "DENTRO" . PHP_EOL;
+            }
+*/
             // si lo tiene, archivamos el interno y el externo, guardando su relación
             if ( true === $is_in_polygon ) {
 //                print "polygono interior" . PHP_EOL;
@@ -1145,9 +1189,12 @@ function determinaContornos2_sortContornos($listaContornos) {
 //                print "inside count:" . count($c['inside']) . PHP_EOL;
 //                print "deleted $k" . PHP_EOL;
                 unset($listaContornos[$k]);
-                break;
+                //break;
             }
         }
+/*
+        print "=======" . PHP_EOL;
+*/
         // el contorno no tiene a nadie dentro, es un level 0
         if ( false === $is_in_polygon ) { // $c no tiene a nadie dentro
 //            print "ponemos el que tiene count de: " . count($c['polygon']) . " como level 0" . PHP_EOL;
@@ -1165,14 +1212,16 @@ function determinaContornos2_sortContornos($listaContornos) {
             }
         }
 
-//        foreach( $listaContornos as $k => $l ) {
-//            print $k . "] " . count($l['polygon']) . PHP_EOL;
-//            print "\t level:" . $l['level'] . PHP_EOL;
-//            print "\t inside:" . count($l['inside']) . PHP_EOL;
-//        }
-//        print "============================================" . PHP_EOL;
     }
-
+/*
+        print"STATUS FINAL" . PHP_EOL;
+        foreach( $listaContornos as $k => $l ) {
+            print $k . "] " . count($l['polygon']) . PHP_EOL;
+            print "\t level:" . $l['level'] . PHP_EOL;
+            print "\t inside:" . count($l['inside']) . PHP_EOL;
+        }
+        print "============================================" . PHP_EOL;
+*/
     return $listaContornos;
 }
 
@@ -1185,19 +1234,22 @@ function determinaContornos2_sortContornos($listaContornos) {
  */
 function determinaContornos2($malla){
 
-    $c = determinaContornos2_getContornos($malla);
-    $listaContornos = determinaContornos2_joinContornos($c);
-
-    $assertListaContornosCount = count($listaContornos);
-    foreach( $listaContornos as $k => $l ) {
-//        print $k . "] " . count($l['polygon']) . PHP_EOL;
-//        print "\t level:" . $l['level'] . PHP_EOL;
-//        print "\t inside:" . count($l['inside']) . PHP_EOL;
-        $assertListaContornosCount += count($l['inside']);
-    }
+    //if ( NULL === ($listaContornos = json_decode(@file_get_contents("turrillas.json"), true)) ) {
+        $c = determinaContornos2_getContornos($malla);
+        $listaContornos = determinaContornos2_joinContornos($c);
+        //file_put_contents("turrillas.json", json_encode($listaContornos));
+    //}
 
     $listaContornosCount = count($listaContornos);
     $listaContornos = determinaContornos2_sortContornos($listaContornos);
+
+    $assertListaContornosCount = count($listaContornos);
+    foreach( $listaContornos as $k => $l ) {
+        // print $k . "] " . count($l['polygon']) . PHP_EOL;
+        // print "\t level:" . $l['level'] . PHP_EOL;
+        // print "\t inside:" . count($l['inside']) . PHP_EOL;
+        $assertListaContornosCount += count($l['inside']);
+    }
 
     print "[assert listaContornos: " . $listaContornosCount . "=?" . $assertListaContornosCount . "]";
     if ( $listaContornosCount != $assertListaContornosCount ) {

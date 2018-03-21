@@ -165,8 +165,10 @@ function calculosFL($radar, $fl, $ruta, $altMode) {
 	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
 	    return;
 	}
+	$nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
+        file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_malla.json", json_encode($mallaGrande));
+        file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_contornos.json", json_encode($listaContornos2));
         // printMalla($malla);
-        // $nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
         // storeMallaAsImage($malla, $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "_FL" . $nivelVuelo);
         // storeListaObstaculos($radar, $ruta[GUARDAR_POR_RADAR], $nivelVuelo);
         print "[calculaCoordenadasGeograficasB]";

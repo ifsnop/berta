@@ -39,7 +39,8 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 
     // recorremos los azimuths
     print "cargando contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")" . PHP_EOL;
-    for($i = 0; $i < $screening['totalAzimuths']; $i++){
+    $acimutOld = 0;
+    for( $i = 0; $i < $screening['totalAzimuths']; $i++ ) {
         $listaObstaculos = array();
 	// buscamos el bloque que comienza por AZIMUTH
 	while ( "AZIMUTH" != substr($contenidoFichero[$lineaActual], 0, 7) ){
@@ -48,6 +49,13 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 	print ".";
 	// anotamos el acimut actual
 	$acimutActual = substr($contenidoFichero[$lineaActual++], 8) + 0;
+
+	// comprobación de coherencia entre acimuts
+        if ( ($acimutActual - $acimutOld) > 1 ) {
+            die( "ERROR Problema en el fichero >" . $radar['screening'] .
+                "<, salto entre los acimut $acimutOld y $acimutActual" .
+                PHP_EOL);
+        }
 	// anotamos el número de obstaculos para ese acimut
 	$contadorObstaculos = $contenidoFichero[$lineaActual++];
         // insertamos el radar como primer obstaculo, para resolver el caso de que
@@ -74,7 +82,11 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 		$lineaActual++;
 	}
 	// anadimos un obstaculo mas por que hemos insertado el radar como primer obstaculo
-	$screening['listaAzimuths'][$acimutActual] = $listaObstaculos;	
+	$screening['listaAzimuths'][$acimutActual] = $listaObstaculos;
+
+	// actualizamos el contador
+	$acimutOld = $acimutActual;
+
     } // end for exterior
     print PHP_EOL;
 
