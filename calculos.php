@@ -1007,6 +1007,9 @@ function determinaContornos2_getContornos($malla) {
  */
 function determinaContornos2_joinContornos($c) {
 
+    if ( !is_array($c) || 0 == count($c) ) {
+        return array();
+    }
     $contornoFixed = array();
     $sgm = array_shift($c['segments']);
     $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array( 'fila'=>$x1, 'col'=>$y1 );
@@ -1126,6 +1129,10 @@ function determinaContornos2_sortContornos($listaContornos) {
         print PHP_EOL;
     }
 */
+
+    if ( !isset($listaContornos) || 0 == count($listaContornos) ) {
+        return array();
+    }
 
     // calculamos la jerarquía de los polígonos y los rotamos según su profundidad
     $salir = false;

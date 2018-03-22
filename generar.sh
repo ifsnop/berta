@@ -1,7 +1,38 @@
+echo "Inicializando"
+
 rm -rf logs
 mkdir logs
 rm -rf RESULTADOS
 mkdir RESULTADOS
+
+echo "Lanzando"
+for i in aitana alcolea alicante aspontes asturiaswam-rx00 asturiaswam-rx01 \
+asturiaswam-rx02 asturiaswam-rx04 asturiaswam-rx05 auchlias barajas barcelona \
+barcelona-psr begas begas-psr biarritz canchoblanco constantina eljudio eljudio-psr \
+erillas espineiras espineiras-psr foia foia_sin fuerteventura gazules girona grancanaria \
+grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montejunto montejunto_sin \
+montpellier motril olesa palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr \
+paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto portosanto_sin pozonieves \
+randa randa-psr sierraespuna soller solorzano taborno tenerifesur tenerifesur-psr \
+turrillas valdespina valencia valencia-psr valladolid villatobas; do
+
+    cogernuevo="no"
+    while [[ "$cogernuevo" = "no" ]]; do
+        count=`ps ax |grep -i "php main.php" | grep -v grep | wc -l`
+        if [[ $count -lt 8 ]]; then
+            echo php main.php "$i" \> "logs/${i}.log"
+            php main.php "$i" > "logs/${i}.log" 2>&1 &
+            sleep 1
+            cogernuevo="si"
+        else
+            echo -n ".${count}."
+            sleep 10
+        fi
+    done
+
+done
+
+exit
 
 php main.php aitana > logs/aitana.log 2>&1 &
 php main.php alcolea > logs/alcolea.log 2>&1 &

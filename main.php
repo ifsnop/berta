@@ -130,7 +130,7 @@ function programaPrincipal(){
                     crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
                     crearCarpetaResultados($ruta[GUARDAR_POR_RADAR]);
                     print "Generando: ${fl}00 feet" . PHP_EOL;
-		    calculosFL($radar, $fl, $ruta, $altMode);
+		    calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
                 } // for interno
 	    } // foreach
 	    break;
@@ -143,7 +143,7 @@ function programaPrincipal(){
 /*
  * @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
  */
-function calculosFL($radar, $fl, $ruta, $altMode) {
+function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) {
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
     $flm = $fl*100*FEET_TO_METERS; // fl en metros
@@ -165,7 +165,6 @@ function calculosFL($radar, $fl, $ruta, $altMode) {
 	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
 	    return;
 	}
-	$nivelVuelo = str_pad((string)$fl,3,"0", STR_PAD_LEFT);
         file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_malla.json", json_encode($mallaGrande));
         file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_contornos.json", json_encode($listaContornos2));
         // printMalla($malla);
