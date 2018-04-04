@@ -105,7 +105,7 @@ function calculosFLencimaRadar($radar, $flm ){
     // $angulosApantallamiento = array();
     $distanciasAlcances = array();
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
-    $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm);
+    $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm); // AlphaRange en Matlab
     $earthToFl = $radioTerrestreAumentado + $flm;
     $earthToRadar = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'] + $radioTerrestreAumentado;
 	
@@ -121,22 +121,35 @@ function calculosFLencimaRadar($radar, $flm ){
 
 	// obtenemos la altura del último punto para cada azimuth
 	$obstaculoLimitante = $radar['screening']['listaAzimuths'][$i][$count-1]['altura'];
-
         if ($flm >= $obstaculoLimitante){
+            // caso en el que el nivel de vuelo está por encima del obstáculo que limita
 	    $earthToEvalPoint = $radioTerrestreAumentado + $obstaculoLimitante;
-	    // obtenemos el angulo del ultimo obstaculo de cada azimuth
+	    // ángulo del ultimo obstaculo de cada azimuth
 	    $angulo = $radar['screening']['listaAzimuths'][$i][$count-1]['angulo'];
-
-            $distanciasAlcances[$i]= sqrt ((pow($earthToRadar,2) + pow($earthToEvalPoint,2)) - 2 * $earthToRadar * $earthToEvalPoint * cos($angulo));
+            // distancia que corresponde a ese ángulo
+            $distancia = sqrt ((pow($earthToRadar,2) + pow($earthToEvalPoint,2)) - 2 * $earthToRadar * $earthToEvalPoint * cos($angulo));
+            // ángulo formado entre la vertical del radar (hacia el centro de la tierra) y el obstáculo más alto
 	    $gammaMax = acos(
-	        (pow($distanciasAlcances[$i],2) +
+	        (pow($distancia,2) +
 	        pow($earthToRadar,2) -
 	        pow($earthToEvalPoint,2)) /
-	        (2 * $earthToRadar * $distanciasAlcances[$i])
+	        (2 * $earthToRadar * $distancia)
 	    );
 	    
 	    $theta = asin($earthToRadar * sin($gammaMax) / $earthToFl);
+	    // ángulo formado entre el la vertical del radar y el punto de
+	    // corte de la recta que psa por el obstáculo más alto y el nivel
+	    // de vuelo.
 	    $epsilon = M_PI - $theta - $gammaMax;
+            // escogemos el ángulo menor entre el ángulo para la máxima
+            // cobertura del radar al nivel de vuelo estudiado y el ángulo
+            // epsilon. (puede ser que por nivel de vuelo no lleguemos al obstáculo,
+            // entonces la cobertura es menor)
+            if ($epsilon >  $anguloMaxCob) {
+                $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
+	    } else {
+                $distanciasAlcances[$i] = $radioTerrestreAumentado * $epsilon / MILLA_NAUTICA_EN_METROS;
+            }
 
             if (false) {
                 print "radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
@@ -144,28 +157,19 @@ function calculosFLencimaRadar($radar, $flm ){
                 print "obstaculoLimitante: " . $obstaculoLimitante . PHP_EOL;
                 print "earthToEvalPoint: " . $earthToEvalPoint . PHP_EOL;
                 print "angulo:" . $angulo . PHP_EOL;
-                print "distanciasAlcances[" . $i . "]: " . $distanciasAlcances[$i] . PHP_EOL;
+                print "distancia: " . $distancia . PHP_EOL;
                 print "gammaMax: " . $gammaMax . PHP_EOL;
 	        print "theta: " . $theta . PHP_EOL;
 	        print "epsilon: " . $epsilon . PHP_EOL;
-                print "anguloMaxCob: " . $anguloMaxCob . PHP_EOL;
-            }
-
-            if ($epsilon >  $anguloMaxCob) {
-                $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
-	    } else {
-                $distanciasAlcances[$i] = $radioTerrestreAumentado * $epsilon / MILLA_NAUTICA_EN_METROS;
-            }
-
-            // $angulosApantallamiento[$i] = ($gammaMax * PASO_A_GRADOS / M_PI) - FRONTERA_LATITUD;
-
-	    if (false) {
+                print "anguloMaxCob (AlphaRange): " . $anguloMaxCob . PHP_EOL;
 	        print "distanciasAlcances[" . $i . "]: " . $distanciasAlcances[$i] . PHP_EOL;
-                // print "angulosApantallamiento[" . $i . "]: " . $angulosApantallamiento[$i] . PHP_EOL;
             }
-
 	 } else { // $fl < $obstaculoLimitante
-	 	 	
+            // caso en el que el nivel de vuelo está por debajo del obstáculo
+            // que limita. es necesario calcular dónde está el obstáculo que
+            // limita, porque no está al final de la lista de obstáculos, sino
+            // que depende del nivel de vuelo. (en la documentación de Matlab
+            // esto no está explicado).
             $anguloLimitante = 0;
 	    $alturaPrimerPtoSinCob = 0;
 	    $anguloPrimerPtoSinCob = 0;
@@ -222,7 +226,7 @@ function calculaCoordenadasGeograficasA( $radar, $flm, $distanciasAlcances ){
     // Recorrido de los acimuts 
     for ($i = 0; $i < $radar['screening']['totalAzimuths']; $i++) {
 
-        $res = transformaFromPolarToLatLong($radar, $distanciasAlcances[$i], $i * $paso, $latComp);
+        $res = transformaFromPolarToLatLong($radar, $rho = $distanciasAlcances[$i], $theta = $i * $paso, $latComp);
 
         $listaContornos[$i]['lat'] = $res['lat'];
         $listaContornos[$i]['lon'] = $res['lon'];
@@ -1017,9 +1021,9 @@ function determinaContornos2_joinContornos($c) {
     $x2 = $sgm['x2']; $y2 = $sgm['y2']; $contornoFixed[] = array( 'fila'=>$x2, 'col'=>$y2 );
     $leftCorner = findLeftCorner( $x2, $y2, $leftCorner, $contornoFixed );
 
-    print "[00%]";
     $countPct_old = 0; $cuentaTotal = count($c['segments']); $cuentaActual_old = -1;
 
+    print "[Segmentos: $cuentaTotal][00%]";
     while(count($c['segments'])>0) {
         $cuentaActual = count($c['segments']);
 

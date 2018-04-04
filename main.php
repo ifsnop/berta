@@ -71,8 +71,8 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 1;
-    $flMax = 450;
+    $flMin = 160;
+    $flMax = 160;
     $paso = 1;
 
     if ( $argc > 1 ){ 
@@ -151,8 +151,31 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) {
     // DISTINCIÓN DE CASOS 
     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
         $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
-	$listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
+	// $listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
+	
+	// calculosFLdebajoRadar($radar, $flm);// ¡por qué esto no funciona?
+	print "[generacionMallado]";
+        $malla = generacionMallado($radar);
+        storeMallaAsImage($malla, $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "_FL" . $nivelVuelo);
+        print "[mallaMarco]";
+	$mallaGrande = mallaMarco($malla);
+	print "[determinaContornos]";
+        $listaContornos2 = determinaContornos2($mallaGrande);
+	if ( 0 == count($listaContornos2) ) {
+	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+	    return;
+	}
+        file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_malla.json", json_encode($mallaGrande));
+        file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_contornos.json", json_encode($listaContornos2));
+        // printMalla($malla);
+        // storeMallaAsImage($malla, $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "_FL" . $nivelVuelo);
+        // storeListaObstaculos($radar, $ruta[GUARDAR_POR_RADAR], $nivelVuelo);
+        print "[calculaCoordenadasGeograficasB]";
+        $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
+
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
+
+
         print "[calculosFLdebajoRadar]";
 	calculosFLdebajoRadar($radar, $flm);
 	print "[generacionMallado]";
