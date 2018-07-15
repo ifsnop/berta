@@ -5,11 +5,12 @@ ini_set('display_errors', 1);
 ini_set('memory_limit', '16G');
 
 // INCLUSIÓN DE FICHEROS
-include 'cargarDatosTerreno.php';
-include 'cargarDatosCoordenadas.php';
-include 'funcionesAuxiliares.php';
-include 'calculos.php';
-include 'guardar.php';
+include 'inc.cargarScreening.php';
+include 'inc.cargarCoordenadas.php';
+include 'inc.auxiliares.php';
+include 'inc.conrec.php';
+include 'inc.calculos.php';
+include 'inc.guardar.php';
 
 // DEFINICIÓN DE CONSTANTES
 CONST RADIO_TERRESTRE = 6371000;
@@ -67,9 +68,9 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 300;
-    $flMax = 300;
-    $paso = 1;
+    $flMin = 50;
+    $flMax = 400;
+    $paso = 50;
 
     if ( $argc > 1 ){ 
         $lugares = array();
@@ -147,7 +148,9 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) {
     // DISTINCIÓN DE CASOS 
     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
         $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
-	// $listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
+	$listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
+/*
+        // para generar malla por encima
 	print "[generacionMallado]";
         $malla = generacionMallado($radar, $flm, $distanciasAlcances);
         storeMallaAsImage($malla, $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "_FL" . $nivelVuelo);
@@ -166,7 +169,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) {
         // storeListaObstaculos($radar, $ruta[GUARDAR_POR_RADAR], $nivelVuelo);
         print "[calculaCoordenadasGeograficasB]";
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
-
+*/
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
 

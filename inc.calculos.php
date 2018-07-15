@@ -1,7 +1,5 @@
 <?php
 
-include_once("conrec.php");
-
 CONST FRONTERA_LATITUD = 90; // latitud complementaria
 CONST FEET_TO_METERS = 0.30480370641307;
 CONST PASO_A_GRADOS = 180.0;
