@@ -1,7 +1,5 @@
 <?php
 
-include_once("conrec.php");
-
 CONST FRONTERA_LATITUD = 90; // latitud complementaria
 CONST FEET_TO_METERS = 0.30480370641307;
 CONST PASO_A_GRADOS = 180.0;
@@ -741,9 +739,11 @@ function calculaAcimut($x, $y){
  * acimut de cada celda de la malla tiene o no cobertura.
  * 
  * @param array $radar (ENTRADA)
+ * @param float $flm (ENTRADA)
+ * @param array $distanciasAlcances (ENTRADA)
  * @return array $malla (SALIDA)
  */
-function generacionMallado($radar) {
+function generacionMallado($radar, $flm, $distanciasAlcances) {
 
     // pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
     $tamMalla = (( 2 * $radar['range'] ) / TAM_CELDA) / MILLA_NAUTICA_EN_METROS;
@@ -816,13 +816,24 @@ function generacionMallado($radar) {
 	        count($radar['screening']['listaAzimuths'][$azimutCelda]) - 1,
 	        $key = "angulo"
 	    );
-	    if ( ($radar['screening']['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false){
-	        // aqui trasponemos la matriz, no se si es sin querer o es a propósito
-	        $malla[$j][$i] = 0;
-	        //print "0";
+
+	    $alturaCentroFasesAntena = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
+            if ( $flm >= $alturaCentroFasesAntena ) {
+	        if ($distanciaCeldaAradar * $radioTerrestreAumentadoEnMillas > $distanciasAlcances[$azimutCelda]){
+	            // aqui trasponemos la matriz, no se si es sin querer o es a prop..sito
+	            // el valor 1 para representar el caso en el que hay cobertura y 0 para lo contrario
+	            $malla[$j][$i] = 0;
+	        } else {
+                    $malla[$j][$i] = 1;
+                }
 	    } else {
-	        $malla[$j][$i] = 1; // entiendase el valor 1 para representar el caso en el que hay cobertura y 0 para lo contrario
-	        //print "1";
+	        if ( ($radar['screening']['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) ===false){
+	            // aqui trasponemos la matriz, no se si es sin querer o es a prop..sito
+	            // el valor 1 para representar el caso en el que hay cobertura y 0 para lo contrario
+                    $malla[$j][$i] = 0;
+	        } else {
+                    $malla[$j][$i] = 1;
+	        }
 	    }
 	}
 	// print PHP_EOL . PHP_EOL;
