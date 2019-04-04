@@ -1017,6 +1017,10 @@ function determinaContornos2_getContornos($malla) {
 
 /**
  * Helper de determinaContornos2. Procesa la salida de CONREC_contour para obtener listas de polígonos
+ * Se recorren todos los segmentos y se ordenan, para unir unos con otros. Puede haber varios
+ * polígonos, así que se pueden crear varios contornos.
+ * Apuntamos cual es la esquina inferior izquierda porque luego la usaremos para rotar el polígono
+ * (si está dentro o fuera, debe ir CW o CCW).
  * @param array $contorno lista de segmentos de contornos (ENTRADA)
  * @return array lista de contornos cerrados
  */

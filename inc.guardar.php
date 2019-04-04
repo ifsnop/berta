@@ -11,7 +11,7 @@ CONST PERMISOS = 0775;
  * @param int $fl          (ENTRADA) 
  * @param string $altMode  (ENTRADA)
  */
-function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode) {
+function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode, $appendToFilename="") {
 
     $rgb = "7d00ff00";
     $nivelVuelo = str_pad( (string)$fl, 3, "0", STR_PAD_LEFT );
@@ -45,7 +45,14 @@ function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode) {
 
         foreach ( $contorno['polygon'] as &$p ) {
             // transforma las coordenadas del level 0 -> outer
-            $cadenaOuter .= $p['lon'] . "," . $p['lat'] . "," . $p['alt'] . " ";
+            // si no existe lat, lon y alt, utilizar los índices 0,1 y la altura que vino como parámetro
+            if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
+                $cadenaOuter .= $p['lon'] . "," . $p['lat'] . "," . $p['alt'] . " ";
+            } elseif ( isset($p[0]) && isset($p[1]) ) {
+                $cadenaOuter .= $p[1] . "," . $p[0] . "," . $fl*100*FEET_TO_METERS . " ";
+            } else {
+                die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL); exit(-1);    
+            }
         }
         $contenido .= PHP_EOL .
 '                <Polygon>
@@ -58,7 +65,14 @@ function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode) {
             $cadenaInner = "";
             foreach ($contorno_inside['polygon'] as &$p_inside) {
                  // transforma las coordenadas del level 1 -> inner
-                 $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
+                // $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
+                if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
+                    $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
+                } elseif ( isset($p[0]) && isset($p[1]) ) {
+                    $cadenaInner .= $p_inside[1] . "," . $p_inside[0] . "," . $fl*100*FEET_TO_METERS . " ";
+                } else {
+                    die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL); exit(-1);    
+                }
             }
             if ( "" != $cadenaInner ) {
                 $contenido .= PHP_EOL .
@@ -76,8 +90,8 @@ function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode) {
         </Placemark>
         </Document></kml>';
 
-    writeKMZ($ruta[GUARDAR_POR_NIVEL] . $radarWithFL, $radarWithFL, $contenido);
-    writeKMZ($ruta[GUARDAR_POR_RADAR] . $radarWithFL, $radarWithFL, $contenido);
+    writeKMZ($ruta[GUARDAR_POR_NIVEL] . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
+    writeKMZ($ruta[GUARDAR_POR_RADAR] . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
     return;
 
 }

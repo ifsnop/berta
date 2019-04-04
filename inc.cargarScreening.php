@@ -38,7 +38,7 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
     $lineaActual = 7; // primera línea donde comienzan los AZIMUT
 
     // recorremos los azimuths
-    print "cargando contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")" . PHP_EOL;
+    print "INFO Cargando contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")" . PHP_EOL;
     $acimutOld = 0;
     for( $i = 0; $i < $screening['totalAzimuths']; $i++ ) {
         $listaObstaculos = array();
