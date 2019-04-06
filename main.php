@@ -66,7 +66,7 @@ function programaPrincipal(){
     $radioTerrestreAumentado = 0;
     $poligono = false;
     $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona barcelona-psr begas begas-psr biarritz canchoblanco canchoblanco_adsb eljudio eljudio-psr erillas espineiras espineiras-psr foia fuerteventura gazules girona grancanaria grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montecodi montejunto montpellier motril lanzarote lanzarote_adsb palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto pozonieves randa randa-psr sierraespuna soller solorzano taborno tanger tenerifesur tenerifesur-psr turrillas valdespina valencia valencia-psr valladolid villatobas");
-    $lugares = array("soller");
+    $lugares = array("aitana");
     // $lugares = array("biarritz");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);

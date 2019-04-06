@@ -1029,6 +1029,125 @@ function determinaContornos2_joinContornos($c) {
     if ( !is_array($c) || 0 == count($c) ) {
         return array();
     }
+    // insertamos en varias hash lists los segmentos, el original y el invertido
+    $nDirNor = $nInvNor = $nDirOver = $nInvOver = array();
+    foreach($c['segments'] as $sgm) {
+        $vertex1 = $sgm['x1'].";".$sgm['y1'];
+        $vertex2 = $sgm['x2'].";".$sgm['y2'];
+        if ( !isset($nDirNor[$vertex1]) ) {
+            $nDirNor[$vertex1] = $vertex2;
+        } else {
+            if ( isset($nDirOver[$vertex1]) ) die("assert $vertex1 exists in nDirOver" . PHP_EOL);
+            $nDirOver[$vertex1] = $vertex2;
+        }
+        if ( !isset($nInvNor[$vertex2]) ) {
+            $nInvNor[$vertex2] = $vertex1;
+        } else {
+            if ( isset($nInvOver[$vertex2]) ) die("assert $vertex2 exists in nInvOver" . PHP_EOL);
+            $nInvOver[$vertex2] = $vertex1;
+        }
+    }
+
+    // lista completa de contornos
+    $nListaContornos = array();
+    // polígono actual
+    $nFixed = array();
+    // cogemos el primer segmento de la lista de normales
+    list($vertex1, $vertex2) = each($nDirNor); array_shift($nDirNor);
+    // print PHP_EOL . $vertex1 . "=>" . $vertex2 . PHP_EOL;
+    list($x1, $y1) = explode(";", $vertex1); list($x2, $y2) = explode(";", $vertex2);
+    // lo insertamos en la lista de definitivos, buscando leftCorner de lo que será el polígono
+    $nFixed[] = array( 'fila'=>$x1, 'col'=>$y1 );
+    $leftCorner = array( 'xMin' => $x1, 'yMin' => $y1, 'key' => 0 );
+    $nFixed[] = array( 'fila'=>$x2, 'col'=>$y2 );
+    $leftCorner = findLeftCorner( $x2, $y2, $leftCorner, $nFixed );
+    // borramos el inverso del segmento que acabamos de coger (tiene que ser igual key y value!)
+    $assert = 0;
+    if ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
+    if ( isset($nInvOver[$vertex2]) && ($nInvOver[$vertex2]==$vertex1) ) { unset($nInvOver[$vertex2]); $assert++; }
+    if ( $assert != 1 ) die("assert($assert) != 1 in unset 1st try" . PHP_EOL);
+
+    // unos contadores
+    $countPct_old = 0; $cuentaActual_old = -1;
+    $cuentaTotal = count($nDirNor)+count($nDirOver)+count($nInvNor)+count($nInvOver);
+    print "[nSegmentos: $cuentaTotal][00%]";
+
+    // ejecutar mientras tenga elementos en las listas
+    while ( (count($nDirNor)+count($nDirOver)+count($nInvNor)+count($nInvOver)) > 0 ) {
+        $cuentaActual = count($nDirNor) + count($nDirOver);
+        // buscamos el siguiente segmento, solo estará en uno de los cuatro
+        $found = false;
+        $vertex1 = $vertex2;
+        if ( isset($nDirNor[$vertex1]) ) { $vertex2 = $nDirNor[$vertex1]; unset($nDirNor[$vertex1]); $found = true; }
+        elseif ( isset($nDirOver[$vertex1]) ) { $vertex2 = $nDirOver[$vertex1]; unset($nDirOver[$vertex1]); $found = true; }
+        elseif ( isset($nInvNor[$vertex1]) ) { $vertex2 = $nInvNor[$vertex1]; unset($nInvNor[$vertex1]); $found = true; }
+        elseif ( isset($nInvOver[$vertex1]) ) { $vertex2 = $nInvOver[$vertex1]; unset($nInvOver[$vertex1]); $found = true; }
+
+        if ( $found ) {
+            // tenemos que borrar el inverso del segmento que hemos seleccionado
+            // ¿deberíamos buscar en todas las listas o solo en las de inversos?
+            // yo creo que en todas (en la de origen no, pero tampoco importa preguntar)
+            $assert = 0;
+            if ( isset($nDirNor[$vertex2]) && ($nDirNor[$vertex2]==$vertex1) ) { unset($nDirNor[$vertex2]); $assert++; }
+            if ( isset($nDirOver[$vertex2]) && ($nDirOver[$vertex2]==$vertex1) ) { unset($nDirOver[$vertex2]); $assert++; }
+            if ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
+            if ( isset($nInvOver[$vertex2]) && ($nInvOver[$vertex2]==$vertex1) ) { unset($nInvOver[$vertex2]); $assert++; }
+            if ( $assert != 1 ) { print_r($nListaContornos); die("assert($assert) != 1 in unset 2nd try" . PHP_EOL); }
+
+            // como vertex1 lo insertamos anteriormente, solo insertaremos vertex2
+            // print $vertex1 . "=>" . $vertex2 . PHP_EOL;
+            list($x2, $y2) = explode(";", $vertex2);
+            // lo insertamos en la lista de definitivos, buscando leftCorner de lo que será el polígono
+            $nFixed[] = array( 'fila'=>$x2, 'col'=>$y2 );
+            $leftCorner = findLeftCorner( $x2, $y2, $leftCorner, $nFixed );
+        }
+
+        if ( !$found ) { // hay que cerrar el polígono, no hemos encontrado vértices que coincidan
+            $nListaContornos[] = array('level' => -1, 'polygon' =>$nFixed, 'leftCorner' => $leftCorner, 'inside' => array());
+            // repetimos el código para insertar el primer elemento de la lista
+            $nFixed = array();
+            // buscamos la lista que todavía tenga elementos y escogemos uno
+            if ( count($nDirNor) > 0 ) {
+                list($vertex1, $vertex2) = each($nDirNor); array_shift($nDirNor);
+            } elseif ( count($nDirOver) > 0 ) {
+                list($vertex1, $vertex2) = each($nDirOver); array_shift($nDirOver);
+            } elseif ( count($nInvNor) > 0 ) {
+                list($vertex1, $vertex2) = each($nInvNor); array_shift($nInvNor);
+            } elseif ( count($nInvOver) > 0 ) {
+                list($vertex1, $vertex2) = each($nInvOver); array_shift($nInvOver);
+            }
+            list($x1, $y1) = explode(";", $vertex1); list($x2, $y2) = explode(";", $vertex2);
+            // print "NEW LIST" . PHP_EOL . $vertex1 . "=>" . $vertex2 . PHP_EOL;
+
+            // lo insertamos en la lista de definitivos, buscando leftCorner de lo que será el polígono
+            $nFixed[] = array( 'fila'=>$x1, 'col'=>$y1 );
+            $leftCorner = array( 'xMin' => $x1, 'yMin' => $y1, 'key' => 0 );
+            $nFixed[] = array( 'fila'=>$x2, 'col'=>$y2 );
+            $leftCorner = findLeftCorner( $x2, $y2, $leftCorner, $nFixed );
+
+            // borramos el inverso del segmento que acabamos de coger (tiene que ser igual key y value!)
+            $assert = 0;
+            if ( isset($nDirNor[$vertex2]) && ($nDirNor[$vertex2]==$vertex1) ) { unset($nDirNor[$vertex2]); $assert++; }
+            if ( isset($nDirOver[$vertex2]) && ($nDirOver[$vertex2]==$vertex1) ) { unset($nDirOver[$vertex2]); $assert++; }
+            if ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
+            if ( isset($nInvOver[$vertex2]) && ($nInvOver[$vertex2]==$vertex1) ) { unset($nInvOver[$vertex2]); $assert++; }
+            if ( $assert != 1 ) { print_r($nListaContornos); die("assert($assert) != 1 in unset 3rd try" . PHP_EOL); }
+        }
+
+        $cuentaActual_old = $cuentaActual;
+        $countPct = ($cuentaTotal - $cuentaActual)*100.0 / $cuentaTotal;
+        if ( ($countPct - $countPct_old) > 10 ) { print "[" . round($countPct) . "%]"; $countPct_old = $countPct; }
+
+    }
+    // añadimos el último polígono que nos quedaba pendiente
+    $nListaContornos[] = array('level' => -1, 'polygon' =>$nFixed, 'leftCorner' => $leftCorner, 'inside' => array());
+    print "[100%]";
+    return $nListaContornos;
+/*
+    print_r($nListaContornos);
+
+
+    // CODIGO ORIGINAL
     $contornoFixed = array();
     $sgm = array_shift($c['segments']);
     $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array( 'fila'=>$x1, 'col'=>$y1 );
@@ -1052,15 +1171,14 @@ function determinaContornos2_joinContornos($c) {
             // si no hemos conseguido encontrar ningún segmento que contine al último, es que el segmento
             // se ha cerrado, así que abriremos otro segmento
 
-            /*
-            foreach($c['segments'] as $segmento) {
-                fwrite(STDERR,  $segmento['x1'] . ";" . $segmento['y1'] . ";" . $segmento['x2'] . ";" . $segmento['y2'] . PHP_EOL);
-            }
-            print_r($c['segments']);
-            print_r($contornoFixed);
-            die("ERROR determinaContornos2: no se ha encontrado punto siguiente" . PHP_EOL);
-            */
-
+            
+            //foreach($c['segments'] as $segmento) {
+            //    fwrite(STDERR,  $segmento['x1'] . ";" . $segmento['y1'] . ";" . $segmento['x2'] . ";" . $segmento['y2'] . PHP_EOL);
+            //}
+            //print_r($c['segments']);
+            //print_r($contornoFixed);
+            //die("ERROR determinaContornos2: no se ha encontrado punto siguiente" . PHP_EOL);
+            
             // antes de añadir, mirar si el contorno está generado en counter-clockwise
             // $orientacion = comprobarOrientacion($contornoFixed, $leftCorner);
             //foreach($contornoFixed as $s) {
@@ -1090,15 +1208,23 @@ function determinaContornos2_joinContornos($c) {
             $x2 = $sgm['x2']; $y2 = $sgm['y2'];
             if ( (abs($oldx - $x1) < 0.0001) &&
                 (abs($oldy - $y1) < 0.0001) ) {
+                // assert
+                // if ( abs($oldx-$x1)>0 ) print abs($oldx-$x1);
+                // if ( abs($oldy-$y1)>0 ) print abs($oldy-$y1);
+                // si del segmento que toca probar estamos muy cerca de uno de sus vértices,
+                // añadimos el otro punto del vértice, borramos el segmento y seguimos.
                 // print "found $k para oldx,oldy,x1,y1" . PHP_EOL;
                 // print "oldx: $oldx oldy: $oldy x1: $x1 y1: $y1" . PHP_EOL;
                 // $contornoFixed[] = array('fila'=>$x1, 'col' => $y1);
-                $contornoFixed[] = array('fila'=>$x2, 'col' => $y2);
+                $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
                 unset($c['segments'][$k]);
                 $leftCorner = findLeftCorner( $x2, $y2, $leftCorner, $contornoFixed );
                 break;
             } elseif ( (abs($oldx - $x2) < 0.0001) &&
                 (abs($oldy - $y2) < 0.0001) ) {
+                // assert
+                // if ( abs($oldx-$x2)>0 ) print abs($oldx-$x2);
+                // if ( abs($oldy-$y2)>0 ) print abs($oldy-$y2);
                 // print "found $k para oldx,oldy,x2,y2" . PHP_EOL;
                 // print "oldx: $oldx oldy: $oldy x2: $x2 y2: $y2" . PHP_EOL;
                 // $contornoFixed[] = array('fila'=>$x2, 'col'=>$y2);
@@ -1116,8 +1242,9 @@ function determinaContornos2_joinContornos($c) {
 //    file_put_contents("aitana.json", json_encode($listaContornos));
 //    }
 //    print "sin pasar por la casilla de salida" . PHP_EOL;
-
+//    print_r($listaContornos);
     return $listaContornos;
+*/
 }
 
 /**
