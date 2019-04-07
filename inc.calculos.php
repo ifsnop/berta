@@ -6,7 +6,10 @@ CONST PASO_A_GRADOS = 180.0;
 CONST TAM_CELDA = 0.5; //10; // 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no desborda
 CONST TAM_CELDA_MITAD = 0.25; // 5; // 0.25; // NM
 CONST TAM_ANGULO_MAXIMO = 1; //20; // 1; // NM (lo situamos al doble que tamaño celda)
-
+CONST M_PI_DIV_4 = 0.78539816339744830961566084581988; // (3.1415926535897932384626433832795/4.0;
+CONST ATAN_A = 0.0776509570923569;
+CONST ATAN_B = -0.287434475393028;
+$ATAN_C = (M_PI_DIV_4 - ATAN_A - ATAN_B);
 /**
  * Funcion que permite buscar los puntos limitantes necesarios para poder calcular la cobertura.
  * 
@@ -709,7 +712,7 @@ function calculaAcimut($x, $y){
 
     $acimut = 0;
 
-    if ($x < 0){
+    if ($x < 0) {
         $acimut = rad2deg( atan($y / $x) + M_PI );
     } elseif ($x > 0){
         if ($y < 0){
@@ -779,6 +782,7 @@ function generacionMallado($radar, $flm, $distanciasAlcances) {
 
         // CALCULAMOS LAS COORDENADAS X DE CADA CELDA
         $x = $x_fixed + ($i * TAM_CELDA);
+        $powX = $x*$x;
         // $x = ($i * TAM_CELDA) - ( $tamMallaMitad * TAM_CELDA ) + ( TAM_CELDA_MITAD );
 		
         // CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
@@ -801,7 +805,7 @@ function generacionMallado($radar, $flm, $distanciasAlcances) {
 
             // al dividir entre el radio tenemos el angulo deseado
 	    // $distanciaCeldaAradar = ( sqrt( pow( ($xR - $x),2 )+ pow( ($yR - $y),2) ) ) / $radioTerrestreAumentadoEnMillas;
-	    $distanciaCeldaAradar = ( sqrt(pow($x,2)+pow($y,2)) ) / $radioTerrestreAumentadoEnMillas;
+	    $distanciaCeldaAradar = ( sqrt($powX+pow($y,2)) ) / $radioTerrestreAumentadoEnMillas;
 
             // print "$i)" . $azimutCelda . "|" . ( sqrt(pow($x,2)+pow($y,2)) ) . "|" . $x . "|" . $y . " ";
             // print "$i)" . $x . "|" . $y . "  ";
@@ -827,7 +831,7 @@ function generacionMallado($radar, $flm, $distanciasAlcances) {
                     $malla[$j][$i] = 1;
                 }
 	    } else {
-	        if ( ($radar['screening']['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) ===false){
+	        if ( ($radar['screening']['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false){
 	            // aqui trasponemos la matriz, no se si es sin querer o es a prop..sito
 	            // el valor 1 para representar el caso en el que hay cobertura y 0 para lo contrario
                     $malla[$j][$i] = 0;
