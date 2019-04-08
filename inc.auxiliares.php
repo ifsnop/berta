@@ -154,3 +154,36 @@ function printContornos($contornos, $malla) {
 
     return true;
 }
+
+/**
+ * Express number with a byte prefix (byte, Kb, Mb, Gb...)
+ * @param size float number
+ * @return float rounded number with prefix
+*/
+function convertBytes($size) {
+        $unit = array('b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb');
+        return @round($size / pow(1024, ($i = floor(log($size, 1024)))), 1) . '' . $unit[$i];
+}
+
+/**
+* If the input arrays have the same string keys, then the later value
+* for that key will overwrite the previous one. If, however, the arrays
+* contain numeric keys, the later value will not overwrite the original
+* value, but will be appended.
+* Values in the input array with numeric keys will be renumbered with
+* incrementing keys starting from zero in the result array.
+* So this function is actually making some conditional statements. You
+* can replace array merge with normal adding, consisting of the loop
+* (foreach or any other) and the [] operator. You can write a function
+* imitating array_merge, like(using reference to not copy the array..).
+*
+* @url https://stackoverflow.com/questions/23348339/optimizing-array-merge-operation
+*
+* @param array1 source and destination array
+* @param array2 second array to copy to array1
+*/
+function array_merge_fast(&$array1, &$array2) {
+    foreach($array2 as $i) {
+        $array1[] = $i;
+    }
+}
