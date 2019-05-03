@@ -20,43 +20,8 @@ CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
 CONST GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 CONST GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 
-$malla2 = array(
-array(0,0,0,0,0,0,0,0),
-array(0,0,1,0,0,0,0,0),
-array(0,0,0,1,0,0,0,0),
-array(0,0,0,1,1,1,0,0),
-array(0,0,0,1,0,1,0,0),
-array(0,0,0,1,1,1,0,0),
-array(0,0,0,0,0,0,0,0),
-array(0,0,0,0,0,0,0,0),
-);
-/*
-$contornos = determinaContornos2($malla2);
-print_r($contornos);
-
-foreach($contornos as $contorno) {
-    foreach($contorno as $p) {
-        print $p['fila'] . ";" . $p['col'] . PHP_EOL;    
-    }
-}
-exit(-1);
-*/
-
-/*
-$lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona begas biarritz canchoblanco eljudio erillas espineiras foia fuerteventura gazules girona grancanaria inoges lapalma malaga1 malaga2 monflorite montejunto montpellier motril palmamallorca paracuellos1 paracuellos2 penaschache penaschachemil portosanto pozonieves randa sierraespuna soller solorzano taborno tenerifesur turrillas valdespina valencia valladolid villatobas");
-foreach($lugares as $l) {
-    print "php main.php $l > logs/$l.log &" . PHP_EOL;
-}
-exit();
-*/
-/*
-print roundE("40.1") . PHP_EOL;
-print roundE("1") . PHP_EOL;
-print roundE("32.123456789") . PHP_EOL;
-print roundE("2.123456789") . PHP_EOL;
-print roundE("2.12345678") . PHP_EOL;
-*/
 programaPrincipal();
+
 exit(0);
 
 function programaPrincipal(){
@@ -66,11 +31,12 @@ function programaPrincipal(){
     $rutaResultados = "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR;
     $radioTerrestreAumentado = 0;
     $poligono = false;
-    $lugares = explode(" ", "aitana alcolea alicante aspontes auchlias barajas barcelona barcelona-psr begas begas-psr biarritz canchoblanco canchoblanco_adsb eljudio eljudio-psr erillas espineiras espineiras-psr foia fuerteventura gazules girona grancanaria grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montecodi montejunto montpellier motril lanzarote lanzarote_adsb palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto pozonieves randa randa-psr sierraespuna soller solorzano taborno tanger tenerifesur tenerifesur-psr turrillas valdespina valencia valencia-psr valladolid villatobas");
-    //$lugares = explode(" ", "paracuellos1 monflorite alcolea");
-    //$lugares = array("soller");
+    $lugares = explode(" ", "aitana alcolea alicante alicantetwr_adsb aspontes auchlias barajas barcelona barcelona-psr begas begas-psr biarritz canchoblanco canchoblanco_adsb ced_adsb eljudio eljudio-psr erillas espineiras espineiras-psr foia fuerteventura gazules girona grancanaria grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montecodi montejunto montpellier motril lanzarote lanzarote_adsb palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto pozonieves randa randa-psr sierraespuna soller solorzano taborno tanger tenerifesur tenerifesur-psr turrillas turrillas_adsb valdespina valencia valencia-psr valladolid villatobas");
+    // $lugares = explode(" ", "paracuellos1 monflorite alcolea canchoblanco");
+    // $lugares = array("soller");
     // $lugares = array("paracuellos1");
     // $lugares = array("biarritz");
+    $lugares = array("canchoblanco");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
@@ -86,9 +52,11 @@ function programaPrincipal(){
             $lugares[] = $argv[$i];
         }
     }
+    if ( count($lugares) > 1 )
+        print "INFO Cálculo batch de " . count($lugares) . " radares" . PHP_EOL;
 
     $op = 1;
-    do{
+    do {
         // $op = menu();
         switch ($op) {
 	case 0:
@@ -120,7 +88,7 @@ function programaPrincipal(){
 		    $range
 		);
 
-                if (true) {
+                if ( true ) {
                     generateMatlabFiles($radar, $rutaResultados);
                     //continue;
                 }
@@ -151,48 +119,6 @@ function programaPrincipal(){
 
     //multicobertura($multiCoberturas, $lugares, $flMin, $ruta, $altMode, $switch);
 
-/*
-    $algo = new \MartinezRueda\Algorithm();
-    $contorno0 = new \MartinezRueda\Polygon(array($contornos[0]));
-    $contorno1 = new \MartinezRueda\Polygon(array($contornos[1]));
-    $result = $algo->getUnion($contorno0, $contorno1);
-    $tested = $result->toArray();
-    print_r($tested);
-    $listaContornos = array();
-    foreach($tested as $polygon) {
-        // comprobarOrientacion($contornoFixed, $leftCorner); // espera fila/col y no x/y (la fila equivale a x, col a y)
-        // hay que recorrer todo el polígono, para buscar cual es el left corner
-        // con esto inicializamos, y luego iteramos
-        $leftCorner = array( 'xMin' => $polygon[0], 'yMin' => $polygon[1], 'key' => 0 );
-        // la idea es comprobar si el polígono tiene orientación dependiendo de si está dentro o fuera
-        // seguramente la implementación en php no haya tenido ese detalle, pero es la primera forma
-        // que se me ocurre de comprobar la jerarquía de contornos.
-        
-        $listaContornos[] = array('level'=>0, 'polygon' => $polygon, 'inside' => array());
-        //foreach($polygon as $v) {
-        //    $listaContornos[] = array('lat' => $v[0], 'lon' => $v[1], 'alt' => 2743.2333);
-        //}
-    }
-    //print_r($listaContornos);
-    creaKml2($listaContornos, $radar, $ruta, $fl, $altMode, "_UNION");
-    exit(-1);
-*/
-/*
-Array
-(
-    [0] => Array
-    (
-        [level] => 0
-        [polygon] => Array
-        (
-            [0] => Array
-            (
-                [lat] => 42.688022783716
-                [lon] => -2.4555888888889
-                [alt] => 2743.2333577176
-            )
-        
-*/
     return;
 }
 
@@ -206,16 +132,15 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $modo = 'monorada
 
     // DISTINCIÓN DE CASOS 
     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
-        // inicio para calculo por encima normal
+        // inicio para calculo por encima con método vectorial
         $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
 	$listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
 	if ( 'multiradar' == $modo ) {
-	    $mallaLatLon = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
+	    $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
 	}
         // fin para calculo por encima normal
         // inicio para generar malla por encima
 /*
-        $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
 	print "[calculosFLporEncimaComoSiFueraPorDebajoRadar]";
 	calculosFLdebajoRadar($radar, $flm);
 	//print "[generacionMallado]";
@@ -229,11 +154,6 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $modo = 'monorada
 	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
 	    return;
 	}
-        file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_malla.json", json_encode($mallaGrande));
-        file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_contornos.json", json_encode($listaContornos2));
-        // printMalla($malla);
-        // storeMallaAsImage($malla, $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "_FL" . $nivelVuelo);
-        // storeListaObstaculos($radar, $ruta[GUARDAR_POR_RADAR], $nivelVuelo);
         print "[calculaCoordenadasGeograficasB]";
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
 */
@@ -241,92 +161,91 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $modo = 'monorada
 
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
-        $timerStart0 = microtime(true);
         print "[calculosFLdebajoRadar]";
 	calculosFLdebajoRadar($radar, $flm);
-        $maxAnguloConCobertura = 0;
-        foreach($radar['screening']['listaAzimuths'] as $azimuth => $listaObstaculos) {
-            foreach($listaObstaculos as $obstaculo) {
-                if ( $obstaculo['estePtoTieneCobertura'] && ($obstaculo['angulo'] > $maxAnguloConCobertura) ) {
-                    $maxAnguloConCobertura = $obstaculo['angulo'];
+        $newRange = obtieneMaxAnguloConCobertura($radar);
+        $radar['screening']['range'] = round($newRange);
+        $radar['range'] = round($newRange);
+
+//	if ( 'multiradar' == $modo ) {
+	    // puede ser hasta 10 segundos más lenta que sin LatLon en 170NM
+            print "[generacionMalladoLatLon]";
+            $timer0 = microtime(true);
+	    $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances = array());
+	    printf("[generacionMalladoLatLon: %3.4f]", microtime(true) - $timer0);
+//	}
+
+        // comprobación si hay cobertura en las esquinas de la malla,
+        // determina contorno podría fallar
+        for($i=0;$i<count($mallado['malla']); $i++) {
+            for($j=0; $j<count($mallado['malla'][$i]); $j++) {
+                if ( $i == 0 || $i == (count($mallado['malla'])-1) || 
+                     $j == 0 || $j == (count($mallado['malla'][$i])-1) ) {
+                    if ($mallado['malla'][$i][$j] == 1) {
+                        die("IFSNOP ERROR hay cobertura en una esquina i:$i j:$j");
+                    }
+                } else {
+                    continue;
                 }
             }
         }
-        printf("[%3.4fs]", microtime(true) - $timerStart0);
-        print "[ánguloAlcanceMáximo: " . round($maxAnguloConCobertura,3) . "º]";
-        $newRange = $maxAnguloConCobertura*$radar['screening']['radioTerrestreAumentado'];
-        print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
-        $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852));
-        print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . " NM / ${newRange}m]";
-        $radar['screening']['range'] = round($newRange);
-        $radar['range'] = round($newRange);
+    
 
-
-/*
-        // modificación para acelerar la generación cuando la cobertura no llega a toda la malla
-        print "[averiguarAlcanceMáximo]";
-        $maxAnguloConCobertura = 0;
-        foreach($radar['screening']['listaAzimuths'] as $azimuth => $listaObstaculos) {
-            $anguloMinimo = (0.1 *  MILLA_NAUTICA_EN_METROS ) / $radar['screening']['radioTerrestreAumentado'];
-            $numPtosAzimut = count($listaObstaculos);
-            $anguloLimitante = $listaObstaculos[$numPtosAzimut-1]['angulo'];
-            if ( $maxAnguloConCobertura < $anguloLimitante + $anguloMinimo ) {
-                $maxAnguloConCobertura = $anguloLimitante + $anguloMinimo;
-            }
-        }
-        print "[ánguloAlcanceMáximo: $maxAnguloConCobertura]";
-        $newRange = $maxAnguloConCobertura*$radar['screening']['radioTerrestreAumentado'];
-        print "[distanciaAlcanceMáximo: " . round($newRange,2) . "m/" . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM]";
-        // reprocesamos, ahora con un alcance modificado para reducir el tamaño de la malla.
-        // para hacerlo múltiplo de millas enteras, aunque trabajemos en metros
-        $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852));
-        print "[distanciaAlcanceMáximoAlineada: ${newRange}m/" . $newRange/MILLA_NAUTICA_EN_METROS . "NM]";
-        // calculamos, con un alcance forzado más pequeño, porque sabemos que no hará falta nada más grande
-        // hemos escogido el CASE C, distancia al obstáculo más lejano.
-        $radar['screening']['range'] = round($newRange);
-        $radar['range'] = round($newRange);
-        // fin modificación para adecuar el tamaño de la malla al alcance real
-
-        print "[calculosFLdebajoRadar]";
-	calculosFLdebajoRadar($radar, $flm);
-*/
-	if ( 'multiradar' == $modo ) {
-            print "[generacionMalladoLatLon]";
-	    $mallaLatLon = generacionMalladoLatLon($radar, $flm, $distanciasAlcances = array());
-	}
         print "[generacionMallado]";
-        $malla = generacionMallado($radar, $flm, $distanciasAlcances = array() ); // distanciasAlcances no se utiliza
-        print "[mallaMarco]";
-	$mallaGrande = mallaMarco($malla);
+//        $timer0 = microtime(true);
+//        $malla = generacionMallado($radar, $flm, $distanciasAlcances = array() ); // distanciasAlcances no se utiliza
+//        printf("[generacionMallado: %3.4f]", microtime(true) - $timer0);
+//        print "[mallaMarco]";
+//	$mallaGrande = mallaMarco($malla);
+//	$mallaGrande = mallaMarco($mallado['malla']);
+//	print "[determinaContornos]";
+//        $listaContornos2 = determinaContornos2($mallaGrande);
+
 	print "[determinaContornos]";
-        $listaContornos2 = determinaContornos2($mallaGrande);
+        $listaContornos2 = determinaContornos2($mallado['malla']);
 	if ( 0 == count($listaContornos2) ) {
 	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
 	    return false;
 	}
-        //file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_malla.json", json_encode($mallaGrande));
-        //file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site']. "_FL" .  $nivelVuelo . "_contornos.json", json_encode($listaContornos2));
-        // printMalla($malla);
-        // storeMallaAsImage($malla, $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "_FL" . $nivelVuelo);
-        // storeListaObstaculos($radar, $ruta[GUARDAR_POR_RADAR], $nivelVuelo);
 
         print "[calculaCoordenadasGeograficasB]";
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
-
-        // se guarda el json del contorno, podremos usarlo más adelante para interpolar  contornos
-        // $radarWithFL = $radar['screening']['site']. "_FL" .  $nivelVuelo;
-        // file_put_contents($ruta[GUARDAR_POR_RADAR] . $radarWithFL . ".json", json_encode($listaContornos2));
-        // $listaContornos3 = array(); // listo para generar intersecciones
-        //foreach($listaContornos2[0]['polygon'] as $k=>$v) {
-        //    $listaContornos3[] = array($v['lat'], $v['lon']);
-        //}
-        //print_r($listaContornos2);
     }
     print "[crearKml]" . PHP_EOL;
     creaKml2($listaContornos2, $radar, $ruta, $fl, $altMode);
     if ( 'multiradar' == $modo ) {
-        return $mallaLatLon;
+        return $mallado['mallaLatLon'];
     } else {
         return true; // $listaContornos2;
     }
+}
+
+/*
+ * busca la distancia mayor a la que hay cobertura, con la idea de poder
+ * reducir el alcance (y el tamaño de malla) a esa distancia (por ejemplo,
+ * si solo hay cobertura hasta 50NM, no tiene sentido hacer una malla de
+ * 250NM, porque así nos evitamos calcular un montón de puntos sin
+ * cobertura más adelante.
+ */
+function obtieneMaxAnguloConCobertura($radar) {
+    // $timerStart0 = microtime(true);
+    $maxAnguloConCobertura = 0;
+    foreach($radar['screening']['listaAzimuths'] as $azimuth => $listaObstaculos) {
+        foreach($listaObstaculos as $obstaculo) {
+            if ( $obstaculo['estePtoTieneCobertura'] && ($obstaculo['angulo'] > $maxAnguloConCobertura) ) {
+                $maxAnguloConCobertura = $obstaculo['angulo'];
+            }
+        }
+    }
+    // printf("[%3.4fs]", microtime(true) - $timerStart0);
+    print "[ánguloAlcanceMáximo: " . round($maxAnguloConCobertura,3) . "º]";
+    $newRange = $maxAnguloConCobertura*$radar['screening']['radioTerrestreAumentado'];
+    print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
+    // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
+    // una milla adicional, para que la matriz nunca acabe con cobertura en una de
+    // sus esquinas
+    $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
+    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . " NM / ${newRange}m]";
+
+    return $newRange;
 }

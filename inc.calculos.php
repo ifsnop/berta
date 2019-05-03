@@ -6,6 +6,7 @@ CONST PASO_A_GRADOS = 180.0;
 CONST TAM_CELDA = 0.5; //10; // 0.5; // paso de la malla en NM 0.5 , 0.11 es lo mas que pequeño q no desborda
 CONST TAM_CELDA_MITAD = 0.25; // 5; // 0.25; // NM
 CONST TAM_ANGULO_MAXIMO = 1; //20; // 1; // NM (lo situamos al doble que tamaño celda)
+CONST REDONDEO_LATLON = 150; // multiplicamos lat y lon por este valor para redondear la precisión, no necesitamos más.
 
 /**
  * Funcion que permite buscar los puntos limitantes necesarios para poder calcular la cobertura.
@@ -203,6 +204,9 @@ function calculosFLencimaRadar($radar, $flm ){
 /**
  * Funcion que calcula las coordenadas geograficas de cobertura de un fichero kml para un determinado
  * radar a partir de las coordenadas, el nivel de vuelo y el array de distancias de cobertura.
+ * La diferencia con calculaCoordenadasGeograficasB es que la entrada es distinta. En este caso
+ * (A) recorremos el punto más alejado de los azimuts para encontrar la cobertura, en caso (B)
+ * hay que recorrer una lista de contornos que pueden tener contornos dentro.
  * 
  * @param array $radar (ENTRADA)
  * @param int $flm, en metros (ENTRADA)
@@ -876,9 +880,12 @@ function generacionMallado($radar, $flm, $distanciasAlcances) {
 	        if ( ($radar['screening']['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false){
 	            // aqui trasponemos la matriz, no se si es sin querer o es a prop..sito
 	            // el valor 1 para representar el caso en el que hay cobertura y 0 para lo contrario
-                    $malla[$j][$i] = 0;
+	            $malla[$j][$i] = 0;
 	        } else {
                     $malla[$j][$i] = 1;
+                    
+                    print $j . " " . $i . PHP_EOL;
+                    
 	        }
 	    }
 	}
@@ -896,7 +903,7 @@ function generacionMallado($radar, $flm, $distanciasAlcances) {
  * @param array $radar (ENTRADA)
  * @param float $flm (ENTRADA)
  * @param array $distanciasAlcances (ENTRADA)
- * @return array $mallalatlon (SALIDA)
+ * @return array compuesto de $malla y $mallalatlon (SALIDA)
  */
 function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
 
@@ -905,7 +912,8 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
     $radioTerrestreAumentadoEnMillas  = $radar['screening']['radioTerrestreAumentado'] / MILLA_NAUTICA_EN_METROS;
     $alturaCentroFasesAntena = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
 
-    $mallaLatLon = array(); // creamos una malla vacia
+    $malla = array(); // creamos una malla vacia
+    $mallaLatLon = array(); // malla indexadaa por lat/lon
     $azimutTeorico = 0; // azimut teorico calculado
     $azimutCelda = 0; // azimut aproximado
     $pos = 0;
@@ -921,20 +929,19 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
     // tendremos que ajustar el ángulo que calculamos para adecuarlo al número de azimut guardado
     // según screening. Es decir, si hay 720 azimut, y nos sale un ángulo de 360, realmente será de 720.
     $ajusteAzimut = $radar['screening']['totalAzimuths'] / 360.0;
-
     // microptimización
     $listaAzimuts = $radar['screening']['listaAzimuths']; // para acelerar
 
     print "[Tamaño mallaLatLon: " . $tamMalla . "]";
     print "[00%]";
     $countPct_old = 0;
-    // la malla tiene tamMalla + 1, para que el centro siempre quede en una celda
     $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
     $latComp = array(
         'cos' => cos($latitudComplementaria),
         'sin' => sin($latitudComplementaria),
     );
     //$timer0 = microtime(true);
+    // la malla tiene tamMalla + 1, para que el centro siempre quede en una celda
     for ($i = 0; $i <= $tamMalla; $i++){ // recorre las columnas de la malla
         //$timer1 = microtime(true);
         //print "[$i]";
@@ -947,6 +954,7 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
         // CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
         $y_fixed = ( $tamMallaMitad * TAM_CELDA ); // - ( TAM_CELDA_MITAD );//  #- ( $j * TAM_CELDA ) 
 
+        // la malla tiene tamMalla + 1, para que el centro siempre quede en una celda
         for ($j = 0; $j <= $tamMalla; $j++){ // recorre las filas de la malla
             // CALCULAMOS LAS COORDENADAS Y DE CADA CELDA
             $y = $y_fixed - ($j * TAM_CELDA);
@@ -964,30 +972,34 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
 
             // al dividir entre el radio tenemos el angulo deseado
             //$timer2 = microtime(true);
-	    $distanciaCeldaAradar = ( sqrt($powX+$y*$y) ) / $radioTerrestreAumentadoEnMillas;
+	    $distanciaCeldaAradarXY = sqrt($powX+$y*$y);
+            $distanciaCeldaAradarAngulo = ( sqrt($powX+$y*$y) ) / $radioTerrestreAumentadoEnMillas;
             //printf("[timer distancia: %3.6f]", microtime(true) - $timer2);
 
 	    //$timer2 = microtime(true);
 	    $puntoLatLon = transformaFromPolarToLatLon(
 	        $radar,
-	        $distanciaCeldaAradar * $radioTerrestreAumentadoEnMillas,
+	        $distanciaCeldaAradarXY,
 	        $azimutTeorico,
 	        $latComp
 	    );
 	    //printf("[timer transforma: %3.6f]", microtime(true) - $timer2);
 	    //print_r($puntoLatLon);
-
+            $latRounded = $puntoLatLon['lat']*REDONDEO_LATLON;
+            $lonRounded = $puntoLatLon['lon']*REDONDEO_LATLON;
             if ( $flm >= $alturaCentroFasesAntena ) {
-	        if ( ($distanciaCeldaAradar * $radioTerrestreAumentadoEnMillas > $distanciasAlcances[$azimutCelda]) ) {
-		    $mallaLatLon[$j][$i][0] = 0;
+	        if ( ($distanciaCeldaAradarXY > $distanciasAlcances[$azimutCelda]) ) {
+		    $malla[$j][$i] = 0;
+		    $mallaLatLon[$latRounded][$lonRounded] = 0;
 	        } else {
-		    $mallaLatLon[$j][$i][0] = 1;
+		    $malla[$j][$i] = 1;
+		    $mallaLatLon[$latRounded][$lonRounded] = 1;
                 }
             } else {
                 //$timer2 = microtime(true);
 	        // busca la posicion de la  distancia mas proxima en la lista de obstaculos del acimut aproximado (el menor)
 	        $pos = findNearestValue(
-	            $distanciaCeldaAradar,
+	            $distanciaCeldaAradarAngulo,
 	            $listaAzimuts[$azimutCelda],
 	            0,
 	            count($listaAzimuts[$azimutCelda]) - 1,
@@ -996,13 +1008,17 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
 	        //printf("[timer find1: %3.6f]", microtime(true) - $timer2);
 
 	        if ( ($radar['screening']['listaAzimuths'][$azimutCelda][$pos]['estePtoTieneCobertura']) === false ) {
-		    $mallalatlon[$j][$i][0] = 0;
+	            $malla[$j][$i] = 0;
+		    $mallaLatLon[$latRounded][$lonRounded] = 0;
 	        } else {
-		    $mallalatlon[$j][$i][0] = 1;
+		    $malla[$j][$i] = 1;
+		    $mallaLatLon[$latRounded][$lonRounded] = 1;
+		    // print $latRounded . " " . $lonRounded . PHP_EOL; print_r($mallaLatLon);
 	        }
 	    }
-            $mallaLatLon[$j][$i][1] = $puntoLatLon['lat'];
-            $mallaLatLon[$j][$i][2] = $puntoLatLon['lon'];
+	    // antes, independientemente de si había o no cobertura, el punto en lat lon era el mismo
+            //$malla[$j][$i][1] = $puntoLatLon['lat'];
+            //$malla[$j][$i][2] = $puntoLatLon['lon'];
             //print PHP_EOL;
 	}
 	// print PHP_EOL . PHP_EOL;
@@ -1010,7 +1026,8 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
     }
     print "[100%]";
     //printf("[timer0: %3.3f]", microtime(true) - $timer0);
-    return $mallaLatLon;
+
+    return array('malla' => $malla, 'mallaLatLon' => $mallaLatLon);
 }
 
 
@@ -1033,7 +1050,7 @@ function mallaMarco($malla){
     // recorremos la malla y la copiamos en la malla de mayor tamaño 
     for($i = 0; $i < count($malla); $i++) {
         for ($j = 0; $j < count($malla); $j++) {
-	    if ($malla[$i][$j] == 1){
+	    if ($malla[$i][$j] == 1) {
 		$mallaMarco[$i+1][$j+1] = $malla[$i][$j];
 	    }
 	}
@@ -1107,8 +1124,10 @@ function transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp) {
     // ¿por qué se utiliza el -1? RESPUESTA porque le hemos añadido un 1 a la malla cuando
     // la generábamos, para hacer la malla impar y que la celda del centro es la que contenga
     // al radar
-    $x = (($p['col'] - 1) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA);
-    $y = ($tamMallaMitad * TAM_CELDA) - (($p['fila'] - 1) * TAM_CELDA);
+    // $x = (($p['col'] - 1) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA);
+    // $y = ($tamMallaMitad * TAM_CELDA) - (($p['fila'] - 1) * TAM_CELDA);
+    $x = (($p['col']) * TAM_CELDA) - ($tamMallaMitad * TAM_CELDA);
+    $y = ($tamMallaMitad * TAM_CELDA) - (($p['fila']) * TAM_CELDA);
 
     // CALCULO DE LA DISTANCIA
     // $distanciaCeldaAradar = (sqrt(pow(($xR- $x),2)+ pow(($yR - $y),2)) );

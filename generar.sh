@@ -5,6 +5,7 @@ mkdir logs 2> /dev/null
 php main.php aitana > logs/aitana.log 2>&1 &
 php main.php alcolea > logs/alcolea.log 2>&1 &
 php main.php alicante > logs/alicante.log 2>&1 &
+php main.php alicantetwr_adsb > logs/alicantetwr_adsb.log 2>&1 &
 php main.php annaba > logs/annaba.log 2>&1 &
 php main.php aspontes > logs/aspontes.log 2>&1 &
 php main.php asturiaswam > logs/asturiaswam.log 2>&1 &
@@ -81,6 +82,7 @@ php main.php taborno > logs/taborno.log 2>&1 &
 php main.php tenerifesur > logs/tenerifesur.log 2>&1 &
 php main.php tenerifesur-psr > logs/tenerifesur-psr.log 2>&1 &
 php main.php turrillas > logs/turrillas.log 2>&1 &
+php main.php turrillas_adsb > logs/turrillas_adsb.log 2>&1 &
 php main.php valdespina > logs/valdespina.log 2>&1 &
 php main.php valencia > logs/valencia.log 2>&1 &
 php main.php valencia-psr > logs/valencia-psr.log 2>&1 &
