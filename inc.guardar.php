@@ -10,6 +10,7 @@ CONST PERMISOS = 0775;
  * @param string $ruta     (ENTRADA)
  * @param int $fl          (ENTRADA) 
  * @param string $altMode  (ENTRADA)
+ * @return bool
  */
 function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode, $appendToFilename="") {
 
@@ -92,13 +93,13 @@ function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode, $appendToFilena
 
     writeKMZ($ruta[GUARDAR_POR_NIVEL] . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
     writeKMZ($ruta[GUARDAR_POR_RADAR] . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
-    return;
+    return true;
 
 }
 
 function writeKMZ($fileName, $radarWithFL, $content) {
 
-    print "INFO NOMBRE FICHERO: " . $fileName . ".kmz" . PHP_EOL;
+    print "INFO guardando fichero: " . $fileName . ".kmz" . PHP_EOL;
     $zip = new ZipArchive();
     if ( false === $zip->open(
         $fileName . ".kmz",
@@ -133,6 +134,9 @@ function crearCarpetaResultados($ruta){
     return true;
 }
 
+/*
+ * función deprecada
+ */
 function storeMallaAsImage($malla, $nombre) {
     $im = imagecreatetruecolor(count($malla), count($malla[0]));
     if ( false === $im ) {
@@ -165,7 +169,7 @@ function storeMallaAsImage($malla, $nombre) {
     if ( false === imagedestroy( $im ) ) {
         die("ERROR imagedestroy" . PHP_EOL);
     }
-    print "INFO NOMBRE FICHERO: ${nombre}.png" . PHP_EOL;
+    print "INFO guardando fichero: ${nombre}.png" . PHP_EOL;
 
     return true;
 }
@@ -236,4 +240,75 @@ function generateMatlabFiles($radar, $rutaResultados) {
 function roundE($n) {
     $val = round($n, 10, PHP_ROUND_HALF_UP);
     return $val;
+}
+
+/*
+ * Guarda una malla con coordenadas lat/lon en png. Si la malla es global,
+ * colorea según el valor de la cobertura (doble, triple...)
+ * @param array malla
+ * @param string nombre fichero destino
+ * @param array bounding dimensiones maximas lat/lon de la malla
+ * @param bool debug verdadero para mostrar información de depuración
+ * @return bool
+ */
+function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
+
+    $lat_size = $bounding['lat_max'] - $bounding['lat_min'];
+    $lon_size = $bounding['lon_max'] - $bounding['lon_min'];
+    if ( $debug ) print "DEBUG x: " .  $lon_size . " " . "y: " . $lat_size . PHP_EOL;
+
+    if ( false === ($im = imagecreatetruecolor($lon_size, $lat_size)) ) {
+        print "ERROR imagecreatetruecolor" . PHP_EOL; exit(-1);
+    }
+    if ( false === imagealphablending($im, true) ) { // setting alpha blending on
+        print "ERROR imagealphablending" . PHP_EOL; exit(-1);
+    }
+    if ( false === imagesavealpha($im, true) ) {
+        print "ERROR imagesavealpha" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($p = imagecolorallocate($im, 0, 148, 255)) ) {
+        print "ERROR imagecolorallocate (0,148,255)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($r = imagecolorallocate($im, 0, 255, 148)) ) {
+        print "ERROR imagecolorallocate (0,255,148)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($b = imagecolorallocate($im, 255, 148, 0)) ) {
+        print "ERROR imagecolorallocate (255,148,0)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($f = imagecolorallocate($im, 255, 0, 148)) ) {
+        print "ERROR imagecolorallocate (255,0,148)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($bg = imagecolorallocatealpha($im, 0, 0, 0, 127)) ) {
+        print "ERROR imagecolorallocatealpha" . PHP_EOL; exit(-1);
+    }
+    if ( false === imagefill($im, 0, 0, $bg) ) {
+        print "ERROR imagefill" . PHP_EOL; exit(-1);
+    }
+
+    $y = 0;
+    for( $i = $bounding['lat_max']; $i >= $bounding['lat_min']; $i-- ) {
+        $x = 0;
+        for( $j = $bounding['lon_min']; $j <= $bounding['lon_max']; $j++ ) {
+            if ( isset($malla[$i][$j]) ) {
+                switch ($malla[$i][$j]) {
+                    case 1: imagesetpixel($im, $x, $y, $p); break;
+                    case 2: imagesetpixel($im, $x, $y, $r); break;
+                    case 3: imagesetpixel($im, $x, $y, $b); break;
+                    case 4: imagesetpixel($im, $x, $y, $f); break;
+                }
+            }
+            $x++;
+        }
+        $y++;
+    }
+
+    if ( false === imagepng( $im, $nombre . ".png" ) ) {
+        print "ERROR imagepng ${nombre}.png" . PHP_EOL; exit(-1);
+    }
+    if ( false === imagedestroy( $im ) ) {
+        print "ERROR imagedestroy" . PHP_EOL; exit(-1);
+    }
+
+    print "INFO nombre fichero: ${nombre}.png" . PHP_EOL;
+    return true;
 }

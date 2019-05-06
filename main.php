@@ -36,15 +36,16 @@ function programaPrincipal(){
     // $lugares = array("soller");
     // $lugares = array("paracuellos1");
     // $lugares = array("biarritz");
-    $lugares = array("canchoblanco");
+    $lugares = array("alcolea", "paracuellos1", "monflorite");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 1;
-    $flMax = 400;
+    $flMin = 120;
+    $flMax = 120;
     $paso = 1;
 
-    $modo = 'monoradar'; //'multiradar';
+    $multiCoberturas = array();
+    $modo = 'multiradar'; // 'monoradar'; //'multiradar';
 
     if ( $argc > 1 ){ 
         $lugares = array();
@@ -68,7 +69,6 @@ function programaPrincipal(){
             // para probar con una distancia más pequeña y forzar alcance a 20NM
 	    // $infoCoral['canchoblanco']['secondaryMaximumRange'] = 20;
 	    // recorremos todas las localizaciones que nos ha dado el usuario
-	    $multiCoberturas = array();
             foreach($lugares as $lugar) {
                 print PHP_EOL . "INFO Procesando $lugar" . PHP_EOL;
                 $lugar = strtolower($lugar);
@@ -104,9 +104,11 @@ function programaPrincipal(){
                     crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
                     crearCarpetaResultados($ruta[GUARDAR_POR_RADAR]);
                     print "Generando: ${fl}00 feet" . PHP_EOL;
-		    $multiCoberturas[] = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $modo);
-		    print "Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
-	                "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . ")" . PHP_EOL;
+		    $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
+		    if ( 'multiradar' == $modo )
+		        $multiCoberturas[$lugar] = $ret;
+		    print "INFO Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
+	                "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
 
                 } // for interno
 	    } // foreach
@@ -117,7 +119,7 @@ function programaPrincipal(){
     if ( 'multiradar' != $modo )
         return;
 
-    //multicobertura($multiCoberturas, $lugares, $flMin, $ruta, $altMode, $switch);
+    multicobertura($multiCoberturas, $lugares, $flMin, $ruta, $altMode);
 
     return;
 }
@@ -125,7 +127,7 @@ function programaPrincipal(){
 /*
  * @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
  */
-function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $modo = 'monoradar') {
+function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'monoradar') {
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
     $flm = $fl*100*FEET_TO_METERS; // fl en metros
@@ -134,100 +136,78 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $modo = 'monorada
     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
         // inicio para calculo por encima con método vectorial
         $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
-	$listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
-	if ( 'multiradar' == $modo ) {
-	    $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
-	}
-        // fin para calculo por encima normal
-        // inicio para generar malla por encima
-/*
-	print "[calculosFLporEncimaComoSiFueraPorDebajoRadar]";
-	calculosFLdebajoRadar($radar, $flm);
-	//print "[generacionMallado]";
-        $malla = generacionMallado($radar, $flm, $distanciasAlcances);
-        storeMallaAsImage($malla, $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "_FL" . $nivelVuelo);
-        print "[mallaMarco]";
-	$mallaGrande = mallaMarco($malla);
-	print "[determinaContornos]";
-        $listaContornos2 = determinaContornos2($mallaGrande);
-	if ( 0 == count($listaContornos2) ) {
-	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
-	    return;
-	}
-        print "[calculaCoordenadasGeograficasB]";
-        $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
-*/
-        // fin para generar mallas por encima
 
-    } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
-
-        print "[calculosFLdebajoRadar]";
-	calculosFLdebajoRadar($radar, $flm);
-        $newRange = obtieneMaxAnguloConCobertura($radar);
+        $newRange = obtieneMaxAnguloConCoberturaA($distanciasAlcances);
         $radar['screening']['range'] = round($newRange);
         $radar['range'] = round($newRange);
+        $listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
+        	
+        // codigo para generar malla por encima para la multicobertura
+        // con listaContornos2 ya podemos generar una cobertura vectorial
+        $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
 
-//	if ( 'multiradar' == $modo ) {
-	    // puede ser hasta 10 segundos más lenta que sin LatLon en 170NM
-            print "[generacionMalladoLatLon]";
-            $timer0 = microtime(true);
-	    $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances = array());
-	    printf("[generacionMalladoLatLon: %3.4f]", microtime(true) - $timer0);
-//	}
-
-        // comprobación si hay cobertura en las esquinas de la malla,
-        // determina contorno podría fallar
-        for($i=0;$i<count($mallado['malla']); $i++) {
-            for($j=0; $j<count($mallado['malla'][$i]); $j++) {
-                if ( $i == 0 || $i == (count($mallado['malla'])-1) || 
-                     $j == 0 || $j == (count($mallado['malla'][$i])-1) ) {
-                    if ($mallado['malla'][$i][$j] == 1) {
-                        die("IFSNOP ERROR hay cobertura en una esquina i:$i j:$j");
-                    }
-                } else {
-                    continue;
-                }
-            }
-        }
-    
-
-        print "[generacionMallado]";
-//        $timer0 = microtime(true);
-//        $malla = generacionMallado($radar, $flm, $distanciasAlcances = array() ); // distanciasAlcances no se utiliza
-//        printf("[generacionMallado: %3.4f]", microtime(true) - $timer0);
-//        print "[mallaMarco]";
-//	$mallaGrande = mallaMarco($malla);
-//	$mallaGrande = mallaMarco($mallado['malla']);
-//	print "[determinaContornos]";
-//        $listaContornos2 = determinaContornos2($mallaGrande);
-
-	print "[determinaContornos]";
+        // con esto generamos cobertura matricial en el kml, que no creo que sea
+        // necesario.
+        // se podría probar a interseccionar con Martinez-Rueda, de momento no.
+        /*
+	print "[determinaContornos2 start]"; $timer0 = microtime(true);
         $listaContornos2 = determinaContornos2($mallado['malla']);
 	if ( 0 == count($listaContornos2) ) {
 	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
 	    return false;
 	}
+	printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
+        print "[calculaCoordenadasGeograficasB]";
+        $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
+        */
+        // fin código para generar malla por encima
+
+    } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
+
+        print "[calculosFLdebajoRadar]";
+	calculosFLdebajoRadar($radar, $flm);
+        $newRange = obtieneMaxAnguloConCoberturaB($radar);
+        $radar['screening']['range'] = round($newRange);
+        $radar['range'] = round($newRange);
+
+        // if ( 'multiradar' == $modo ) { // puede ser hasta 10 segundos más lenta que sin LatLon en 170NM
+        print "[generacionMalladoLatLon start]"; $timer0 = microtime(true);
+        $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances = array());
+        printf("[generacionMalladoLatLon ended %3.4fs]", microtime(true) - $timer0);
+        // }
+
+        // comprobación si hay cobertura en las esquinas de la malla. En ese caso,
+        // determinaContornos2 podría fallar
+        print "[check coverage overflow "; $timer0 = microtime(true);
+        checkCoverageOverflow($mallado['malla']);
+        printf(" %3.4fs]", microtime(true) - $timer0);
+
+	print "[determinaContornos2 start]"; $timer0 = microtime(true);
+        $listaContornos2 = determinaContornos2($mallado['malla']);
+	if ( 0 == count($listaContornos2) ) {
+	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+	    return false;
+	}
+	printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
 
         print "[calculaCoordenadasGeograficasB]";
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
     }
     print "[crearKml]" . PHP_EOL;
     creaKml2($listaContornos2, $radar, $ruta, $fl, $altMode);
-    if ( 'multiradar' == $modo ) {
-        return $mallado['mallaLatLon'];
-    } else {
-        return true; // $listaContornos2;
-    }
+    return $mallado['mallaLatLon'];
 }
 
 /*
+ * Para coberturas por debajo de la altura del radar,
  * busca la distancia mayor a la que hay cobertura, con la idea de poder
  * reducir el alcance (y el tamaño de malla) a esa distancia (por ejemplo,
  * si solo hay cobertura hasta 50NM, no tiene sentido hacer una malla de
  * 250NM, porque así nos evitamos calcular un montón de puntos sin
  * cobertura más adelante.
+ * @return float nuevo alcance en metros
  */
-function obtieneMaxAnguloConCobertura($radar) {
+function obtieneMaxAnguloConCoberturaB($radar) {
     // $timerStart0 = microtime(true);
     $maxAnguloConCobertura = 0;
     foreach($radar['screening']['listaAzimuths'] as $azimuth => $listaObstaculos) {
@@ -244,8 +224,55 @@ function obtieneMaxAnguloConCobertura($radar) {
     // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
     // una milla adicional, para que la matriz nunca acabe con cobertura en una de
     // sus esquinas
+    // no debería hacer falta hacer un round
     $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
-    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . " NM / ${newRange}m]";
+    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m]";
 
     return $newRange;
+}
+
+/*
+ * Para coberturas por encima de la altura del radar,
+ * busca la distancia mayor a la que hay cobertura, con la idea de poder
+ * reducir el alcance (y el tamaño de malla) a esa distancia (por ejemplo,
+ * si solo hay cobertura hasta 50NM, no tiene sentido hacer una malla de
+ * 250NM, porque así nos evitamos calcular un montón de puntos sin
+ * cobertura más adelante.
+ * @param array distanciasAlcances con el máximo alcance en NM por cada azimuth.
+ * @return float nuevo alcance en metros
+ */
+function obtieneMaxAnguloConCoberturaA($distanciasAlcances) {
+    // Como es por encima, habrá un array con la máxima distancia en millas
+    $newRange = max($distanciasAlcances)*MILLA_NAUTICA_EN_METROS;
+    print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
+    // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
+    // una milla adicional, para que la matriz nunca acabe con cobertura en una de
+    // sus esquinas
+    $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
+    // no debería hacer falta hacer un round
+    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m]";
+
+    return $newRange;
+}
+
+/*
+ * comprueba que no haya cobertura en ninguna de las esquinas de la malla,
+ * porque sino el algoritmo de contorno fallaría.
+ * si hay cobertura, cerramos la ejecución.
+ */
+function checkCoverageOverflow($malla) {
+    for($i=0; $i<count($malla); $i++) {
+        for($j=0; $j<count($malla[$i]); $j++) {
+            // miramos solo en las esquinas
+            if ( $i == 0 || $i == (count($malla)-1) ||
+                 $j == 0 || $j == (count($malla[$i])-1) ) {
+                if ($malla[$i][$j] == 1) {
+                    print "ERROR hay cobertura en una esquina (i:$i j:$j)" . PHP_EOL; exit(-1);
+                }
+            } else {
+                continue;
+            }
+        }
+    }
+    return true;
 }

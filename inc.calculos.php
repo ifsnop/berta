@@ -102,7 +102,6 @@ function calculaAnguloMaximaCobertura($radar, $flm){
  */
 function calculosFLencimaRadar($radar, $flm ){
 		
-    // $angulosApantallamiento = array();
     $distanciasAlcances = array();
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm); // AlphaRange en Matlab
@@ -115,7 +114,8 @@ function calculosFLencimaRadar($radar, $flm ){
         // obtenemos la última linea del array para cada azimut.
 	if ( !isset($radar['screening']['listaAzimuths'][$i]) ) {
 	    print_r($radar);
-	    die("ERROR: el azimuth $i no existe" . PHP_EOL);
+	    print "ERROR: el azimuth $i no existe" . PHP_EOL;
+	    exit(-1);
 	}
 	$count = count($radar['screening']['listaAzimuths'][$i]);
 
@@ -784,12 +784,16 @@ function calculaAcimut($x, $y){
  * Funcion que crea una malla de tamaño el doble del alcance del radar y
  * la rellena con 0 o 1 en función de si el punto al que se aproxima el
  * acimut de cada celda de la malla tiene o no cobertura.
+ * No se utiliza desde que creamos generacionMalladoLatLon, que a la vez
+ * que se genera la malla de 0 y 1's se genera una con ubicaciones de
+ * convertidas (y redondeadas) en latitud longitud.
  * 
  * @param array $radar (ENTRADA)
  * @param float $flm (ENTRADA)
  * @param array $distanciasAlcances (ENTRADA)
  * @return array $malla (SALIDA)
  */
+/*
 function generacionMallado($radar, $flm, $distanciasAlcances) {
 
     // pasamos a  millas nauticas el rango del radar que esta almacenado en metros en la estructura radar
@@ -894,6 +898,7 @@ function generacionMallado($radar, $flm, $distanciasAlcances) {
     print "[100%]";
     return $malla;
 }
+*/
 
 /**
  * Funcion que crea una malla de tamaño el doble del alcance del radar y
@@ -1033,10 +1038,13 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
 
 /**
  * Funcion que crea una matriz con la matriz que le entra como parametro de entrada y la bordea con 0's
+ * Función no utilizada desde que se optimiza el tamaño de la malla para no calcular puntos extra.
+ * En ese momento, se genera un marco a la malla de 1 milla
  * 
  * @param array $malla (ENTRADA)
  * @return array $mallaMarco (SALIDA)
  */
+/*
 function mallaMarco($malla){
 	
     $mallaMarco = array();
@@ -1057,7 +1065,7 @@ function mallaMarco($malla){
     }
     return $mallaMarco;
 }
-
+*/
 /**
  * Funcion que calcula las coordenadas geograficas para el caso B (fl debajo del radar)
  *
@@ -1682,4 +1690,3 @@ function comprobarOrientacion($contornoFixed, $leftCorner) {
     else
         return false; // CW
 }
-
