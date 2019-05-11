@@ -6,17 +6,31 @@ CONST PERMISOS = 0775;
  * Funcion para crear el fichero kml con los resultados del calculo de la cobertura del radar (CASO B: fl por debajo del radar)
  * 
  * @param array $listaContornos    (ENTRADA)
- * @param array $radar     (ENTRADA)
+ * @param array $radarName (ENTRADA)
  * @param string $ruta     (ENTRADA)
  * @param int $fl          (ENTRADA) 
  * @param string $altMode  (ENTRADA)
  * @return bool
  */
-function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode, $appendToFilename="") {
+function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFilename="", $coverageLevel = 'mono') {
 
-    $rgb = "7d00ff00";
     $nivelVuelo = str_pad( (string)$fl, 3, "0", STR_PAD_LEFT );
-    $radarWithFL = $radar['screening']['site']. "_FL" .  $nivelVuelo;
+
+    switch ( $coverageLevel ) { 
+        case "mono": $rgb = "7d00ff00"; break;          // Rascal: 2497FF
+        case "doble": $rgb = "7dff0000"; break;         // Rascal: A55935
+        case "triple": $rgb = "7dffff00"; break;        // Rascal: DE7799
+        case "cuadruple": $rgb = "7d0000ff"; break;     // Rascal: 00F67B
+        case "quintuple": $rgb = "7dff00ff"; break;
+        case "sextuple": $rgb = "7d00ffff"; break;
+    }
+
+    if ( is_array($radarName) ) {
+        $radarWithFL = implode("_", $radarName) . "_" . $coverageLevel . "_FL" .  $nivelVuelo;
+    } else {
+        $radarWithFL = $radarName . "_FL" .  $nivelVuelo;
+    }
+
     if ( false ) {
         print "nivelVuelo: " . $nivelVuelo . PHP_EOL;
         print "radarWithFL: " . $radarWithFL . PHP_EOL;
@@ -91,10 +105,11 @@ function creaKml2($listaContornos, $radar, $ruta, $fl, $altMode, $appendToFilena
         </Placemark>
         </Document></kml>';
 
-    writeKMZ($ruta[GUARDAR_POR_NIVEL] . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
-    writeKMZ($ruta[GUARDAR_POR_RADAR] . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
-    return true;
+    foreach($ruta as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
+        writeKMZ($val . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
+    }
 
+    return true;
 }
 
 function writeKMZ($fileName, $radarWithFL, $content) {
@@ -119,7 +134,7 @@ function writeKMZ($fileName, $radarWithFL, $content) {
  * @param string $ruta  (ENTRADA)
  * @return boolean, para comprobar si la funcion a tenido exito o no (SALIDA)
  */
-function crearCarpetaResultados($ruta){
+function crearCarpetaResultados($ruta) {
 	
     if ( !is_dir( $ruta ) ) {
         clearstatcache();
@@ -252,9 +267,13 @@ function roundE($n) {
  * @return bool
  */
 function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
+    // ojo, el png tendrá el tamaño de la malla global, para poder solapar
+    // todas las imágenes en una sola con un programa tipo Paint.NET
+    // no se guardan las mallas individuales en su espacio de coordenadas
+    // sino en el global.
 
-    $lat_size = $bounding['lat_max'] - $bounding['lat_min'];
-    $lon_size = $bounding['lon_max'] - $bounding['lon_min'];
+    $lat_size = $bounding['lat_max'] - $bounding['lat_min'] + 1;
+    $lon_size = $bounding['lon_max'] - $bounding['lon_min'] + 1;
     if ( $debug ) print "DEBUG x: " .  $lon_size . " " . "y: " . $lat_size . PHP_EOL;
 
     if ( false === ($im = imagecreatetruecolor($lon_size, $lat_size)) ) {
@@ -289,12 +308,17 @@ function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
     for( $i = $bounding['lat_max']; $i >= $bounding['lat_min']; $i-- ) {
         $x = 0;
         for( $j = $bounding['lon_min']; $j <= $bounding['lon_max']; $j++ ) {
+            if ( $x > $lon_size ) die ("x>lon_size");
+            if ( $y > $lat_size ) die ("y>lat_size");
+            // puede no existir porque la malla de cada radar solo cubre
+            // la cobertura del radar en concreto
             if ( isset($malla[$i][$j]) ) {
-                switch ($malla[$i][$j]) {
+                switch (countSetBits($malla[$i][$j])) {
+                    case 0: break;
                     case 1: imagesetpixel($im, $x, $y, $p); break;
                     case 2: imagesetpixel($im, $x, $y, $r); break;
                     case 3: imagesetpixel($im, $x, $y, $b); break;
-                    case 4: imagesetpixel($im, $x, $y, $f); break;
+                    default: imagesetpixel($im, $x, $y, $f); break; // 4 o más
                 }
             }
             $x++;
@@ -302,6 +326,23 @@ function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
         $y++;
     }
 
+    /*
+    $y = 0;
+    foreach( $malla as $i => $lons ) {
+        $x = 0;
+        foreach( $lons as $j => $value ) {
+            switch (countSetBits($value)) {
+                case 0: break;
+                case 1: imagesetpixel($im, $x, $y, $p); break;
+                case 2: imagesetpixel($im, $x, $y, $r); break;
+                case 3: imagesetpixel($im, $x, $y, $b); break;
+                default: imagesetpixel($im, $x, $y, $f); break; // 4 o más
+            }
+            $x++;        
+        }
+        $y++;
+    }
+    */
     if ( false === imagepng( $im, $nombre . ".png" ) ) {
         print "ERROR imagepng ${nombre}.png" . PHP_EOL; exit(-1);
     }

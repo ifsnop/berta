@@ -1032,6 +1032,11 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
     print "[100%]";
     //printf("[timer0: %3.3f]", microtime(true) - $timer0);
 
+    print "[sortingMallaLatLon]";
+    ksort($mallaLatLon);
+    foreach($mallaLatLon as $lat => &$lons) {
+        ksort($lons);
+    }
     return array('malla' => $malla, 'mallaLatLon' => $mallaLatLon);
 }
 
@@ -1066,6 +1071,7 @@ function mallaMarco($malla){
     return $mallaMarco;
 }
 */
+
 /**
  * Funcion que calcula las coordenadas geograficas para el caso B (fl debajo del radar)
  *
@@ -1120,6 +1126,53 @@ $listaC = array(
 }
 
 /**
+ * Funcion que calcula las coordenadas geograficas para el caso C (malla global en lat/lon)
+ *
+ * @param int $flm (ENTRADA)
+ * @param array $listaC (ENTRADA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
+ * @return array filas asociadas con la longitud y columnas con latitud 
+ */
+function calculaCoordenadasGeograficasC( $flm, $listaContornos ) {
+/*
+$listaC = array(
+    array(
+        'level' => 0,
+        'polygon' => array(
+            0 => array('fila' => 444, 'col' => 333),
+            1 =>  array('fila' => 444, 'col' => 333)),
+        'inside' => array(
+            'level' => 1,
+            'polygon' => array(
+                0 => array('fila' => 444, 'col' => 333),
+                1 =>  array('fila' => 444, 'col' => 333)),
+            )
+        ),
+    );
+*/
+    foreach( $listaContornos as &$contorno ) {
+        foreach ( $contorno['polygon'] as &$p ) {
+            // transforma las coordenadas del level 0
+            $p['alt'] = $flm;
+            $p['lat'] = $p['fila'] / REDONDEO_LATLON;
+            $p['lon'] = $p['col'] / REDONDEO_LATLON;
+            unset($p['fila']); unset($p['col']);    
+            //$p = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp);
+        }
+        foreach ( $contorno['inside'] as $k1 => &$contorno_inside ) {
+            foreach ($contorno_inside['polygon'] as $k2 => &$p_inside) {
+                // transforma las coordenadas del level 1
+                $p_inside['alt'] = $flm;
+                $p_inside['lat'] = $p_inside['fila'] / REDONDEO_LATLON;
+                $p_inside['lon'] = $p_inside['col'] / REDONDEO_LATLON;
+                unset($p_inside['fila']); unset($p_inside['col']);
+            }
+        }
+    }
+
+    return $listaContornos;
+}
+
+/**
  * Transforma coordenadas X/Y (col/fila) en latitud/longitud (en grados)
  *
  * @param array $radar datos del centro de coordenadas, definidos por un radar (ENTRADA)
@@ -1151,6 +1204,7 @@ function transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp) {
 
 /**
  * Helper de determinaContornos2. Wrapper para llamar a CONREC_contour
+ * generamos los arrays x, y, d para la llamada
  * @param array $malla (ENTRADA)
  * @return array lista de segmentos de contornos
  */
@@ -1161,6 +1215,24 @@ function determinaContornos2_getContornos($malla) {
     $y = array();
     $empty = 0;
     // inicializamos los arrays de coordenadas necesarios para CONREC_contour
+    /*
+    // nuestra malla siempre es cuadrada. CONREC necesita los índices de x y de y.
+    // al ser cuadrada, atajamos.
+    // DEPRECADO
+    // for( $i=0; $i < count($malla); $i++ ) {
+    //     $x[$i] = $i; $y[$i] = $i;
+    // }
+    // ya no es cuadrada, cuando hacemos mallas globales pueden salir rectangulares
+    // así que hay que guardar los índices para acceder a la malla en x e y
+    $k = 0;
+    foreach($malla as $i => $row) {
+        $x[$k++] = $i;
+    }
+    $k = 0;
+    foreach($malla[$i] as $j => $value) {
+        $y[$k++] = $j;
+    }
+
     $iMalla = count($malla);
     for( $i = 0; $i < $iMalla; $i++ ) {
         $d[$i] = array();
@@ -1174,17 +1246,26 @@ function determinaContornos2_getContornos($malla) {
             $d[$i][$j] = $val;
         }
     }
-    
-    if ($empty == 0) {
+    */
+
+    $i = 0;
+    foreach( $malla as $lat => $lons ) {
+        $d[$i] = array();
+        $x[$i] = $lat;
+        $j = 0;
+        foreach( $lons as $lon => $value ) {
+            $y[$j] = $lon;
+            $d[$i][$j] = $value;
+            $empty += $value;
+            $j++;
+        }
+        $i++;
+    }
+
+    if ( 0 == $empty ) {
         // sanity check. si no hay ningún 1 en toda la malla,
         // abortar porque significa que la malla está vacía.
         return array();
-    }
-    
-    // nuestra malla siempre es cuadrada. CONREC necesita los índices de x y de y.
-    // al ser cuadrada, atajamos.
-    for( $i=0; $i < count($malla); $i++ ) {
-        $x[$i] = $i; $y[$i] = $i;
     }
 
     // se llama a CONREC pidiendo 2 contornos. Si pidiésemos uno, se calcularía al 50% entre
@@ -1194,11 +1275,17 @@ function determinaContornos2_getContornos($malla) {
     // Debería comprobar si es así o al revés, porque el comentario de más abajo me ha dejado
     // la duda. Sea como sea, la salida que tenemos es la más correcta, uniendo agueros de
     // no cobertura en zonas de cobertura, y nos interesa porque es más conservador.
-    $contornos = CONREC_contour($malla, $x, $y, $numContornos = 2);
+    $contornos = CONREC_contour($d, $x, $y, $numContornos = 2);
+    // contornos tiene un value y un segment
+    //print_r($contornos);
+    print "[contornos: " . count($contornos) . " => (";
+    foreach($contornos as $c) {
+        print " value:" . round($c['value'],2) . " segment_count:" . count($c['segments']);
+    }
+    print " )]";
 
     // para quedarnos con el segundo contorno generado, que siempre será el más conservador
     $c = $contornos[1];
-    print "[conrec: " . count($c) . "]";
 
     return $c;
 }
@@ -1689,4 +1776,109 @@ function comprobarOrientacion($contornoFixed, $leftCorner) {
         return true; // CCW
     else
         return false; // CW
+}
+
+/*
+ * Para coberturas por debajo de la altura del radar,
+ * busca la distancia mayor a la que hay cobertura, con la idea de poder
+ * reducir el alcance (y el tamaño de malla) a esa distancia (por ejemplo,
+ * si solo hay cobertura hasta 50NM, no tiene sentido hacer una malla de
+ * 250NM, porque así nos evitamos calcular un montón de puntos sin
+ * cobertura más adelante.
+ * @return float nuevo alcance en metros
+ */
+function obtieneMaxAnguloConCoberturaB($radar) {
+    // $timerStart0 = microtime(true);
+    $maxAnguloConCobertura = 0;
+    foreach($radar['screening']['listaAzimuths'] as $azimuth => $listaObstaculos) {
+        foreach($listaObstaculos as $obstaculo) {
+            if ( $obstaculo['estePtoTieneCobertura'] && ($obstaculo['angulo'] > $maxAnguloConCobertura) ) {
+                $maxAnguloConCobertura = $obstaculo['angulo'];
+            }
+        }
+    }
+    // printf("[%3.4fs]", microtime(true) - $timerStart0);
+    print "[ánguloAlcanceMáximo: " . round($maxAnguloConCobertura,3) . "º]";
+    $newRange = $maxAnguloConCobertura*$radar['screening']['radioTerrestreAumentado'];
+    print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
+    // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
+    // una milla adicional, para que la matriz nunca acabe con cobertura en una de
+    // sus esquinas
+    // no debería hacer falta hacer un round
+    $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
+    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m]";
+
+    return $newRange;
+}
+
+/*
+ * Para coberturas por encima de la altura del radar,
+ * busca la distancia mayor a la que hay cobertura, con la idea de poder
+ * reducir el alcance (y el tamaño de malla) a esa distancia (por ejemplo,
+ * si solo hay cobertura hasta 50NM, no tiene sentido hacer una malla de
+ * 250NM, porque así nos evitamos calcular un montón de puntos sin
+ * cobertura más adelante.
+ * @param array distanciasAlcances con el máximo alcance en NM por cada azimuth.
+ * @return float nuevo alcance en metros
+ */
+function obtieneMaxAnguloConCoberturaA($distanciasAlcances) {
+    // Como es por encima, habrá un array con la máxima distancia en millas
+    $newRange = max($distanciasAlcances)*MILLA_NAUTICA_EN_METROS;
+    print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
+    // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
+    // una milla adicional, para que la matriz nunca acabe con cobertura en una de
+    // sus esquinas
+    $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
+    // no debería hacer falta hacer un round
+    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m]";
+
+    return $newRange;
+}
+
+/*
+ * comprueba que no haya cobertura en ninguna de las esquinas de la malla,
+ * porque sino el algoritmo de contorno fallaría.
+ * si hay cobertura, cerramos la ejecución.
+ */
+function checkCoverageOverflow($malla) {
+    // obtiene primer índice de la malla
+    $index_i = array_keys($malla);
+    $index_j = array_keys($malla[$index_i[0]]);
+
+    $i_first = $index_i[0];
+    $j_first = $index_j[0];
+
+    $i_last = $index_i[count($index_i)-1];
+    $j_last = $index_j[count($index_j)-1];
+
+    if ( false ) print "DEBUG i_first: $i_first i_last: $i_last j_first: $j_first j_last: $j_last";
+    foreach( $malla as $i => $rows ) {
+        foreach ( $rows as $j => $value ) {
+            // miramos solo en las esquinas
+            if ( $i == $i_first || $i == $i_last ||
+                 $j == $j_first || $j == $j_last ) {
+                if ( $value == 1 ) {
+                    print "ERROR hay cobertura en una esquina (i:$i j:$j)" . PHP_EOL; /*exit(-1);*/
+                }
+            } else {
+                continue;
+            }
+        }
+    }
+/*
+    for( $i=0; $i<count($malla); $i++ ) {
+        for( $j=0; $j<count($malla[$i]); $j++ ) {
+            // miramos solo en las esquinas
+            if ( $i == 0 || $i == (count($malla)-1) ||
+                 $j == 0 || $j == (count($malla[$i])-1) ) {
+                if ($malla[$i][$j] == 1) {
+                    print "ERROR hay cobertura en una esquina (i:$i j:$j)" . PHP_EOL; exit(-1);
+                }
+            } else {
+                continue;
+            }
+        }
+    }
+*/
+    return true;
 }

@@ -187,3 +187,26 @@ function array_merge_fast(&$array1, &$array2) {
         $array1[] = $i;
     }
 }
+
+$num_to_bits = array(0, 1, 1, 2, 1, 2, 2, 3,
+                     1, 2, 2, 3, 2, 3, 3, 4);
+/*
+ * Count set bits by pre-storing count set bits in nibbles.
+ * @param int number to count bits set to '1'
+ * @return int number of bits set to '1'
+ */
+function countSetBits($num) {
+    global $num_to_bits;
+    $nibble = 0;
+    if (0 == $num)
+        return $num_to_bits[0];
+
+    // Find last nibble
+    $nibble = $num & 0xf;
+
+    // Use pre-stored values to find count
+    // in last nibble plus recursively add
+    // remaining nibbles.
+    return $num_to_bits[$nibble] +
+           countSetBits($num >> 4);
+}

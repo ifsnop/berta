@@ -103,7 +103,7 @@ function programaPrincipal(){
                     $ruta[GUARDAR_POR_NIVEL] = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
                     crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
                     crearCarpetaResultados($ruta[GUARDAR_POR_RADAR]);
-                    print "Generando: ${fl}00 feet" . PHP_EOL;
+                    print "INFO Generando: ${fl}00 feet" . PHP_EOL;
 		    $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
 		    if ( 'multiradar' == $modo )
 		        $multiCoberturas[$lugar] = $ret;
@@ -119,7 +119,9 @@ function programaPrincipal(){
     if ( 'multiradar' != $modo )
         return;
 
-    multicobertura($multiCoberturas, $lugares, $flMin, $ruta, $altMode);
+    $ruta = array('MULTI' => $rutaResultados . "MULTI" . DIRECTORY_SEPARATOR);
+    crearCarpetaResultados($ruta['MULTI']);                
+    multicobertura($multiCoberturas, $flMin, $ruta, $altMode);
 
     return;
 }
@@ -146,6 +148,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'mo
         // con listaContornos2 ya podemos generar una cobertura vectorial
         $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
 
+        // print_r(array_keys($mallado['mallaLatLon']));exit(0);
         // con esto generamos cobertura matricial en el kml, que no creo que sea
         // necesario.
         // se podría probar a interseccionar con Martinez-Rueda, de momento no.
@@ -194,85 +197,15 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'mo
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
     }
     print "[crearKml]" . PHP_EOL;
-    creaKml2($listaContornos2, $radar, $ruta, $fl, $altMode);
+    creaKml2(
+        $listaContornos2,
+        $radar['screening']['site'],
+        $ruta,
+        $fl,
+        $altMode,
+        $appendToFilename = '',
+        $coverageLevel = 'mono'
+    );
     return $mallado['mallaLatLon'];
 }
 
-/*
- * Para coberturas por debajo de la altura del radar,
- * busca la distancia mayor a la que hay cobertura, con la idea de poder
- * reducir el alcance (y el tamaño de malla) a esa distancia (por ejemplo,
- * si solo hay cobertura hasta 50NM, no tiene sentido hacer una malla de
- * 250NM, porque así nos evitamos calcular un montón de puntos sin
- * cobertura más adelante.
- * @return float nuevo alcance en metros
- */
-function obtieneMaxAnguloConCoberturaB($radar) {
-    // $timerStart0 = microtime(true);
-    $maxAnguloConCobertura = 0;
-    foreach($radar['screening']['listaAzimuths'] as $azimuth => $listaObstaculos) {
-        foreach($listaObstaculos as $obstaculo) {
-            if ( $obstaculo['estePtoTieneCobertura'] && ($obstaculo['angulo'] > $maxAnguloConCobertura) ) {
-                $maxAnguloConCobertura = $obstaculo['angulo'];
-            }
-        }
-    }
-    // printf("[%3.4fs]", microtime(true) - $timerStart0);
-    print "[ánguloAlcanceMáximo: " . round($maxAnguloConCobertura,3) . "º]";
-    $newRange = $maxAnguloConCobertura*$radar['screening']['radioTerrestreAumentado'];
-    print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
-    // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
-    // una milla adicional, para que la matriz nunca acabe con cobertura en una de
-    // sus esquinas
-    // no debería hacer falta hacer un round
-    $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
-    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m]";
-
-    return $newRange;
-}
-
-/*
- * Para coberturas por encima de la altura del radar,
- * busca la distancia mayor a la que hay cobertura, con la idea de poder
- * reducir el alcance (y el tamaño de malla) a esa distancia (por ejemplo,
- * si solo hay cobertura hasta 50NM, no tiene sentido hacer una malla de
- * 250NM, porque así nos evitamos calcular un montón de puntos sin
- * cobertura más adelante.
- * @param array distanciasAlcances con el máximo alcance en NM por cada azimuth.
- * @return float nuevo alcance en metros
- */
-function obtieneMaxAnguloConCoberturaA($distanciasAlcances) {
-    // Como es por encima, habrá un array con la máxima distancia en millas
-    $newRange = max($distanciasAlcances)*MILLA_NAUTICA_EN_METROS;
-    print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
-    // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
-    // una milla adicional, para que la matriz nunca acabe con cobertura en una de
-    // sus esquinas
-    $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
-    // no debería hacer falta hacer un round
-    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m]";
-
-    return $newRange;
-}
-
-/*
- * comprueba que no haya cobertura en ninguna de las esquinas de la malla,
- * porque sino el algoritmo de contorno fallaría.
- * si hay cobertura, cerramos la ejecución.
- */
-function checkCoverageOverflow($malla) {
-    for($i=0; $i<count($malla); $i++) {
-        for($j=0; $j<count($malla[$i]); $j++) {
-            // miramos solo en las esquinas
-            if ( $i == 0 || $i == (count($malla)-1) ||
-                 $j == 0 || $j == (count($malla[$i])-1) ) {
-                if ($malla[$i][$j] == 1) {
-                    print "ERROR hay cobertura en una esquina (i:$i j:$j)" . PHP_EOL; exit(-1);
-                }
-            } else {
-                continue;
-            }
-        }
-    }
-    return true;
-}
