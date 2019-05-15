@@ -6,10 +6,11 @@ CONST PERMISOS = 0775;
  * Funcion para crear el fichero kml con los resultados del calculo de la cobertura del radar (CASO B: fl por debajo del radar)
  * 
  * @param array $listaContornos    (ENTRADA)
- * @param array $radarName (ENTRADA)
- * @param string $ruta     (ENTRADA)
- * @param int $fl          (ENTRADA) 
- * @param string $altMode  (ENTRADA)
+ * @param array|string $radarName Radares que se han utilizado para esta cobertura (ENTRADA)
+ * @param string $ruta Path donde guardar el fichero generado    (ENTRADA)
+ * @param int $fl Nivel de vuelo  (ENTRADA) 
+ * @param string $altMode Si el KML está pegado al suelo o la altura es relativa/absoluta (ENTRADA)
+ * @param string|array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA) 
  * @return bool
  */
 function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFilename="", $coverageLevel = 'mono') {
@@ -26,9 +27,10 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
     }
 
     if ( is_array($radarName) ) {
-        $radarWithFL = implode("_", $radarName) . "_" . $coverageLevel . "_FL" .  $nivelVuelo;
+        $radarWithFL = implode("_", $radarName) . "-" .
+            $coverageLevel . "-FL" .  $nivelVuelo;
     } else {
-        $radarWithFL = $radarName . "_FL" .  $nivelVuelo;
+        $radarWithFL = $radarName . "-FL" .  $nivelVuelo;
     }
 
     if ( false ) {
@@ -104,6 +106,10 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
 '            </MultiGeometry>
         </Placemark>
         </Document></kml>';
+
+    if ( is_array($appendToFilename) ) {
+        $appendToFilename = "-" . implode("_", $appendToFilename);
+    }
 
     foreach($ruta as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
         writeKMZ($val . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
@@ -285,17 +291,23 @@ function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
     if ( false === imagesavealpha($im, true) ) {
         print "ERROR imagesavealpha" . PHP_EOL; exit(-1);
     }
-    if ( false === ($p = imagecolorallocate($im, 0, 148, 255)) ) {
-        print "ERROR imagecolorallocate (0,148,255)" . PHP_EOL; exit(-1);
-    }
-    if ( false === ($r = imagecolorallocate($im, 0, 255, 148)) ) {
+    if ( false === ($r = imagecolorallocate($im, 255, 0, 0)) ) {
         print "ERROR imagecolorallocate (0,255,148)" . PHP_EOL; exit(-1);
     }
-    if ( false === ($b = imagecolorallocate($im, 255, 148, 0)) ) {
+    if ( false === ($g = imagecolorallocate($im, 0, 255, 0)) ) {
+        print "ERROR imagecolorallocate (0,0,255)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($b = imagecolorallocate($im, 0, 0, 255)) ) {
         print "ERROR imagecolorallocate (255,148,0)" . PHP_EOL; exit(-1);
     }
-    if ( false === ($f = imagecolorallocate($im, 255, 0, 148)) ) {
+    if ( false === ($f = imagecolorallocate($im, 255, 255, 0)) ) {
         print "ERROR imagecolorallocate (255,0,148)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($p = imagecolorallocate($im, 0, 255, 255)) ) {
+        print "ERROR imagecolorallocate (0,148,255)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($q = imagecolorallocate($im, 255, 255, 255)) ) {
+        print "ERROR imagecolorallocate (0,148,255)" . PHP_EOL; exit(-1);
     }
     if ( false === ($bg = imagecolorallocatealpha($im, 0, 0, 0, 127)) ) {
         print "ERROR imagecolorallocatealpha" . PHP_EOL; exit(-1);
@@ -305,7 +317,7 @@ function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
     }
 
     $y = 0;
-    for( $i = $bounding['lat_max']; $i >= $bounding['lat_min']; $i-- ) {
+    for( $i = $bounding['lat_min']; $i <= $bounding['lat_max']; $i++ ) {
         $x = 0;
         for( $j = $bounding['lon_min']; $j <= $bounding['lon_max']; $j++ ) {
             if ( $x > $lon_size ) die ("x>lon_size");
@@ -314,12 +326,14 @@ function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
             // la cobertura del radar en concreto
             if ( isset($malla[$i][$j]) ) {
                 switch (countSetBits($malla[$i][$j])) {
-                    case 0: break;
-                    case 1: imagesetpixel($im, $x, $y, $p); break;
-                    case 2: imagesetpixel($im, $x, $y, $r); break;
-                    case 3: imagesetpixel($im, $x, $y, $b); break;
+                    case 0: imagesetpixel($im, $x, $y, $r); break;
+                    case 1: imagesetpixel($im, $x, $y, $g); break;
+                    case 2: imagesetpixel($im, $x, $y, $b); break;
+                    case 3: imagesetpixel($im, $x, $y, $p); break;
                     default: imagesetpixel($im, $x, $y, $f); break; // 4 o más
                 }
+//            } else { // parece que corrompe la imagen
+//                imagesetpixel($im, $x, $y, $q); break;
             }
             $x++;
         }

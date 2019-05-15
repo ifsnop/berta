@@ -36,7 +36,7 @@ function programaPrincipal(){
     // $lugares = array("soller");
     // $lugares = array("paracuellos1");
     // $lugares = array("biarritz");
-    $lugares = array("alcolea", "paracuellos1", "monflorite");
+    $lugares = array("valdespina"); //"alcolea", "paracuellos1", "monflorite", "valdespina", "paracuellos2");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 

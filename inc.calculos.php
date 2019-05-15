@@ -1268,14 +1268,16 @@ function determinaContornos2_getContornos($malla) {
         return array();
     }
 
-    // se llama a CONREC pidiendo 2 contornos. Si pidiésemos uno, se calcularía al 50% entre
+    // se llama a CONREC pidiendo 4 contornos. Si pidiésemos uno, se calcularía al 50% entre
     // la celda con valor a 1 y la celda con valor a 0, es decir, entre se interpola entre medias.
-    // Al pedir 2, se hacen dos contornos, uno al 33% y otro al 66%. Por como se ordenan, si
-    // elegimos el segundo, se queda más cerca de la celda con valor.
-    // Debería comprobar si es así o al revés, porque el comentario de más abajo me ha dejado
-    // la duda. Sea como sea, la salida que tenemos es la más correcta, uniendo agueros de
-    // no cobertura en zonas de cobertura, y nos interesa porque es más conservador.
-    $contornos = CONREC_contour($d, $x, $y, $numContornos = 2);
+    // esto da problemas en los cruces cuando se llama a _joinContornos, porque se pueden
+    // cruzar los contornos.
+    // Al pedir 2, se hacen dos contornos, uno al 33% y otro al 66%.
+    // Al pedir 4, se generan 0.2, 0.4, 0.6, 0.8.
+    // La idea es coger el de 0.6 para solapar poquito, y no dejar un hueco grande entre
+    // dos coberturas que deberían estar juntas (una doble pegada a una mono).
+
+    $contornos = CONREC_contour($d, $x, $y, $numContornos = 4);
     // contornos tiene un value y un segment
     //print_r($contornos);
     print "[contornos: " . count($contornos) . " => (";
@@ -1284,9 +1286,10 @@ function determinaContornos2_getContornos($malla) {
     }
     print " )]";
 
-    // para quedarnos con el segundo contorno generado, que siempre será el más conservador
+    // Si nos quedamos con el contorno 0, nos estamos quedando con el 0.2 (de 4) o con el 0.33 (de 2).
+    // Eso implica que solapa con el contorno vecino, porque te metes en el terreno del vecino.
+    // Lo mejor es lo más próximo al 0.5, sin ser 0.5 y solapando (quedandose por debajo).
     $c = $contornos[1];
-
     return $c;
 }
 
@@ -1858,7 +1861,7 @@ function checkCoverageOverflow($malla) {
             if ( $i == $i_first || $i == $i_last ||
                  $j == $j_first || $j == $j_last ) {
                 if ( $value == 1 ) {
-                    print "ERROR hay cobertura en una esquina (i:$i j:$j)" . PHP_EOL; /*exit(-1);*/
+                    print "ERROR hay cobertura en una esquina (i:$i j:$j)" . PHP_EOL; exit(-1);
                 }
             } else {
                 continue;
