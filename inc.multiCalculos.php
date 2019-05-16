@@ -40,7 +40,7 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
     $mallas = interpolaHuecos2($mallas, $bounding);
     $mallas = eliminaHuecos($mallas, $bounding);
     $b = calculaBoundingBox($mallas);
-    print_r($bounding);
+    // print_r($bounding);
     // guardamos mallas sin huecos por separado como imágenes para comprobar
     foreach($mallas as $radar => $malla) {
         if ( 'global' != $radar )
@@ -54,28 +54,18 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
 
     // guardamos malla global como imagen para comprobar
     storeMallaAsImage3($malla_global, 'mallaglobal_' . $radar . '_FL' . $nivelVuelo, $bounding);
-    print "INFO Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
-        "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
+    //print "INFO Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
+    //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
     print "[liberandoMemoria]" . PHP_EOL;
     unset($mallas);
-    print "INFO Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
-        "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
+    //print "INFO Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
+    //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
 
     print "[check coverage overflow "; $timer0 = microtime(true);
     checkCoverageOverflow($malla_global);
     printf(" %3.4fs]", microtime(true) - $timer0);
     // preparados para generar contornos
 
-/*
-    $y = $x = $d = array();
-    for ($i = 0; $i < count($malla_global); $i++) {
-	for ($j = 0; $j < count($malla_global[$bounding['lat_max']]); $j++) {
-	    $y[$j] = ($bounding['lon_min'] + $j) / REDONDEO_LATLON;
-	    $x[$i] = ($bounding['lat_min'] + $i) / REDONDEO_LATLON;
-	    $d[$i][$j] = $malla_global[$bounding['lat_min'] + $i][$bounding['lon_min'] + $j];
-	}
-    }
-*/
     // coverage level irá pasando por todas las combinaciones de radares
     for($coverageLevel = 1; $coverageLevel <= pow(2,$radaresCount)-1; $coverageLevel++) {
         print PHP_EOL . "================================================" . PHP_EOL;
@@ -97,7 +87,7 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
             print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
             continue;
         }
-        storeMallaAsImage3($malla, 'malla_' . $coverageLevel . '_FL' . $nivelVuelo, $bounding);
+        storeMallaAsImage3($malla, 'malla_' . str_pad( $coverageLevel , 3, "0", STR_PAD_LEFT ) . '-FL' . $nivelVuelo, $bounding);
 
         $b = calculaBoundingBox(array('global'=>$malla));
         print "DEBUG boundingBox malla nivel $coverageLevel: " . printBoundingBox($b) . PHP_EOL;
@@ -122,42 +112,6 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
             $coverageName[countSetBits($coverageLevel) < 5 ? countSetBits($coverageLevel) : 4]
         );
     }
-
-/*
-    $contours = CONREC_contour($d,$x,$y,$numContornos = $maxCoverage);
-
-    for ($i = 0; $i < $maxCoverage; $i++) {
-	$c = $contours[$i];
-
-	$listaContornos = determinaContornos2_joinContornos($c);
-                    
-	$listaContornosCount = count($listaContornos);
-	$listaContornos = determinaContornos2_sortContornos($listaContornos);
-                            
-	$assertListaContornosCount = count($listaContornos);
-	foreach( $listaContornos as $k => $l ) {
-	    // print $k . "] " . count($l['polygon']) . PHP_EOL;
-	    // print "\t level:" . $l['level'] . PHP_EOL;
-	    // print "\t inside:" . count($l['inside']) . PHP_EOL;
-	    $assertListaContornosCount += count($l['inside']);
-	}
-
-	print "[assert listaContornos: " . $listaContornosCount . "=?" . $assertListaContornosCount . "]";
-	if ( $listaContornosCount != $assertListaContornosCount ) {
-	    die("ERROR al reindexar los contornos" . PHP_EOL);
-	}
-        // ojo, deberíamos modificar creaKml2 de acuerdo al código de javi
-	creaKml2(
-	    $listaContornos,
-	    $cobertura[$i], // faltaría poner aquí los nombres de los radares que han proporcionado esta cobertura 
-	    $ruta,
-	    $fl,
-	    $altMode,
-	    $appendToFilename = '',
-	    $coverageLevel = 'mono'
-	);
-    }
-    */
 
     return true;
 }

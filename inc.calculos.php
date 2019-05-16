@@ -1277,7 +1277,7 @@ function determinaContornos2_getContornos($malla) {
     // La idea es coger el de 0.6 para solapar poquito, y no dejar un hueco grande entre
     // dos coberturas que deberían estar juntas (una doble pegada a una mono).
 
-    $contornos = CONREC_contour($d, $x, $y, $numContornos = 4);
+    $contornos = CONREC_contour($d, $x, $y, $numContornos = 3);
     // contornos tiene un value y un segment
     //print_r($contornos);
     print "[contornos: " . count($contornos) . " => (";
@@ -1307,22 +1307,34 @@ function determinaContornos2_joinContornos($c) {
     if ( !is_array($c) || 0 == count($c) ) {
         return array();
     }
+
     // insertamos en varias hash lists los segmentos, el original y el invertido
-    $nDirNor = $nInvNor = $nDirOver = $nInvOver = array();
+    $nDirNor = $nInvNor = $nDirOver1 = $nInvOver1 = array();
+    $nDirOver2 = $nInvOver2 = $nDirOver3 = $nInvOver3 = array();
     foreach($c['segments'] as $sgm) {
         $vertex1 = $sgm['x1'].";".$sgm['y1'];
         $vertex2 = $sgm['x2'].";".$sgm['y2'];
         if ( !isset($nDirNor[$vertex1]) ) {
             $nDirNor[$vertex1] = $vertex2;
+        } elseif ( !isset($nDirOver1[$vertex1]) ) {
+            $nDirOver1[$vertex1] = $vertex2;
+        } elseif ( !isset($nDirOver2[$vertex1]) ) {
+            $nDirOver2[$vertex1] = $vertex2;
+        } elseif ( !isset($nDirOver3[$vertex1]) ) {
+            $nDirOver3[$vertex1] = $vertex2;
         } else {
-            if ( isset($nDirOver[$vertex1]) ) die("assert $vertex1 exists in nDirOver" . PHP_EOL);
-            $nDirOver[$vertex1] = $vertex2;
+            print("assert $vertex1 => $vertex2 exists in nDirOver1,2,3" . PHP_EOL); exit(-1);
         }
         if ( !isset($nInvNor[$vertex2]) ) {
             $nInvNor[$vertex2] = $vertex1;
+        } elseif ( !isset($nInvOver1[$vertex2]) ) {
+            $nInvOver1[$vertex2] = $vertex1;
+        } elseif ( !isset($nInvOver2[$vertex2]) ) {
+            $nInvOver2[$vertex2] = $vertex1;
+        } elseif ( !isset($nInvOver3[$vertex2]) ) {
+            $nInvOver3[$vertex2] = $vertex1;
         } else {
-            if ( isset($nInvOver[$vertex2]) ) die("assert $vertex2 exists in nInvOver" . PHP_EOL);
-            $nInvOver[$vertex2] = $vertex1;
+            print("assert $vertex2 => $vertex1 exists in nInvOver1,2,3" . PHP_EOL); exit(-1);
         }
     }
 
@@ -1342,24 +1354,38 @@ function determinaContornos2_joinContornos($c) {
     // borramos el inverso del segmento que acabamos de coger (tiene que ser igual key y value!)
     $assert = 0;
     if ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
-    if ( isset($nInvOver[$vertex2]) && ($nInvOver[$vertex2]==$vertex1) ) { unset($nInvOver[$vertex2]); $assert++; }
-    if ( $assert != 1 ) die("assert($assert) != 1 in unset 1st try" . PHP_EOL);
+    if ( isset($nInvOver1[$vertex2]) && ($nInvOver1[$vertex2]==$vertex1) ) { unset($nInvOver1[$vertex2]); $assert++; }
+    if ( isset($nInvOver2[$vertex2]) && ($nInvOver2[$vertex2]==$vertex1) ) { unset($nInvOver2[$vertex2]); $assert++; }
+    if ( isset($nInvOver3[$vertex2]) && ($nInvOver3[$vertex2]==$vertex1) ) { unset($nInvOver3[$vertex2]); $assert++; }
+    if ( $assert != 1 ) die("assert($assert != 1) in unset 1st try" . PHP_EOL);
 
     // unos contadores
     $countPct_old = 0; $cuentaActual_old = -1;
-    $cuentaTotal = count($nDirNor)+count($nDirOver)+count($nInvNor)+count($nInvOver);
+    $cuentaTotal = count($nDirNor)+count($nDirOver1)+count($nInvNor)+count($nInvOver1);
     print "[nSegmentos: $cuentaTotal][00%]";
 
     // ejecutar mientras tenga elementos en las listas
-    while ( (count($nDirNor)+count($nDirOver)+count($nInvNor)+count($nInvOver)) > 0 ) {
-        $cuentaActual = count($nDirNor) + count($nDirOver);
+    while ( (count($nDirNor)+
+            count($nInvNor)+
+            count($nDirOver1)+
+            count($nInvOver1)+
+            count($nDirOver2)+
+            count($nInvOver2)+
+            count($nDirOver3)+
+            count($nInvOver3)
+            ) > 0 ) {
+        $cuentaActual = count($nDirNor) + count($nDirOver1)  + count($nDirOver2) + count($nDirOver3);
         // buscamos el siguiente segmento, solo estará en uno de los cuatro
         $found = false;
         $vertex1 = $vertex2;
-        if ( isset($nDirNor[$vertex1]) ) { $vertex2 = $nDirNor[$vertex1]; unset($nDirNor[$vertex1]); $found = true; }
-        elseif ( isset($nDirOver[$vertex1]) ) { $vertex2 = $nDirOver[$vertex1]; unset($nDirOver[$vertex1]); $found = true; }
+        if     ( isset($nDirNor[$vertex1]) ) { $vertex2 = $nDirNor[$vertex1]; unset($nDirNor[$vertex1]); $found = true; }
+        elseif ( isset($nDirOver1[$vertex1]) ) { $vertex2 = $nDirOver1[$vertex1]; unset($nDirOver1[$vertex1]); $found = true; }
         elseif ( isset($nInvNor[$vertex1]) ) { $vertex2 = $nInvNor[$vertex1]; unset($nInvNor[$vertex1]); $found = true; }
-        elseif ( isset($nInvOver[$vertex1]) ) { $vertex2 = $nInvOver[$vertex1]; unset($nInvOver[$vertex1]); $found = true; }
+        elseif ( isset($nInvOver1[$vertex1]) ) { $vertex2 = $nInvOver1[$vertex1]; unset($nInvOver1[$vertex1]); $found = true; }
+        elseif ( isset($nDirOver2[$vertex1]) ) { $vertex2 = $nDirOver2[$vertex1]; unset($nDirOver2[$vertex1]); $found = true; }
+        elseif ( isset($nInvOver2[$vertex1]) ) { $vertex2 = $nInvOver2[$vertex1]; unset($nInvOver2[$vertex1]); $found = true; }
+        elseif ( isset($nDirOver3[$vertex1]) ) { $vertex2 = $nDirOver3[$vertex1]; unset($nDirOver3[$vertex1]); $found = true; }
+        elseif ( isset($nInvOver3[$vertex1]) ) { $vertex2 = $nInvOver3[$vertex1]; unset($nInvOver3[$vertex1]); $found = true; }
 
         if ( $found ) {
             // tenemos que borrar el inverso del segmento que hemos seleccionado
@@ -1367,10 +1393,14 @@ function determinaContornos2_joinContornos($c) {
             // yo creo que en todas (en la de origen no, pero tampoco importa preguntar)
             $assert = 0;
             if ( isset($nDirNor[$vertex2]) && ($nDirNor[$vertex2]==$vertex1) ) { unset($nDirNor[$vertex2]); $assert++; }
-            if ( isset($nDirOver[$vertex2]) && ($nDirOver[$vertex2]==$vertex1) ) { unset($nDirOver[$vertex2]); $assert++; }
-            if ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
-            if ( isset($nInvOver[$vertex2]) && ($nInvOver[$vertex2]==$vertex1) ) { unset($nInvOver[$vertex2]); $assert++; }
-            if ( $assert != 1 ) { print_r($nListaContornos); die("assert($assert) != 1 in unset 2nd try" . PHP_EOL); }
+            elseif ( isset($nDirOver1[$vertex2]) && ($nDirOver1[$vertex2]==$vertex1) ) { unset($nDirOver1[$vertex2]); $assert++; }
+            elseif ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
+            elseif ( isset($nInvOver1[$vertex2]) && ($nInvOver1[$vertex2]==$vertex1) ) { unset($nInvOver1[$vertex2]); $assert++; }
+            elseif ( isset($nDirOver2[$vertex2]) && ($nDirOver2[$vertex2]==$vertex1) ) { unset($nDirOver2[$vertex2]); $assert++; }
+            elseif ( isset($nInvOver2[$vertex2]) && ($nInvOver2[$vertex2]==$vertex1) ) { unset($nInvOver2[$vertex2]); $assert++; }
+            elseif ( isset($nDirOver3[$vertex2]) && ($nDirOver3[$vertex2]==$vertex1) ) { unset($nDirOver3[$vertex2]); $assert++; }
+            elseif ( isset($nInvOver3[$vertex2]) && ($nInvOver3[$vertex2]==$vertex1) ) { unset($nInvOver3[$vertex2]); $assert++; }
+            if ( $assert != 1 ) { print_r($nListaContornos); die("assert($assert != 1) in unset 2nd try" . PHP_EOL); }
 
             // como vertex1 lo insertamos anteriormente, solo insertaremos vertex2
             // print $vertex1 . "=>" . $vertex2 . PHP_EOL;
@@ -1387,12 +1417,20 @@ function determinaContornos2_joinContornos($c) {
             // buscamos la lista que todavía tenga elementos y escogemos uno
             if ( count($nDirNor) > 0 ) {
                 list($vertex1, $vertex2) = each($nDirNor); array_shift($nDirNor);
-            } elseif ( count($nDirOver) > 0 ) {
-                list($vertex1, $vertex2) = each($nDirOver); array_shift($nDirOver);
+            } elseif ( count($nDirOver1) > 0 ) {
+                list($vertex1, $vertex2) = each($nDirOver1); array_shift($nDirOver1);
             } elseif ( count($nInvNor) > 0 ) {
                 list($vertex1, $vertex2) = each($nInvNor); array_shift($nInvNor);
-            } elseif ( count($nInvOver) > 0 ) {
-                list($vertex1, $vertex2) = each($nInvOver); array_shift($nInvOver);
+            } elseif ( count($nInvOver1) > 0 ) {
+                list($vertex1, $vertex2) = each($nInvOver1); array_shift($nInvOver1);
+            } elseif ( count($nDirOver2) > 0 ) {
+                list($vertex1, $vertex2) = each($nDirOver2); array_shift($nDirOver2);
+            } elseif ( count($nInvOver2) > 0 ) {
+                list($vertex1, $vertex2) = each($nInvOver2); array_shift($nInvOver2);
+            } elseif ( count($nDirOver3) > 0 ) {
+                list($vertex1, $vertex2) = each($nDirOver3); array_shift($nDirOver3);
+            } elseif ( count($nInvOver3) > 0 ) {
+                list($vertex1, $vertex2) = each($nInvOver3); array_shift($nInvOver3);
             }
             list($x1, $y1) = explode(";", $vertex1); list($x2, $y2) = explode(";", $vertex2);
             // print "NEW LIST" . PHP_EOL . $vertex1 . "=>" . $vertex2 . PHP_EOL;
@@ -1406,10 +1444,14 @@ function determinaContornos2_joinContornos($c) {
             // borramos el inverso del segmento que acabamos de coger (tiene que ser igual key y value!)
             $assert = 0;
             if ( isset($nDirNor[$vertex2]) && ($nDirNor[$vertex2]==$vertex1) ) { unset($nDirNor[$vertex2]); $assert++; }
-            if ( isset($nDirOver[$vertex2]) && ($nDirOver[$vertex2]==$vertex1) ) { unset($nDirOver[$vertex2]); $assert++; }
-            if ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
-            if ( isset($nInvOver[$vertex2]) && ($nInvOver[$vertex2]==$vertex1) ) { unset($nInvOver[$vertex2]); $assert++; }
-            if ( $assert != 1 ) { print_r($nListaContornos); die("assert($assert) != 1 in unset 3rd try" . PHP_EOL); }
+            elseif ( isset($nDirOver1[$vertex2]) && ($nDirOver1[$vertex2]==$vertex1) ) { unset($nDirOver1[$vertex2]); $assert++; }
+            elseif ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
+            elseif ( isset($nInvOver1[$vertex2]) && ($nInvOver1[$vertex2]==$vertex1) ) { unset($nInvOver1[$vertex2]); $assert++; }
+            elseif ( isset($nDirOver2[$vertex2]) && ($nDirOver2[$vertex2]==$vertex1) ) { unset($nDirOver2[$vertex2]); $assert++; }
+            elseif ( isset($nInvOver2[$vertex2]) && ($nInvOver2[$vertex2]==$vertex1) ) { unset($nInvOver2[$vertex2]); $assert++; }
+            elseif ( isset($nDirOver3[$vertex2]) && ($nDirOver3[$vertex2]==$vertex1) ) { unset($nDirOver3[$vertex2]); $assert++; }
+            elseif ( isset($nInvOver3[$vertex2]) && ($nInvOver3[$vertex2]==$vertex1) ) { unset($nInvOver3[$vertex2]); $assert++; }
+            if ( $assert != 1 ) { print_r($nListaContornos); die("assert($assert != 1) in unset 3rd try" . PHP_EOL); }
         }
 
         $cuentaActual_old = $cuentaActual;
@@ -1421,11 +1463,8 @@ function determinaContornos2_joinContornos($c) {
     $nListaContornos[] = array('level' => -1, 'polygon' =>$nFixed, 'leftCorner' => $leftCorner, 'inside' => array());
     print "[100%]";
     return $nListaContornos;
-/*
-    print_r($nListaContornos);
 
-
-    // CODIGO ORIGINAL
+    // CODIGO ORIGINAL (SOPORTA DE FORMA NATIVA LOS CRUCES)
     $contornoFixed = array();
     $sgm = array_shift($c['segments']);
     $x1 = $sgm['x1']; $y1 = $sgm['y1']; $contornoFixed[] = array( 'fila'=>$x1, 'col'=>$y1 );
@@ -1522,7 +1561,7 @@ function determinaContornos2_joinContornos($c) {
 //    print "sin pasar por la casilla de salida" . PHP_EOL;
 //    print_r($listaContornos);
     return $listaContornos;
-*/
+
 }
 
 /**

@@ -126,6 +126,12 @@ function printMalla($malla, $relleno = " ") {
     }
 }
 
+/*
+ * Desde que se utiliza conrec para los contornos, los índices son decimales 
+ * (ahora el contorno se situa entre medias de la celda a 1 y la celda a 0
+ * y printContornos no funciona)
+ *
+ */
 function printContornos($contornos, $malla) {
 /*
     $malla = array();

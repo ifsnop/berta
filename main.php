@@ -20,6 +20,49 @@ CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
 CONST GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 CONST GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 
+/*
+$prueba = array(
+    array(0,0,0,0,0,0,0,0,0,0,0),
+    array(0,1,1,1,0,0,0,0,0,0,0),
+    array(0,1,2,2,1,0,0,0,0,0,0),
+    array(0,1,2,2,1,0,0,0,0,0,0),
+    array(0,0,1,1,1,0,0,0,0,0,0),
+    array(0,0,0,0,0,0,0,0,0,0,0),
+    array(0,0,0,0,0,0,0,0,0,0,0),
+    array(0,0,0,0,0,0,0,0,0,0,0),
+    );
+
+//$prueba = array(
+//    array(0,0,0,0),
+//    array(0,1,0,0),
+//    array(0,0,1,0),
+//    array(0,0,0,0),
+//);
+
+$d = $x = $y = array();
+$i = 0;
+foreach( $prueba as $lat => $lons ) {
+    $d[$i] = array();
+    $x[$i] = $lat;
+    $j = 0;
+    foreach( $lons as $lon => $value ) {
+        $y[$j] = $lon;
+        $d[$i][$j] = $value;
+        $j++;
+    }
+    $i++;
+}
+printMalla($prueba, "0");
+$contornos = CONREC_contour($d, $x, $y, array(0.33,1.33,2.33)); //$numContornos = 3);
+//print_r($contornos[0]['segments']);
+storeContornosAsImage3($contornos, "prueba");
+$listaContornos2 = determinaContornos2($prueba);
+creaKml2($listaContornos2, "PRUEBA", array("./"), 100, "absolute");
+
+//print_r($listaContornos2);
+//printContornos($listaContornos2, $prueba);
+exit(0);
+*/
 programaPrincipal();
 
 exit(0);
@@ -36,7 +79,7 @@ function programaPrincipal(){
     // $lugares = array("soller");
     // $lugares = array("paracuellos1");
     // $lugares = array("biarritz");
-    $lugares = array("valdespina"); //"alcolea", "paracuellos1", "monflorite", "valdespina", "paracuellos2");
+    $lugares = array("alcolea", "paracuellos1", "monflorite", "valdespina", "paracuellos2");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
@@ -70,7 +113,7 @@ function programaPrincipal(){
 	    // $infoCoral['canchoblanco']['secondaryMaximumRange'] = 20;
 	    // recorremos todas las localizaciones que nos ha dado el usuario
             foreach($lugares as $lugar) {
-                print PHP_EOL . "INFO Procesando $lugar" . PHP_EOL;
+                print "INFO Procesando $lugar" . PHP_EOL;
                 $lugar = strtolower($lugar);
                 // carga el fichero de screening en memoria
                 // tener en cuenta que si es un $lugar acabado en psr, hay que poner el range del psr
@@ -96,19 +139,33 @@ function programaPrincipal(){
 		// print_r($radar);
 	        // para probar con una distancia más pequeña y forzar alcance a 20NM
 		// $radar['screening']['range'] = 20*1852;
-		for ($fl = $flMin; $fl <= $flMax; $fl += $paso) {
+	        $ruta = array();
+                $ruta[GUARDAR_POR_RADAR] = $rutaResultados . $radar['screening']['site'] . DIRECTORY_SEPARATOR;
+                crearCarpetaResultados($ruta[GUARDAR_POR_RADAR]);
+                for ($fl = $flMin; $fl <= $flMax; $fl += $paso) {
+		    $ret = false; $from_cache = false;
                     $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
-                    $ruta = array();
-                    $ruta[GUARDAR_POR_RADAR] = $rutaResultados . $radar['screening']['site'] . DIRECTORY_SEPARATOR;
                     $ruta[GUARDAR_POR_NIVEL] = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
                     crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
-                    crearCarpetaResultados($ruta[GUARDAR_POR_RADAR]);
                     print "INFO Generando: ${fl}00 feet" . PHP_EOL;
-		    $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
+                    // mira primero si la malla está en la cache
+                    if ( file_exists($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json") ) {
+                        $ret = file_get_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json");
+                        if ( false !== $ret ) {
+                            $ret = json_decode($ret, $assoc = true);
+                            $from_cache = true;
+                        }
+                    }
+                    if ( $ret === NULL || $ret === false )
+    		        $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
+    		    // si hemos generado la malla, la guardamos en la cache
+    		    if ( false == $from_cache)
+    		        file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.json", json_encode($ret));
+
 		    if ( 'multiradar' == $modo )
 		        $multiCoberturas[$lugar] = $ret;
-		    print "INFO Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
-	                "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
+		    // print "DEBUG Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
+	            //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
 
                 } // for interno
 	    } // foreach
@@ -208,4 +265,3 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'mo
     );
     return $mallado['mallaLatLon'];
 }
-

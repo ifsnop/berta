@@ -65,6 +65,8 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
             // si no existe lat, lon y alt, utilizar los índices 0,1 y la altura que vino como parámetro
             if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
                 $cadenaOuter .= $p['lon'] . "," . $p['lat'] . "," . $p['alt'] . " ";
+            } elseif ( isset($p['fila']) && isset($p['col']) ) {
+                $cadenaOuter .= $p['fila'] . "," . $p['col'] . "," . $fl*100*FEET_TO_METERS . " ";
             } elseif ( isset($p[0]) && isset($p[1]) ) {
                 $cadenaOuter .= $p[1] . "," . $p[0] . "," . $fl*100*FEET_TO_METERS . " ";
             } else {
@@ -83,9 +85,11 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
             foreach ($contorno_inside['polygon'] as &$p_inside) {
                  // transforma las coordenadas del level 1 -> inner
                 // $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
-                if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
+                if ( isset($p_inside['lat']) && isset($p_inside['lon']) && isset($p_inside['alt']) ) {
                     $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
-                } elseif ( isset($p[0]) && isset($p[1]) ) {
+                } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
+                    $cadenaInner .= $p_inside['fila'] . "," . $p_inside['col'] . "," . $fl*100*FEET_TO_METERS . " ";
+                } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
                     $cadenaInner .= $p_inside[1] . "," . $p_inside[0] . "," . $fl*100*FEET_TO_METERS . " ";
                 } else {
                     die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL); exit(-1);    
@@ -326,11 +330,11 @@ function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
             // la cobertura del radar en concreto
             if ( isset($malla[$i][$j]) ) {
                 switch (countSetBits($malla[$i][$j])) {
-                    case 0: imagesetpixel($im, $x, $y, $r); break;
-                    case 1: imagesetpixel($im, $x, $y, $g); break;
-                    case 2: imagesetpixel($im, $x, $y, $b); break;
-                    case 3: imagesetpixel($im, $x, $y, $p); break;
-                    default: imagesetpixel($im, $x, $y, $f); break; // 4 o más
+                    case 0: imagesetpixel($im, $x, $lat_size - $y, $r); break;
+                    case 1: imagesetpixel($im, $x, $lat_size - $y, $g); break;
+                    case 2: imagesetpixel($im, $x, $lat_size - $y, $b); break;
+                    case 3: imagesetpixel($im, $x, $lat_size - $y, $p); break;
+                    default: imagesetpixel($im, $x, $lat_size - $y, $f); break; // 4 o más
                 }
 //            } else { // parece que corrompe la imagen
 //                imagesetpixel($im, $x, $y, $q); break;
@@ -357,6 +361,76 @@ function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
         $y++;
     }
     */
+    if ( false === imagepng( $im, $nombre . ".png" ) ) {
+        print "ERROR imagepng ${nombre}.png" . PHP_EOL; exit(-1);
+    }
+    if ( false === imagedestroy( $im ) ) {
+        print "ERROR imagedestroy" . PHP_EOL; exit(-1);
+    }
+
+    print "INFO nombre fichero: ${nombre}.png" . PHP_EOL;
+    return true;
+}
+
+/*
+ * Guarda una imagen generada con las líneas de los contornos
+ * @param array malla
+ * @param string nombre fichero destino
+ * @param array bounding dimensiones maximas lat/lon de la malla
+ * @param bool debug verdadero para mostrar información de depuración
+ * @return bool
+ */
+function storeContornosAsImage3($contornos, $nombre, $debug = false) {
+    // ojo, el png tendrá el tamaño de la malla global, para poder solapar
+    // todas las imágenes en una sola con un programa tipo Paint.NET
+    // no se guardan las mallas individuales en su espacio de coordenadas
+    // sino en el global.
+    $colors = array();
+
+    if ( false === ($im = imagecreatetruecolor(100,100)) ) {
+        print "ERROR imagecreatetruecolor" . PHP_EOL; exit(-1);
+    }
+    if ( false === imagealphablending($im, true) ) { // setting alpha blending on
+        print "ERROR imagealphablending" . PHP_EOL; exit(-1);
+    }
+    if ( false === imagesavealpha($im, true) ) {
+        print "ERROR imagesavealpha" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($colors[0] = imagecolorallocate($im, 255, 0, 0)) ) {
+        print "ERROR imagecolorallocate (0,255,148)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($colors[1] = imagecolorallocate($im, 0, 255, 0)) ) {
+        print "ERROR imagecolorallocate (0,0,255)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($colors[2] = imagecolorallocate($im, 0, 0, 255)) ) {
+        print "ERROR imagecolorallocate (255,148,0)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($colors[3] = imagecolorallocate($im, 255, 255, 0)) ) {
+        print "ERROR imagecolorallocate (255,0,148)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($colors[4] = imagecolorallocate($im, 0, 255, 255)) ) {
+        print "ERROR imagecolorallocate (0,148,255)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($colors[5] = imagecolorallocate($im, 255, 255, 255)) ) {
+        print "ERROR imagecolorallocate (0,148,255)" . PHP_EOL; exit(-1);
+    }
+    if ( false === ($bg = imagecolorallocatealpha($im, 0, 0, 0, 127)) ) {
+        print "ERROR imagecolorallocatealpha" . PHP_EOL; exit(-1);
+    }
+    if ( false === imagefill($im, 0, 0, $bg) ) {
+        print "ERROR imagefill" . PHP_EOL; exit(-1);
+    }
+    $colorIndex = 0;
+    foreach($contornos as $c) {
+        print $c['value'] . PHP_EOL;
+        foreach($c['segments'] as $p) {
+            //print "(" . ($p['x1']*10.0) . "," . $p['y1']*10.0 . ")=>(" . $p['x2']*10.0 . "," . $p['y2']*10.0 . ")";
+            imageline($im, $p['x1']*10.0, 100 - $p['y1']*10.0, $p['x2']*10.0, 100 - $p['y2']*10.0, $colors[$colorIndex]);
+        }
+        // print PHP_EOL;
+        $colorIndex++;
+    }
+
     if ( false === imagepng( $im, $nombre . ".png" ) ) {
         print "ERROR imagepng ${nombre}.png" . PHP_EOL; exit(-1);
     }
