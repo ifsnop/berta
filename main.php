@@ -67,111 +67,155 @@ programaPrincipal();
 
 exit(0);
 
+function printHelp() {
+    print "-r radar_list     | --radar-list radar_list (lista entre comillas)" . PHP_EOL;
+    print "-m max_range      | --max-range max_range (in NM)" . PHP_EOL;
+    print "-1 (default) | -2 | --monoradar (default)" . PHP_EOL;
+    print "                  | --multiradar" . PHP_EOL;
+    print "-l                | --list" . PHP_EOL;
+    print "-s min,max,step   | --steps min,max,step" . PHP_EOL;
+    print "-h                | --help" . PHP_EOL;
+    return;
+}
+
 function programaPrincipal(){
     global $argv, $argc;
+    // default values, calculate everything
+    $lugares = explode(" ", "aitana alcolea alicante alicantetwr_adsb aspontes auchlias barajas barcelona barcelona-psr begas begas-psr biarritz bilbaotwr_adsb canchoblanco canchoblanco_adsb ced_adsb elgoro eljudio eljudio-psr erillas espineiras espineiras-psr foia fuerteventura gazules girona grancanaria grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montecodi montejunto montpellier motril lanzarote lanzarote_adsb palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto pozonieves randa randa-psr randa_asdb sierraespuna soller solorzano taborno tanger tenerifesur tenerifesur-psr turrillas turrillas_adsb valdespina valencia valencia-psr valladolid villatobas");
+    $flMin = 1;
+    $flMax = 400;
+    $paso = 1;
+    $maxRange = false;
+    $modo = 'monoradar';
+
+    $shortopts  = "r:"; // radar name
+    $shortopts .= "m:"; // max range in NM
+    $shortopts .= "1"; // modo monoradar
+    $shortopts .= "2"; // modo multiradar
+    $shortopts .= "l"; // list available radars
+    $shortopts .= "h"; // help
+    $shortopts .= "s:"; // steps
+    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "list", "help", "steps:" );
+    $options = getopt( $shortopts, $longopts );
+    foreach( $options as $key => $value ) {
+        switch( $key ) {
+            case 'help':
+            case 'h':
+                printHelp();
+                exit(0);
+                break;
+            case 'list':
+            case 'l':
+                print_r( $lugares );
+                exit(0);
+                break;
+            case 'radar-list':
+            case 'r':
+                $lugares = explode( " ", $value );
+                print "INFO Ejecutando con la siguiente selección de radar(es) [" . implode(",", $lugares) . "]" . PHP_EOL;
+                break;
+            case 'max-range':
+            case 'm':
+                $maxRange = $value;
+                print "INFO Alcance forzado a $value NM" . PHP_EOL;
+                break;
+            case 'steps':
+            case 's':
+                $steps = explode( ",", $value );
+                // print_r($steps); var_dump($steps);
+                if (!is_numeric($steps[0]) || !is_numeric($steps[1]) || !is_numeric($steps[2]) ) {
+                    printHelp();
+                    exit(0);
+                }
+                $flMin = $steps[0]; $flMax = $steps[1]; $paso = $steps[2];
+                break;
+            case '1':
+            case 'monoradar':
+                break;
+            case '2':
+            case 'multiradar':
+                $modo = 'multiradar';
+                print "INFO Modo *multiradar* activado" . PHP_EOL;
+                break;
+            default:
+                print "ERROR Parámetro no esperado: $key" . PHP_EOL;
+                exit(0);
+        }
+    }
 
     $path = "/home/eval/%rassv6%/spain.tsk";
     $rutaResultados = "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR;
-    $radioTerrestreAumentado = 0;
     $poligono = false;
-    $lugares = explode(" ", "aitana alcolea alicante alicantetwr_adsb aspontes auchlias barajas barcelona barcelona-psr begas begas-psr biarritz canchoblanco canchoblanco_adsb ced_adsb eljudio eljudio-psr erillas espineiras espineiras-psr foia fuerteventura gazules girona grancanaria grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montecodi montejunto montpellier motril lanzarote lanzarote_adsb palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto pozonieves randa randa-psr sierraespuna soller solorzano taborno tanger tenerifesur tenerifesur-psr turrillas turrillas_adsb valdespina valencia valencia-psr valladolid villatobas");
-    // $lugares = explode(" ", "paracuellos1 monflorite alcolea canchoblanco");
-    // $lugares = array("soller");
-    // $lugares = array("paracuellos1");
-    // $lugares = array("biarritz");
-    $lugares = array("alcolea", "paracuellos1", "monflorite", "valdespina", "paracuellos2");
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    $flMin = 120;
-    $flMax = 120;
-    $paso = 1;
+    print "Pasos configurados (min,max,paso): (${flMin},${flMax},${paso})" . PHP_EOL;
 
     $multiCoberturas = array();
-    $modo = 'multiradar'; // 'monoradar'; //'multiradar';
 
-    if ( $argc > 1 ){ 
-        $lugares = array();
-        for($i = 1; $i < $argc; $i++) {
-            $lugares[] = $argv[$i];
+    //pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
+    // recorremos todas las localizaciones que nos ha dado el usuario
+    foreach($lugares as $lugar) {
+        print "INFO Procesando $lugar" . PHP_EOL;
+        $lugar = strtolower($lugar);
+        // carga el fichero de screening en memoria
+        // tener en cuenta que si es un $lugar acabado en psr, hay que poner el range del psr
+        if ( !isset($infoCoral[$lugar]) ) {
+            die("ERROR el radar $lugar no está configurado en la bbdd del SASS-C" . PHP_EOL);
         }
-    }
-    if ( count($lugares) > 1 )
-        print "INFO Cálculo batch de " . count($lugares) . " radares" . PHP_EOL;
+        $range = $infoCoral[$lugar]['secondaryMaximumRange'];
+        if ( false !== strpos($lugar, "psr") ) {
+            print "INFO Cargando alcance del psr" . PHP_EOL;
+            $range = $infoCoral[$lugar]['primaryMaximumRange'];
+        }
+        // si hubiese un alcance forzado, configurarlo ahora para evaluar
+        // es el equivalente a hacerlo aquí:
+        // $infoCoral['canchoblanco']['secondaryMaximumRange'] = 20;
+        if ( false !== $maxRange ) {
+            $range = $maxRange;
+        }
 
-    $op = 1;
-    do {
-        // $op = menu();
-        switch ($op) {
-	case 0:
-	    echo "Hasta la vista!". PHP_EOL;
-	    break;
-	case 1:
-            //pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
-            $op = 0;
-            // para probar con una distancia más pequeña y forzar alcance a 20NM
-	    // $infoCoral['canchoblanco']['secondaryMaximumRange'] = 20;
-	    // recorremos todas las localizaciones que nos ha dado el usuario
-            foreach($lugares as $lugar) {
-                print "INFO Procesando $lugar" . PHP_EOL;
-                $lugar = strtolower($lugar);
-                // carga el fichero de screening en memoria
-                // tener en cuenta que si es un $lugar acabado en psr, hay que poner el range del psr
-                if ( !isset($infoCoral[$lugar]) ) {
-                    die("ERROR: el radar $lugar no está configurado en la bbdd del SASS-C" . PHP_EOL);
+	$radar = cargarDatosTerreno( $infoCoral[$lugar], $range );
+
+        if ( true ) {
+            // para la herramienta de cálculo de kmz de matlab
+            generateMatlabFiles($radar, $rutaResultados);
+            //continue;
+        }
+
+        $ruta = array();
+        $ruta[GUARDAR_POR_RADAR] = $rutaResultados . $radar['screening']['site'] . DIRECTORY_SEPARATOR;
+        crearCarpetaResultados($ruta[GUARDAR_POR_RADAR]);
+        for ($fl = $flMin; $fl <= $flMax; $fl += $paso) {
+            $ret = false; $from_cache = false;
+            $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
+            $ruta[GUARDAR_POR_NIVEL] = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
+            crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
+            print "INFO Generando: ${fl}00 feet";
+            // mira primero si la malla está en la cache
+            if ( file_exists($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json") ) {
+                $ret = file_get_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json");
+                if ( false !== $ret ) {
+                    $ret = json_decode($ret, $assoc = true);
+                    $from_cache = true;
+                    print " [cached]";
                 }
-                $range = $infoCoral[$lugar]['secondaryMaximumRange'];
-                if ( false !== strpos($lugar, "psr") ) {
-                    print "cargando alcance del psr" . PHP_EOL;
-                    $range = $infoCoral[$lugar]['primaryMaximumRange'];
-                }
-
-		$radar = cargarDatosTerreno(
-		    $infoCoral[$lugar],
-		    $range
-		);
-
-                if ( true ) {
-                    generateMatlabFiles($radar, $rutaResultados);
-                    //continue;
-                }
-
-		// print_r($radar);
-	        // para probar con una distancia más pequeña y forzar alcance a 20NM
-		// $radar['screening']['range'] = 20*1852;
-	        $ruta = array();
-                $ruta[GUARDAR_POR_RADAR] = $rutaResultados . $radar['screening']['site'] . DIRECTORY_SEPARATOR;
-                crearCarpetaResultados($ruta[GUARDAR_POR_RADAR]);
-                for ($fl = $flMin; $fl <= $flMax; $fl += $paso) {
-		    $ret = false; $from_cache = false;
-                    $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
-                    $ruta[GUARDAR_POR_NIVEL] = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
-                    crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
-                    print "INFO Generando: ${fl}00 feet" . PHP_EOL;
-                    // mira primero si la malla está en la cache
-                    if ( file_exists($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json") ) {
-                        $ret = file_get_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json");
-                        if ( false !== $ret ) {
-                            $ret = json_decode($ret, $assoc = true);
-                            $from_cache = true;
-                        }
-                    }
-                    if ( $ret === NULL || $ret === false )
-    		        $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
-    		    // si hemos generado la malla, la guardamos en la cache
-    		    if ( false == $from_cache)
-    		        file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.json", json_encode($ret));
-
-		    if ( 'multiradar' == $modo )
-		        $multiCoberturas[$lugar] = $ret;
-		    // print "DEBUG Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
-	            //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
-
-                } // for interno
-	    } // foreach
-	    //break; // break para generar solo 1 nivel
-	} // switch
-    } while ($op != 0);
+            }
+            print PHP_EOL;
+            if ( $ret === NULL || $ret === false ) {
+                $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
+            }
+            // si hemos generado la malla, la guardamos en la cache
+            if ( false == $from_cache) {
+                file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.json", json_encode($ret));
+            }
+            if ( 'multiradar' == $modo ) {
+                $multiCoberturas[$lugar] = $ret;
+                // print "DEBUG Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
+                //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
+            }
+        } // for interno
+    } // foreach
 
     if ( 'multiradar' != $modo )
         return;

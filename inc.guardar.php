@@ -147,7 +147,7 @@ function writeKMZ($fileName, $radarWithFL, $content) {
 function crearCarpetaResultados($ruta) {
 	
     if ( !is_dir( $ruta ) ) {
-        clearstatcache();
+        //clearstatcache();
         //$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
         if (mkdir($ruta, PERMISOS, true)) {
             return true;

@@ -1277,7 +1277,7 @@ function determinaContornos2_getContornos($malla) {
     // La idea es coger el de 0.6 para solapar poquito, y no dejar un hueco grande entre
     // dos coberturas que deberían estar juntas (una doble pegada a una mono).
 
-    $contornos = CONREC_contour($d, $x, $y, $numContornos = 3);
+    $contornos = CONREC_contour($d, $x, $y, $numContornos = array(0.33));
     // contornos tiene un value y un segment
     //print_r($contornos);
     print "[contornos: " . count($contornos) . " => (";
@@ -1288,8 +1288,10 @@ function determinaContornos2_getContornos($malla) {
 
     // Si nos quedamos con el contorno 0, nos estamos quedando con el 0.2 (de 4) o con el 0.33 (de 2).
     // Eso implica que solapa con el contorno vecino, porque te metes en el terreno del vecino.
-    // Lo mejor es lo más próximo al 0.5, sin ser 0.5 y solapando (quedandose por debajo).
-    $c = $contornos[1];
+    // Lo mejor es lo más próximo al 0.5, sin ser 0.5 y solapando (quedandose por debajo) cuando hay
+    // multiradar. En monoradar, cogemos 0.66, que no junta los huecos de cobertura.
+
+    $c = $contornos[0];
     return $c;
 }
 

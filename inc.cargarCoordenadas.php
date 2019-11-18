@@ -127,7 +127,9 @@ function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
 	$radar[$name] = array_merge($radar[$name], $values);
 	// si en el fichero se definen dos radares (PSR y SSR, hay que devolver dos radares, no uno!)
         if ( false !== strpos($radar[$name]['radarType'], "primary") ) {
+            // copiamos en un radar nuevo los datos
             $radar[$name . "-psr"] = $radar[$name];
+            // le cambiamos el nombre para reflejar que ahora tiene PSR
             $radar[$name . "-psr"]['radar'] = $radar[$name . "-psr"]['radar'] . "-psr";
         }
     } else {
