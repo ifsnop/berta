@@ -26,11 +26,15 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
         case "sextuple": $rgb = "7d00ffff"; break;
     }
 
+    if ( is_array($appendToFilename) ) {
+        $appendToFilename = "-" . implode("_", $appendToFilename);
+    }
+
     if ( is_array($radarName) ) {
         $radarWithFL = implode("_", $radarName) . "-" .
-            $coverageLevel . "-FL" .  $nivelVuelo;
+            $coverageLevel . "-FL" .  $nivelVuelo . $appendToFilename;
     } else {
-        $radarWithFL = $radarName . "-FL" .  $nivelVuelo;
+        $radarWithFL = $radarName . "-FL" .  $nivelVuelo . $appendToFilename;
     }
 
     if ( false ) {
@@ -111,12 +115,8 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
         </Placemark>
         </Document></kml>';
 
-    if ( is_array($appendToFilename) ) {
-        $appendToFilename = "-" . implode("_", $appendToFilename);
-    }
-
     foreach($ruta as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
-        writeKMZ($val . $radarWithFL . $appendToFilename, $radarWithFL, $contenido);
+        writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $contenido);
     }
 
     return true;

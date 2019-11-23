@@ -72,8 +72,9 @@ function printHelp() {
     print "-m max_range      | --max-range max_range (in NM)" . PHP_EOL;
     print "-1 (default) | -2 | --monoradar (default)" . PHP_EOL;
     print "                  | --multiradar" . PHP_EOL;
+    print "-f                | --force (ignore cache)" . PHP_EOL;
     print "-l                | --list" . PHP_EOL;
-    print "-s min,max,step   | --steps min,max,step" . PHP_EOL;
+    print "-s min,max,step   | --steps min,max,step (in FL)" . PHP_EOL;
     print "-h                | --help" . PHP_EOL;
     return;
 }
@@ -86,17 +87,23 @@ function programaPrincipal(){
     $flMax = 400;
     $paso = 1;
     $maxRange = false;
+    $force = false;
     $modo = 'monoradar';
 
     $shortopts  = "r:"; // radar name
     $shortopts .= "m:"; // max range in NM
     $shortopts .= "1"; // modo monoradar
     $shortopts .= "2"; // modo multiradar
+    $shortopts .= "f"; // forzado (ignorar cache)
     $shortopts .= "l"; // list available radars
     $shortopts .= "h"; // help
     $shortopts .= "s:"; // steps
-    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "list", "help", "steps:" );
+    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "force", "list", "help", "steps:" );
     $options = getopt( $shortopts, $longopts );
+    if ( 0 == count($options) ) {
+        printHelp();
+        exit(0);
+    }
     foreach( $options as $key => $value ) {
         switch( $key ) {
             case 'help':
@@ -137,6 +144,11 @@ function programaPrincipal(){
                 $modo = 'multiradar';
                 print "INFO Modo *multiradar* activado" . PHP_EOL;
                 break;
+            case 'f':
+            case 'force':
+                $force = true;
+                print "INFO Modo *forzado* activado" . PHP_EOL;
+                break;
             default:
                 print "ERROR Parámetro no esperado: $key" . PHP_EOL;
                 exit(0);
@@ -149,7 +161,7 @@ function programaPrincipal(){
     $altMode = altitudeModetoString($altitudeMode = 0);
     $infoCoral = getRadars($path, $parse_all = true);
 
-    print "Pasos configurados (min,max,paso): (${flMin},${flMax},${paso})" . PHP_EOL;
+    print "INFO Pasos configurados (min,max,paso): (${flMin},${flMax},${paso})" . PHP_EOL;
 
     $multiCoberturas = array();
 
@@ -192,8 +204,8 @@ function programaPrincipal(){
             $ruta[GUARDAR_POR_NIVEL] = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
             crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
             print "INFO Generando: ${fl}00 feet";
-            // mira primero si la malla está en la cache
-            if ( file_exists($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json") ) {
+            // mira primero si la malla está en la cache, siempre que no estemos en modo forzado!
+            if ( !$force && file_exists($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json") ) {
                 $ret = file_get_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json");
                 if ( false !== $ret ) {
                     $ret = json_decode($ret, $assoc = true);
@@ -201,7 +213,9 @@ function programaPrincipal(){
                     print " [cached]";
                 }
             }
+
             print PHP_EOL;
+            // como no había nada en la caché, hay que calcularlo todo
             if ( $ret === NULL || $ret === false ) {
                 $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
             }
