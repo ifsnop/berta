@@ -11,7 +11,7 @@
 * @param string $altMode si lo queres absolute o relative(ENTRADA)
 */
          
-function multicobertura($mallas, $fl, $ruta, $altMode) {
+function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('parcial' => true, 'rascal'=>true, 'unica' => true) ) {
 
     if ( !isset($mallas) || count($mallas) == 0 ) {
         return false;
@@ -29,7 +29,7 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
     $radaresCount = count($mallas);
 
     $bounding = calculaBoundingBox($mallas);
-    print "DEBUG boundingBox malla normal: " . printBoundingBox($bounding) . PHP_EOL;
+    // print "DEBUG boundingBox malla normal: " . printBoundingBox($bounding) . PHP_EOL;
     // guardamos mallas por separado como imágenes para comprobar
     foreach($mallas as $radar => $malla) {
         storeMallaAsImage3($malla, 'malla_' . $radar . '_FL' . $nivelVuelo, $bounding);
@@ -49,15 +49,15 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
     }
 
     list($malla_global, $indexes, $maxCoverage) = calculaMallaGlobal($mallas, $bounding);
-    $b = calculaBoundingBox(array('global'=>$malla_global));
-    print "DEBUG boundingBox malla global: " . printBoundingBox($b) . PHP_EOL;
+    // $b = calculaBoundingBox(array('global'=>$malla_global));
+    // print "DEBUG boundingBox malla global: " . printBoundingBox($b) . PHP_EOL;
     print "INFO maxCoverage: $maxCoverage/" . $coverageName[$maxCoverage] . PHP_EOL;
 
     // guardamos malla global como imagen para comprobar
     storeMallaAsImage3($malla_global, 'mallaglobal_' . $radar . '_FL' . $nivelVuelo, $bounding);
     //print "INFO Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
     //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
-    print "[liberandoMemoria]" . PHP_EOL;
+    // print "[liberandoMemoria]" . PHP_EOL;
     unset($mallas);
     //print "INFO Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
     //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
@@ -67,53 +67,54 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
     printf(" %3.4fs]", microtime(true) - $timer0);
     // preparados para generar contornos
 
-    // coverage level irá pasando por todas las combinaciones de radares
-    for($coverageLevel = 1; $coverageLevel <= pow(2,$radaresCount)-1; $coverageLevel++) {
-        continue;
-        print PHP_EOL . "================================================" . PHP_EOL;
-        print "INFO $coverageLevel => " . $coverageName[countSetBits($coverageLevel)] . " =>";
-        // buscamos los radares que han influido en este nivel de cobertura para el nombre del fichero
-        $radaresUsed = array();
-        for($i = $coverageLevel, $radarPtr = 0; $i>0; $radarPtr++, $i=$i>>1) {
-            if ( $i & 1 ) {
-                //$radaresUsed[$radares[$radarPtr]] = true;
-                $radaresUsed[] = $radares[$radarPtr];
-                print " " . $radares[$radarPtr];
+    // coverage level irá pasando por todas las combinaciones de radares y tipos -> mono, doble, triple...
+    if ( true === $calculosMode['parcial'] ) {
+    
+        for($coverageLevel = 1; $coverageLevel <= pow(2,$radaresCount)-1; $coverageLevel++) {
+            print PHP_EOL . "================================================" . PHP_EOL;
+            print "INFO $coverageLevel => " . $coverageName[countSetBits($coverageLevel)] . " =>";
+            // buscamos los radares que han influido en este nivel de cobertura para el nombre del fichero
+            $radaresUsed = array();
+            for($i = $coverageLevel, $radarPtr = 0; $i>0; $radarPtr++, $i=$i>>1) {
+                if ( $i & 1 ) {
+                    //$radaresUsed[$radares[$radarPtr]] = true;
+                    $radaresUsed[] = $radares[$radarPtr];
+                    print " " . $radares[$radarPtr];
+                }
+                // else { $radarsUsed[$radares[$radarPtr]] = false;  // print "No utilizado: " . $radares[$radarPtr] . PHP_EOL; }
             }
-            // else { $radarsUsed[$radares[$radarPtr]] = false;  // print "No utilizado: " . $radares[$radarPtr] . PHP_EOL; }
+            print PHP_EOL;
+
+            // extrae de la malla global, el radar que se indica en coverageLevel (hemos ido pasando por todas las combinaciones)
+            $malla = obtieneMallaPorRadar($malla_global, $coverageLevel);
+            if ( false === $malla ) {
+                print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+                continue;
+            }
+            storeMallaAsImage3($malla, 'malla_' . str_pad( $coverageLevel , 3, "0", STR_PAD_LEFT ) . '-FL' . $nivelVuelo, $bounding);
+
+            // $b = calculaBoundingBox(array('global'=>$malla));
+            // print "DEBUG boundingBox malla nivel $coverageLevel: " . printBoundingBox($b) . PHP_EOL;
+            print "[determinaContornos2 start]"; $timer0 = microtime(true);
+            $listaContornos2 = determinaContornos2($malla);
+            if ( 0 == count($listaContornos2) ) {
+                print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+                continue;
+            }
+            printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
+            print "[calculaCoordenadasGeograficasC]" . PHP_EOL;
+            $listaContornos2 = calculaCoordenadasGeograficasC($flm, $listaContornos2);
+
+            creaKml2(
+                $listaContornos2,
+                $radares,
+                $ruta,
+                $fl,
+                $altMode,
+                $appendToFilename = $radaresUsed,
+                $coverageName[countSetBits($coverageLevel) < 5 ? countSetBits($coverageLevel) : 4]
+            );
         }
-        print PHP_EOL;
-
-        // extrae de la malla global, el radar que se indica en coverageLevel (hemos ido pasando por todas las combinaciones)
-        $malla = obtieneMallaPorRadar($malla_global, $coverageLevel);
-        if ( false === $malla ) {
-            print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
-            continue;
-        }
-        storeMallaAsImage3($malla, 'malla_' . str_pad( $coverageLevel , 3, "0", STR_PAD_LEFT ) . '-FL' . $nivelVuelo, $bounding);
-
-        $b = calculaBoundingBox(array('global'=>$malla));
-        print "DEBUG boundingBox malla nivel $coverageLevel: " . printBoundingBox($b) . PHP_EOL;
-
-        print "[determinaContornos2 start]"; $timer0 = microtime(true);
-        $listaContornos2 = determinaContornos2($malla);
-        if ( 0 == count($listaContornos2) ) {
-            print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
-            continue;
-        }
-        printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
-        print "[calculaCoordenadasGeograficasC]" . PHP_EOL;
-        $listaContornos2 = calculaCoordenadasGeograficasC($flm, $listaContornos2);
-
-        creaKml2(
-            $listaContornos2,
-            $radares,
-            $ruta,
-            $fl,
-            $altMode,
-            $appendToFilename = $radaresUsed,
-            $coverageName[countSetBits($coverageLevel) < 5 ? countSetBits($coverageLevel) : 4]
-        );
     }
     // aquí iteraramos por todos los niveles de cobertura posibles, desde la mono
     // representada por un 1, hasta la máxima que hallamos calculado al principio de la función.
@@ -122,56 +123,54 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
     // habría que iterar hasta < maxCoverage, y ahora es <=.
     // en este trozo de código, se junta la mono de alcolea y la mono de paracuellos 
     // y tener una solo de mono... etc
+    if ( true === $calculosMode['rascal'] ) {
+        for ($coverage = 1; $coverage<=$maxCoverage; $coverage++) {
+            $coverageLevel = $coverageName[$coverage];
 
-    for ($coverage = 1; $coverage<=$maxCoverage; $coverage++) {
-        $coverageLevel = $coverageName[$coverage];
-        
-        $malla = obtieneMallaCoberturaPorNivel($malla_global, $coverage);
-        if ( false === $malla ) {
-            print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
-            continue;
-            //exit(0);
+            $malla = obtieneMallaCoberturaPorNivel($malla_global, $coverage);
+            if ( false === $malla ) {
+                print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+                continue;
+            }
+            storeMallaAsImage3($malla, 'malla' . '-FL' . $nivelVuelo . "-" . $coverageLevel, $bounding);
+
+            // $b = calculaBoundingBox(array('global'=>$malla));
+            // print "DEBUG boundingBox malla nivel $coverageLevel: " . printBoundingBox($b) . PHP_EOL;
+            print "[determinaContornos2 start]"; $timer0 = microtime(true);
+            $listaContornos2 = determinaContornos2($malla);
+            if ( 0 == count($listaContornos2) ) {
+                print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . "-" . $coverageLevel . PHP_EOL;
+                continue;
+            }
+            printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
+            print "[calculaCoordenadasGeograficasC]" . PHP_EOL;
+            $listaContornos2 = calculaCoordenadasGeograficasC($flm, $listaContornos2);
+
+            creaKml2(
+                $listaContornos2,
+                $radares,
+                $ruta,
+                $fl,
+                $altMode,
+                $appendToFilename = "",
+                $coverageLevel
+            );
         }
-        storeMallaAsImage3($malla, 'malla' . '-FL' . $nivelVuelo . "-" . $coverageLevel, $bounding);
-
-        $b = calculaBoundingBox(array('global'=>$malla));
-        print "DEBUG boundingBox malla nivel $coverageLevel: " . printBoundingBox($b) . PHP_EOL;
-
-        print "[determinaContornos2 start]"; $timer0 = microtime(true);
-        $listaContornos2 = determinaContornos2($malla);
-        if ( 0 == count($listaContornos2) ) {
-            print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . "-" . $coverageLevel . PHP_EOL;
-            continue;
-        }
-        printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
-        print "[calculaCoordenadasGeograficasC]" . PHP_EOL;
-        $listaContornos2 = calculaCoordenadasGeograficasC($flm, $listaContornos2);
-
-        creaKml2(
-            $listaContornos2,
-            $radares,
-            $ruta,
-            $fl,
-            $altMode,
-            $appendToFilename = "",
-            $coverageLevel
-        );
     }
     
     // calcular la cobertura única, es decir, independietemente de si es doble, triple o x, pintar
     // todo como una malla continua
-
-    $malla = obtieneMallaCoberturaUnica($malla_global);
+    if ( true === $calculosMode['unica'] ) {
+        print "INFO: Calculando malla única" . PHP_EOL;
+        $malla = obtieneMallaCoberturaUnica($malla_global);
         if ( false === $malla ) {
             print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
             continue;
-            //exit(0);
         }
         storeMallaAsImage3($malla, 'malla' . '-FL' . $nivelVuelo . "-unica", $bounding);
 
-        $b = calculaBoundingBox(array('global'=>$malla));
-        print "DEBUG boundingBox malla nivel unico: " . printBoundingBox($b) . PHP_EOL;
-
+        // $b = calculaBoundingBox(array('global'=>$malla));
+        // print "DEBUG boundingBox malla nivel unico: " . printBoundingBox($b) . PHP_EOL;
         print "[determinaContornos2 start]"; $timer0 = microtime(true);
         $listaContornos2 = determinaContornos2($malla);
         if ( 0 == count($listaContornos2) ) {
@@ -181,18 +180,16 @@ function multicobertura($mallas, $fl, $ruta, $altMode) {
         printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
         print "[calculaCoordenadasGeograficasC]" . PHP_EOL;
         $listaContornos2 = calculaCoordenadasGeograficasC($flm, $listaContornos2);
-
         creaKml2(
             $listaContornos2,
             $radares,
             $ruta,
             $fl,
             $altMode,
-            $appendToFilename = "-unica",
-            "mono" /*pintamos la cobertura única con el color de la mono*/
+            $appendToFilename = "",
+            "unica" /*pintamos la cobertura única con el color de la mono*/
         );
-
-
+    }
 
     return true;
 }

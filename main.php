@@ -70,8 +70,12 @@ exit(0);
 function printHelp() {
     print "-r radar_list     | --radar-list radar_list (lista entre comillas)" . PHP_EOL;
     print "-m max_range      | --max-range max_range (in NM)" . PHP_EOL;
-    print "-1 (default) | -2 | --monoradar (default)" . PHP_EOL;
-    print "                  | --multiradar" . PHP_EOL;
+    print "-1 (default)      | --monoradar (default)" . PHP_EOL;
+    print "-2                | --multiradar" . PHP_EOL;
+    print "   -u             | --unica (multicobertura como una sola suma de todas)" . PHP_EOL;
+    print "   -r (default)   | --rascal (multicobertura estilo rascal)" . PHP_EOL;
+    print "                  | --no-rascal" . PHP_EOL;
+    print "   -p             | --parcial (multicobertura por radar y tipo->mono,doble,triple...)" . PHP_EOL;
     print "-f                | --force (ignore cache)" . PHP_EOL;
     print "-l                | --list" . PHP_EOL;
     print "-s min,max,step   | --steps min,max,step (in FL)" . PHP_EOL;
@@ -89,16 +93,20 @@ function programaPrincipal(){
     $maxRange = false;
     $force = false;
     $modo = 'monoradar';
+    $calculosMode = array('unica' => false, 'parcial' => false, 'rascal' => true);
 
     $shortopts  = "r:"; // radar name
     $shortopts .= "m:"; // max range in NM
     $shortopts .= "1"; // modo monoradar
     $shortopts .= "2"; // modo multiradar
+    $shortopts .= "u"; // multi unica
+    $shortopts .= "p"; // multi parcial
+    // $shortopts .= "r"; // multi rascal <- choca con radar name
     $shortopts .= "f"; // forzado (ignorar cache)
     $shortopts .= "l"; // list available radars
     $shortopts .= "h"; // help
     $shortopts .= "s:"; // steps
-    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "force", "list", "help", "steps:" );
+    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "help", "steps:" );
     $options = getopt( $shortopts, $longopts );
     if ( 0 == count($options) ) {
         printHelp();
@@ -143,6 +151,24 @@ function programaPrincipal(){
             case 'multiradar':
                 $modo = 'multiradar';
                 print "INFO Modo *multiradar* activado" . PHP_EOL;
+                break;
+            case 'u':
+            case 'unica':
+                $calculosMode['unica'] = true;
+                print "INFO calculo *multiradar con cobertura única* activado" . PHP_EOL;
+                break;
+            case 'rascal':
+                $calculosMode['rascal'] = true;
+                print "INFO calculo *multiradar al estilo rascal* activado" . PHP_EOL;
+                break;
+            case 'no-rascal':
+                $calculosMode['rascal'] = false;
+                print "INFO calculo *multiradar al estilo rascal* desactivado" . PHP_EOL;
+                break;
+            case 'p':
+            case 'parcial':
+                $calculosMode['parcial'] = true;
+                print "INFO calculo *multiradar por radares y tipo (mono,doble,triple...)* activado" . PHP_EOL;
                 break;
             case 'f':
             case 'force':
@@ -236,7 +262,7 @@ function programaPrincipal(){
 
     $ruta = array('MULTI' => $rutaResultados . "MULTI" . DIRECTORY_SEPARATOR);
     crearCarpetaResultados($ruta['MULTI']);                
-    multicobertura($multiCoberturas, $flMin, $ruta, $altMode);
+    multicobertura($multiCoberturas, $flMin, $ruta, $altMode, $calculosMode);
 
     return;
 }

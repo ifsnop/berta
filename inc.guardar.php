@@ -18,10 +18,15 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
     $nivelVuelo = str_pad( (string)$fl, 3, "0", STR_PAD_LEFT );
 
     switch ( $coverageLevel ) { 
-        case "mono": $rgb = "7d00ff00"; break;          // Rascal: 2497FF
-        case "doble": $rgb = "7dff0000"; break;         // Rascal: A55935
-        case "triple": $rgb = "7dffff00"; break;        // Rascal: DE7799
-        case "cuadruple": $rgb = "7d0000ff"; break;     // Rascal: 00F67B
+        case "unica": $rgb = "7d00ff00"; break;         // igual que mono
+        case "mono": $rgb = "7d00ff00"; break;
+        // case "mono": $rgb = "e6ff9724"; break;          // Rascal
+        case "doble": $rgb = "7dff0000"; break;
+        // case "doble": $rgb = "e63559a5"; break;         // Rascal
+        case "triple": $rgb = "7dffff00"; break;
+        // case "triple": $rgb = "e69977de"; break;        // Rascal
+        case "cuadruple": $rgb = "7d0000ff"; break;
+        // case "cuadruple": $rgb = "e67bf600"; break;     // Rascal
         case "quintuple": $rgb = "7dff00ff"; break;
         case "sextuple": $rgb = "7d00ffff"; break;
     }
