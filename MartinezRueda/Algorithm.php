@@ -106,6 +106,9 @@ class Algorithm
      */
     protected function compute(Polygon $subject, Polygon $clipping, $operation)/* : Polygon*/
     {
+        // https://github.com/darthmelak/martinez-rueda-php/commit/29340d1284bf8572f2a906fbe74b5d10116c6632
+        $result = null;
+
         // Test for 1 trivial result case
         if ($subject->ncontours() * $clipping->ncontours() == 0) {
             if ($operation == self::OPERATION_DIFFERENCE) {
@@ -139,7 +142,9 @@ class Algorithm
                 $result = $subject;
 
                 for ($i = 0; $i < $clipping->ncontours(); $i++) {
-                    $result[] = $clipping->contour($i);
+                    // $result[] = $clipping->contour($i);
+                    // https://github.com/kudm761/martinez-rueda-php/pull/1/commits/8e971cbdfe6e52ac048dd91982d98f9f8d0fa79e
+                     $result->push_back($clipping->contour($i));
                 }
             }
 
