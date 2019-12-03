@@ -1277,7 +1277,7 @@ function determinaContornos2_getContornos($malla) {
     // La idea es coger el de 0.6 para solapar poquito, y no dejar un hueco grande entre
     // dos coberturas que deberían estar juntas (una doble pegada a una mono).
 
-    $contornos = CONREC_contour($d, $x, $y, $numContornos = array(0.33));
+    $contornos = CONREC_contour($d, $x, $y, $numContornos = array(0.33)); // era 0.33
     // contornos tiene un value y un segment
     //print_r($contornos);
     print "[contornos: " . count($contornos) . " => (";
@@ -1925,4 +1925,75 @@ function checkCoverageOverflow($malla) {
     }
 */
     return true;
+}
+
+/*
+ * Helper function para Ramer–Douglas–Peucker
+ * https://rosettacode.org/wiki/Ramer-Douglas-Peucker_line_simplification#PHP
+ *
+ * @param array punto
+ * @param array línea
+ * @return float distancia perpendicular del punto a la línea
+ */
+function perpendicular_distance(array $pt, array $line) {
+    // Calculate the normalized delta x and y of the line.
+    $dx = $line[1][0] - $line[0][0];
+    $dy = $line[1][1] - $line[0][1];
+    $mag = sqrt($dx * $dx + $dy * $dy);
+    if ($mag > 0) {
+        $dx /= $mag;
+        $dy /= $mag;
+    }
+
+    // Calculate dot product, projecting onto normalized direction.
+    $pvx = $pt[0] - $line[0][0];
+    $pvy = $pt[1] - $line[0][1];
+    $pvdot = $dx * $pvx + $dy * $pvy;
+
+    // Scale line direction vector and subtract from pv.
+    $dsx = $pvdot * $dx;
+    $dsy = $pvdot * $dy;
+    $ax = $pvx - $dsx;
+    $ay = $pvy - $dsy;
+
+    return sqrt($ax * $ax + $ay * $ay);
+}
+
+/*
+ * The Ramer–Douglas–Peucker algorithm is a line simplification algorithm
+ * for reducing the number of points used to define its shape.
+ * https://rosettacode.org/wiki/Ramer-Douglas-Peucker_line_simplification#PHP
+ *
+ * @param array points lista de parejas de puntos con un polígono a simplificar.
+ * @param float epsilon límite para descartar puntos demasiado juntos.
+ * @return array lista de puntos simplificada
+ */
+function ramer_douglas_peucker(array $points, $epsilon) {
+    if (count($points) < 2) {
+        throw new InvalidArgumentException('Not enough points to simplify');
+    }
+    // Find the point with the maximum distance from the line between start/end.
+    $dmax = 0;
+    $index = 0;
+    $end = count($points) - 1;
+    $start_end_line = array( $points[0], $points[$end] );
+    for ($i = 1; $i < $end; $i++) {
+        $dist = perpendicular_distance($points[$i], $start_end_line);
+        if ($dist > $dmax) {
+            $index = $i;
+            $dmax = $dist;
+        }
+    }
+
+    // If max distance is larger than epsilon, recursively simplify.
+    if ($dmax > $epsilon) {
+        $new_start = ramer_douglas_peucker(array_slice($points, 0, $index + 1), $epsilon);
+        $new_end = ramer_douglas_peucker(array_slice($points, $index), $epsilon);
+        array_pop($new_start);
+        return array_merge($new_start, $new_end);
+    }
+
+    // Max distance is below epsilon, so return a line from with just the
+    // start and end points.
+    return array( $points[0], $points[$end] );
 }

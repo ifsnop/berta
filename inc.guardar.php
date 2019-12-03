@@ -4,16 +4,16 @@ CONST PERMISOS = 0775;
 
 /**
  * Funcion para crear el fichero kml con los resultados del calculo de la cobertura del radar (CASO B: fl por debajo del radar)
- * 
- * @param array $listaContornos    (ENTRADA)
+ *
+ * @param array $listaContornos (ENTRADA)
  * @param array|string $radarName Radares que se han utilizado para esta cobertura (ENTRADA)
- * @param string $ruta Path donde guardar el fichero generado    (ENTRADA)
- * @param int $fl Nivel de vuelo  (ENTRADA) 
+ * @param string $ruta Path donde guardar el fichero generado (ENTRADA)
+ * @param int $fl Nivel de vuelo (ENTRADA)
  * @param string $altMode Si el KML está pegado al suelo o la altura es relativa/absoluta (ENTRADA)
- * @param string|array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA) 
+ * @param string|array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
  * @return bool
  */
-function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFilename="", $coverageLevel = 'mono') {
+function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFilename="", $coverageLevel = 'mono', $epsilon = false) {
 
     $nivelVuelo = str_pad( (string)$fl, 3, "0", STR_PAD_LEFT );
 
@@ -53,77 +53,56 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
         return false;
     }
 
-    $contenido = '<?xml version="1.0" encoding="UTF-8"?>
-        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
-        <Document>
-        <name>' . $radarWithFL . '</name>
-        <Style id="transGreenPoly">
-            <LineStyle><width>1.5</width></LineStyle>
-            <PolyStyle><color>' . $rgb . '</color></PolyStyle>
-	</Style>
-	<Placemark>
-            <name>' .  $radarWithFL . '</name>
-	    <styleUrl>#transGreenPoly</styleUrl>
-	    <MultiGeometry>';
-
+    // vamos a transformar los polígonos que pueden venir en lat/lon, fila/col o 0/1 en 0/1/2.
+    // porque sino es un lio.
+    $group = array(); $vextex = array(); // estadísticas
     foreach( $listaContornos as &$contorno ) {
-        $cadenaOuter = "";
-
+        $vertexCount = 0; // estadísticas
+        $polygon = array();
         foreach ( $contorno['polygon'] as &$p ) {
-            // transforma las coordenadas del level 0 -> outer
-            // si no existe lat, lon y alt, utilizar los índices 0,1 y la altura que vino como parámetro
             if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
-                $cadenaOuter .= $p['lon'] . "," . $p['lat'] . "," . $p['alt'] . " ";
+                $polygon[] = array($p['lat'], $p['lon'], $p['alt']);
             } elseif ( isset($p['fila']) && isset($p['col']) ) {
-                $cadenaOuter .= $p['fila'] . "," . $p['col'] . "," . $fl*100*FEET_TO_METERS . " ";
+                $polygon[] = array($p['col'], $p['fila'], $fl*100*FEET_TO_METERS);
             } elseif ( isset($p[0]) && isset($p[1]) ) {
-                $cadenaOuter .= $p[1] . "," . $p[0] . "," . $fl*100*FEET_TO_METERS . " ";
+                $polygon[] = array($p[0], $p[1], $fl*100*FEET_TO_METERS);
             } else {
-                die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL); exit(-1);    
+                die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
             }
+            $vertexCount++; // estadísticas
         }
-        $contenido .= PHP_EOL .
-'                <Polygon>
-                <extrude>1</extrude>
-		<altitudeMode>' . $altMode . '</altitudeMode>
-		<outerBoundaryIs><LinearRing><coordinates>' . PHP_EOL . $cadenaOuter . PHP_EOL .
-'                </coordinates></LinearRing></outerBoundaryIs>';
 
+        $inside = array(); $vertexCountInside = array();
         foreach ( $contorno['inside'] as &$contorno_inside ) {
-            $cadenaInner = "";
+            $polygon_inside = array();
+            $currentCountInside = 0;
             foreach ($contorno_inside['polygon'] as &$p_inside) {
-                 // transforma las coordenadas del level 1 -> inner
-                // $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
                 if ( isset($p_inside['lat']) && isset($p_inside['lon']) && isset($p_inside['alt']) ) {
-                    $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
+                    $polygon_inside[] = array($p_inside['lat'], $p_inside['lon'], $p_inside['alt']);
                 } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
-                    $cadenaInner .= $p_inside['fila'] . "," . $p_inside['col'] . "," . $fl*100*FEET_TO_METERS . " ";
+                    $polygon_inside[] = array($p_inside['col'], $p_inside['fila'], $fl*100*FEET_TO_METERS);
                 } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
-                    $cadenaInner .= $p_inside[1] . "," . $p_inside[0] . "," . $fl*100*FEET_TO_METERS . " ";
+                    $polygon_inside[] = array($p_inside[0], $p_inside[1], $fl*100*FEET_TO_METERS);
                 } else {
-                    die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL); exit(-1);    
+                    die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
                 }
+                $currentCountInside++; // estadísticas
             }
-            if ( "" != $cadenaInner ) {
-                $contenido .= PHP_EOL .
-'                <innerBoundaryIs><LinearRing><coordinates>' . PHP_EOL . $cadenaInner . PHP_EOL . 
-'                </coordinates></LinearRing></innerBoundaryIs>';
-            }
+            $inside[] = array('polygon' => $polygon_inside);
+            $vertextCountInside[] = $currentCountInside; // estadísticas
         }
-
-        $contenido .= PHP_EOL .
-'                </Polygon>';
+        $group[] = array('polygon' => $polygon, 'inside' => $inside);
+        if ( 0 == count( $vertexCountInside ) ) $vertexCountInside = false;
+        $vertex[] = array('polygon' => $vertexCount, 'inside' => $vertexCountInside);
     }
-
-    $contenido .= PHP_EOL .
-'            </MultiGeometry>
-        </Placemark>
-        </Document></kml>';
+    // $group tiene la geometría necesaria para pintar todo, en el formato
+    // 0=>lat, 1=>lon, 2=>height
+    // FIN
+    $kml = fromPolygons2KML($group, $radarWithFL, $rgb, $altMode);
 
     foreach($ruta as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
-        writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $contenido);
+        writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $kml);
     }
-
     return true;
 }
 
@@ -446,3 +425,131 @@ function storeContornosAsImage3($contornos, $nombre, $debug = false) {
     print "INFO nombre fichero: ${nombre}.png" . PHP_EOL;
     return true;
 }
+
+/*
+ * Genera un KML a partir de una definición de poligonos. Cada polígono
+ * puede tener huecos, definidos en los subarrays "inside".
+ * @param array polygons
+ * @return string kml
+ * @return bool
+ */
+function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
+
+    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
+        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+        <Document>
+        <name>' . $radarWithFL . '</name>
+        <Style id="transGreenPoly">
+            <LineStyle><width>1.5</width></LineStyle>
+            <PolyStyle><color>' . $rgb . '</color></PolyStyle>
+	</Style>
+	<Placemark>
+            <name>' .  $radarWithFL . '</name>
+	    <styleUrl>#transGreenPoly</styleUrl>
+	    <MultiGeometry>';
+
+    $kmlPolygonHeader = PHP_EOL .
+'                <Polygon>
+                <extrude>1</extrude>
+		<altitudeMode>' . $altMode . '</altitudeMode>
+		<outerBoundaryIs><LinearRing><coordinates>' . PHP_EOL;
+    $kmlPolygonFooter_1 = PHP_EOL .
+'                </coordinates></LinearRing></outerBoundaryIs>';
+
+    $kmlPolygonFooter_2 = PHP_EOL . 
+'                </Polygon>';
+
+    $kmlInnerHeader = '<innerBoundaryIs><LinearRing><coordinates>';
+    $kmlInnerFooter = '</coordinates></LinearRing></innerBoundaryIs>';
+
+    $kmlFooter = PHP_EOL .
+'            </MultiGeometry>
+        </Placemark>
+        </Document></kml>';
+
+
+
+    $kml = $kmlHeader;
+    foreach( $polygons as &$polygon ) {
+        $kmlOuter = "";
+        if ( 10000 < count($polygon['polygon']) ) {
+            print "DEBUG current/refined vertex cound => " . count($polygon['polygon']) . "/";
+            $polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
+            print count($polygon['polygon']) . PHP_EOL;
+        }
+        foreach ( $polygon['polygon'] as &$p ) {
+            $kmlOuter .= $p[1] . "," . $p[0] . "," . $p[2] . " ";
+        }
+        $kml .= $kmlPolygonHeader . $kmlOuter . $kmlPolygonFooter_1;
+        foreach ( $polygon['inside'] as &$polygons_inside ) {
+            $kmlInner = "";
+            foreach ($polygons_inside['polygon'] as &$p_inside) {
+                $kmlInner .=  $p[1] . "," . $p[0] . "," . $p[2] . " ";
+            }
+            if ( "" != $kmlInner ) {
+                $kml .= $kmlInnerHeader . PHP_EOL . $kmlInner . PHP_EOL . $kmlInnerFooter;
+            }
+        }
+        $kml .= $kmlPolygonFooter_2;
+    }
+    $kml .= $kmlFooter;
+    return $kml;
+}
+
+/*
+    // ahora el código para generar el kmz sería mucho mas sencillo, sin ifs, ni nada.
+    foreach( $listaContornos as &$contorno ) {
+        $cadenaOuter = "";
+        foreach ( $contorno['polygon'] as &$p ) {
+            // transforma las coordenadas del level 0 -> outer
+            // si no existe lat, lon y alt, utilizar los índices 0,1 y la altura que vino como parámetro
+            if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
+                $cadenaOuter .= $p['lon'] . "," . $p['lat'] . "," . $p['alt'] . " ";
+            } elseif ( isset($p['fila']) && isset($p['col']) ) {
+                $cadenaOuter .= $p['fila'] . "," . $p['col'] . "," . $fl*100*FEET_TO_METERS . " ";
+            } elseif ( isset($p[0]) && isset($p[1]) ) {
+                $cadenaOuter .= $p[1] . "," . $p[0] . "," . $fl*100*FEET_TO_METERS . " ";
+            } else {
+                die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
+            }
+        }
+
+        $contenido .= PHP_EOL .
+'                <Polygon>
+                <extrude>1</extrude>
+		<altitudeMode>' . $altMode . '</altitudeMode>
+		<outerBoundaryIs><LinearRing><coordinates>' . PHP_EOL . $cadenaOuter . PHP_EOL .
+'                </coordinates></LinearRing></outerBoundaryIs>';
+        foreach ( $contorno['inside'] as &$contorno_inside ) {
+            $cadenaInner = "";
+            foreach ($contorno_inside['polygon'] as &$p_inside) {
+                // transforma las coordenadas del level 1 -> inner
+                // $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
+                if ( isset($p_inside['lat']) && isset($p_inside['lon']) && isset($p_inside['alt']) ) {
+                    $cadenaInner .= $p_inside['lon'] . "," . $p_inside['lat'] . "," . $p_inside['alt'] . " ";
+                } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
+                    $cadenaInner .= $p_inside['fila'] . "," . $p_inside['col'] . "," . $fl*100*FEET_TO_METERS . " ";
+                } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
+                    $cadenaInner .= $p_inside[1] . "," . $p_inside[0] . "," . $fl*100*FEET_TO_METERS . " ";
+                } else {
+                    die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
+                }
+            }
+            if ( "" != $cadenaInner ) {
+                $contenido .= PHP_EOL .
+'                <innerBoundaryIs><LinearRing><coordinates>' . PHP_EOL . $cadenaInner . PHP_EOL . 
+'                </coordinates></LinearRing></innerBoundaryIs>';
+            }
+        }
+        $contenido .= PHP_EOL .
+'                </Polygon>';
+    }
+*/
+    // 
+
+/*
+    $contenido .= PHP_EOL .
+'            </MultiGeometry>
+        </Placemark>
+        </Document></kml>';
+*/

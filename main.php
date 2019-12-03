@@ -245,11 +245,12 @@ function programaPrincipal(){
             if ( $ret === NULL || $ret === false ) {
                 $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
             }
-            // si hemos generado la malla, la guardamos en la cache
-            if ( false == $from_cache) {
+            // si hemos generado malla nueva, y la malla es correcta, la guardamos en la cache
+            if ( false == $from_cache && false !== $ret ) {
                 file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.json", json_encode($ret));
             }
-            if ( 'multiradar' == $modo ) {
+            // si estamos en modo multiradar, y la malla es correcta, la guardamos para el procesado multiradar
+            if ( 'multiradar' == $modo && false !== $ret ) {
                 $multiCoberturas[$lugar] = $ret;
                 // print "DEBUG Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
                 //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
@@ -261,7 +262,7 @@ function programaPrincipal(){
         return;
 
     $ruta = array('MULTI' => $rutaResultados . "MULTI" . DIRECTORY_SEPARATOR);
-    crearCarpetaResultados($ruta['MULTI']);                
+    crearCarpetaResultados($ruta['MULTI']);
     multicobertura($multiCoberturas, $flMin, $ruta, $altMode, $calculosMode);
 
     return;
@@ -293,7 +294,9 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'mo
         // con esto generamos cobertura matricial en el kml, que no creo que sea
         // necesario.
         // se podría probar a interseccionar con Martinez-Rueda, de momento no.
+
         /*
+        // comentar si no queremos hacer coberturas por encima como si fuese por debajo
 	print "[determinaContornos2 start]"; $timer0 = microtime(true);
         $listaContornos2 = determinaContornos2($mallado['malla']);
 	if ( 0 == count($listaContornos2) ) {
@@ -303,6 +306,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'mo
 	printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
         print "[calculaCoordenadasGeograficasB]";
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
+        // comentar si no queremos hacer coberturas por encima como si fuese por debajo
         */
         // fin código para generar malla por encima
 

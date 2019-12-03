@@ -39,16 +39,16 @@ function mostrarAltitudMode(){
  * @return string
  */
 function altitudeModetoString ($altitudeMode){
-	
-	$modo = "";
-	switch($altitudeMode){
-		case 0: $modo = "Subject to the ground"; break;  
-		case 1: $modo = "Subject to seabed"; break;
-		case 2: $modo = "Relative to soil"; break;
-		case 3: $modo = "Relative to the seabed"; break;
-		case 4: $modo = "Absolute"; break;
-	}
-	return $modo;
+
+    $modo = "";
+    switch($altitudeMode){
+	case 0: $modo = "clampToGround"; break; // "Subject to the ground"; break;
+	case 1: $modo = "clampToSeaFloor"; break; // "Subject to seabed"; break;
+	case 2: $modo = "relativeToGround"; break; // "Relative to soil"; break;
+	case 3: $modo = "relativeToSeaFloor"; break; // "Relative to the seabed"; break;
+	case 4: $modo = "absolute"; break;
+    }
+    return $modo;
 }
 
 /**

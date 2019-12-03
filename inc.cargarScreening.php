@@ -105,7 +105,7 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
         $radar['range'] = $screening['range'] * MILLA_NAUTICA_EN_METROS;
     }
 
-    echo "El alcance del radar es de " .
+    print "INFO El alcance del radar es de " .
         ($radar['range'] / MILLA_NAUTICA_EN_METROS) . 
         "NM / " . $radar['range'] . "m" . PHP_EOL;
 

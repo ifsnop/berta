@@ -19,8 +19,8 @@ function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('pa
 
     $nivelVuelo = str_pad( (string)$fl, 3, "0", STR_PAD_LEFT );
     $flm = $fl*100*FEET_TO_METERS; // fl en metros para calculoCoordenadasGeograficasX
-    $coverageName = array(
-        1 => "mono", "doble", "triple",
+    $coverageName = array( 0 => "ninguna", 
+        "mono", "doble", "triple",
         "cuadruple", "quintuple", "sextuple",
         "septuple", "octuple", "nonuple"
     );
@@ -29,7 +29,7 @@ function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('pa
     $radaresCount = count($mallas);
 
     $bounding = calculaBoundingBox($mallas);
-    // print "DEBUG boundingBox malla normal: " . printBoundingBox($bounding) . PHP_EOL;
+    print "DEBUG boundingBox malla normal: " . printBoundingBox($bounding) . PHP_EOL;
     // guardamos mallas por separado como imágenes para comprobar
     foreach($mallas as $radar => $malla) {
         storeMallaAsImage3($malla, 'malla_' . $radar . '_FL' . $nivelVuelo, $bounding);
@@ -49,8 +49,8 @@ function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('pa
     }
 
     list($malla_global, $indexes, $maxCoverage) = calculaMallaGlobal($mallas, $bounding);
-    // $b = calculaBoundingBox(array('global'=>$malla_global));
-    // print "DEBUG boundingBox malla global: " . printBoundingBox($b) . PHP_EOL;
+    $b = calculaBoundingBox(array('global'=>$malla_global));
+    print "DEBUG boundingBox malla global: " . printBoundingBox($b) . PHP_EOL;
     print "INFO maxCoverage: $maxCoverage/" . $coverageName[$maxCoverage] . PHP_EOL;
 
     // guardamos malla global como imagen para comprobar
@@ -64,7 +64,7 @@ function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('pa
 
     print "[check coverage overflow "; $timer0 = microtime(true);
     checkCoverageOverflow($malla_global);
-    printf(" %3.4fs]", microtime(true) - $timer0);
+    printf(" %3.4fs]" . PHP_EOL, microtime(true) - $timer0);
     // preparados para generar contornos
 
     // coverage level irá pasando por todas las combinaciones de radares y tipos -> mono, doble, triple...
@@ -160,35 +160,39 @@ function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('pa
     
     // calcular la cobertura única, es decir, independietemente de si es doble, triple o x, pintar
     // todo como una malla continua
+    // para poder hacer el continue/break, metemos todo en un while(true) (porque php no tiene goto)
     if ( true === $calculosMode['unica'] ) {
-        print "INFO: Calculando malla única" . PHP_EOL;
-        $malla = obtieneMallaCoberturaUnica($malla_global);
-        if ( false === $malla ) {
-            print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
-            continue;
+        while (true) {
+            print "INFO: Calculando malla única" . PHP_EOL;
+            $malla = obtieneMallaCoberturaUnica($malla_global);
+            if ( false === $malla ) {
+                print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+                break;
+            }
+            storeMallaAsImage3($malla, 'malla' . '-FL' . $nivelVuelo . "-unica", $bounding);
+    
+            $b = calculaBoundingBox(array('global'=>$malla));
+            print "DEBUG boundingBox malla nivel unico: " . printBoundingBox($b) . PHP_EOL;
+            print "[determinaContornos2 start]"; $timer0 = microtime(true);
+            $listaContornos2 = determinaContornos2($malla);
+            if ( 0 == count($listaContornos2) ) {
+                print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . "-unica" . PHP_EOL;
+                break;
+            }
+            printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
+            print "[calculaCoordenadasGeograficasC]" . PHP_EOL;
+            $listaContornos2 = calculaCoordenadasGeograficasC($flm, $listaContornos2);
+            creaKml2(
+                $listaContornos2,
+                $radares,
+                $ruta,
+                $fl,
+                $altMode,
+                $appendToFilename = "",
+                "unica" /*pintamos la cobertura única con el color de la mono*/
+            );
+            break;
         }
-        storeMallaAsImage3($malla, 'malla' . '-FL' . $nivelVuelo . "-unica", $bounding);
-
-        // $b = calculaBoundingBox(array('global'=>$malla));
-        // print "DEBUG boundingBox malla nivel unico: " . printBoundingBox($b) . PHP_EOL;
-        print "[determinaContornos2 start]"; $timer0 = microtime(true);
-        $listaContornos2 = determinaContornos2($malla);
-        if ( 0 == count($listaContornos2) ) {
-            print "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . "-unica" . PHP_EOL;
-            continue;
-        }
-        printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
-        print "[calculaCoordenadasGeograficasC]" . PHP_EOL;
-        $listaContornos2 = calculaCoordenadasGeograficasC($flm, $listaContornos2);
-        creaKml2(
-            $listaContornos2,
-            $radares,
-            $ruta,
-            $fl,
-            $altMode,
-            $appendToFilename = "",
-            "unica" /*pintamos la cobertura única con el color de la mono*/
-        );
     }
 
     return true;
@@ -206,7 +210,7 @@ function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('pa
  * de las filas y las columnas.
  *
  * @param array $mallas array con las mallas individuales
- * @return array límites máximos y mínimos para latitud y longitud
+ * @return array límites máximos y mínimos para latitud y longitud de cobertura, y limites sup,inf,right,left para los bordes reales de la malla
  */
 function calculaBoundingBox($mallas) {
     $timer0 = microtime(true);
@@ -226,12 +230,13 @@ function calculaBoundingBox($mallas) {
         // hay que sumarle uno al máximo y restarle uno al
         // mínimo.
         $lats_keys = array_keys($malla);
-        $lat_sup = max(array_merge($lats_keys, array($lat_sup)));
-        $lat_inf = min(array_merge($lats_keys, array($lat_inf)));
+        // print_r($malla);
+        $lat_sup = max(array_merge($lats_keys, array($lat_sup))); // cogemos la mayor de las latitudes
+        $lat_inf = min(array_merge($lats_keys, array($lat_inf))); // cogemos la menor de las latitudes
         foreach ($malla as $lat => $lons) {
             $lons_keys = array_keys($lons);
-            $lon_lef = min(array_merge($lons_keys, array($lon_lef)));
-            $lon_rig = max(array_merge($lons_keys, array($lon_rig)));
+            $lon_rig = max(array_merge($lons_keys, array($lon_rig))); // cogemos la mayor de las longitudes
+            $lon_lef = min(array_merge($lons_keys, array($lon_lef))); // cogemos la menor de las lontigudes
             foreach ($lons as $lon => $hayCobertura) {
                 if ( 0 != $hayCobertura ) {
                     // antes simplemente se guardaba la posición del punto con cobertura
@@ -246,7 +251,7 @@ function calculaBoundingBox($mallas) {
                     if ( !isset($lat_dupes[$lat]) ) {
                         $lat_dupes[$lat] = true;
                         $lat_index_next = array_search($lat, $lats_keys) + 1;
-                        $lat_index_prev = array_search($lat, $lats_keys) - 1;
+                        $lat_index_prev = array_search($lat, $lats_keys) - 2; // turrillas a 150NM la lat inferior no es suficiente con quitar 1
                         if ( isset($lats_keys[$lat_index_next]) )
                             $lats_maxmin[$lats_keys[$lat_index_next]] = true;
                         if ( isset($lats_keys[$lat_index_prev]) )
@@ -256,8 +261,8 @@ function calculaBoundingBox($mallas) {
                     }
                     if ( !isset($lon_dupes[$lon]) ) {
                         $lon_dupes[$lon] = true;
-                        $lon_index_next = array_search($lon, $lons_keys) + 1;
-                        $lon_index_prev = array_search($lon, $lons_keys) - 1;                    
+                        $lon_index_next = array_search($lon, $lons_keys) + 2; // por la derecha y por abajo hay que ampliar un poco mas
+                        $lon_index_prev = array_search($lon, $lons_keys) - 1; // dada la forma de interpolar que utilizamos
                         if ( isset($lons_keys[$lon_index_next]) )
                             $lons_maxmin[$lons_keys[$lon_index_next]] = true;
                         if ( isset($lons_keys[$lon_index_prev]) )
@@ -270,8 +275,9 @@ function calculaBoundingBox($mallas) {
     }
     print " " . round(microtime(true) - $timer0, 4) . "s]" . PHP_EOL;
 
-    if ( count($lats_maxmin) == 0 || count($lons_maxmin) == 0 )
-        return false;
+    if ( count($lats_maxmin) == 0 || count($lons_maxmin) == 0 ) {
+        die("ERROR malla vacia" . PHP_EOL);
+    }
 
     return array(
         'lat_max' => max(array_keys($lats_maxmin)),
@@ -562,10 +568,14 @@ function obtieneMallaPorRadar($malla, $radarBits) {
  * @return string cadena con los límites formateados
  */
 function printBoundingBox($bounding) {
-    $ret = "" .
-        "lat_max:" . $bounding['lat_max'] . "c (" . round($bounding['lat_max']/REDONDEO_LATLON,3) . "º) " .
-        "lon_max:" . $bounding['lon_max'] . "c (" . round($bounding['lon_max']/REDONDEO_LATLON,3) . "º) " .
-        "lat_min:" . $bounding['lat_min'] . "c (" . round($bounding['lat_min']/REDONDEO_LATLON,3) . "º) " .
-        "lon_min:" . $bounding['lon_min'] . "c (" . round($bounding['lon_min']/REDONDEO_LATLON,3) . "º)";
+    $ret = "" . PHP_EOL . 
+        "\tlat_max:" . $bounding['lat_max'] . "c (" . round($bounding['lat_max']/REDONDEO_LATLON,3) . "º) " .
+        "lon_max:" .   $bounding['lon_max'] . "c (" . round($bounding['lon_max']/REDONDEO_LATLON,3) . "º) " .
+        "lat_min:" .   $bounding['lat_min'] . "c (" . round($bounding['lat_min']/REDONDEO_LATLON,3) . "º) " .
+        "lon_min:" .   $bounding['lon_min'] . "c (" . round($bounding['lon_min']/REDONDEO_LATLON,3) . "º)" . PHP_EOL .
+        "\tlat_sup:" . $bounding['lat_sup'] . "c (" . round($bounding['lat_sup']/REDONDEO_LATLON,3) . "º) " .
+        "lon_rig:" .   $bounding['lon_rig'] . "c (" . round($bounding['lon_rig']/REDONDEO_LATLON,3) . "º) " .
+        "lat_inf:" .   $bounding['lat_inf'] . "c (" . round($bounding['lat_inf']/REDONDEO_LATLON,3) . "º) " .
+        "lon_lef:" .   $bounding['lon_lef'] . "c (" . round($bounding['lon_lef']/REDONDEO_LATLON,3) . "º)";
     return $ret;
 }
