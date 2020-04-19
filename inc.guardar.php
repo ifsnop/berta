@@ -224,7 +224,7 @@ function generateMatlabFiles($radar, $rutaResultados) {
     crearCarpetaResultados($rutaCoordenadas);
 
     if ( 0 == strlen($radar['screening_file']) )
-        continue;
+        return;
 
     @unlink($rutaTerrenos.$radar['screening_file']['site'].".txt");
     if ( false === copy($radar['screening_file'], $rutaTerrenos.$radar['screening']['site'] . ".txt") )
@@ -466,8 +466,6 @@ function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
 '            </MultiGeometry>
         </Placemark>
         </Document></kml>';
-
-
 
     $kml = $kmlHeader;
     foreach( $polygons as &$polygon ) {
