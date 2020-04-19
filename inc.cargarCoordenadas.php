@@ -18,9 +18,14 @@ function getRadars($eval_dir, $parse_all = false) {
     $radars = array();
 
     print "cargando la información de los radares de >$eval_dir<";
+
+    if ( !file_exists($eval_dir) ) {
+        die(PHP_EOL . "ERROR path >$eval_dir< doesn't exist" . PHP_EOL);
+    }
+
     if ( false === $parse_all) {  
 	// obtenemos el nombre del fichero que contiene todos los radares activos en la evaluación
-	exec("/usr/bin/find $eval_dir -name  \"recording_details.par\" | grep -v \\.eva 2> /dev/null", $recording_details_file);
+	exec("/usr/bin/find $eval_dir -name  \"recording_details.par\" | grep -v \"\\.eva\" | grep -v \"\\.cfg\" 2> /dev/null", $recording_details_file);
 	if ( 0 == count($recording_details_file) ) {
             die("ERROR couldn't find recording_details.par inside $eval_dir" . PHP_EOL);
 	}

@@ -14,6 +14,19 @@ include_once('inc.multiCalculos.php');
 include_once('inc.guardar.php');
 // include_once('MartinezRueda/Algorithm.php');
 
+$config = array(
+    'lugares' => array(
+        "paracuellos1",
+        "alcolea",
+        "monflorite"
+    ),
+    'path' => "spain.tsk/",
+);
+
+if ( file_exists('inc.config.php') ) {
+    include_once('inc.config.php');
+}
+
 // DEFINICIÓN DE CONSTANTES
 CONST RADIO_TERRESTRE = 6371000;
 CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
@@ -68,7 +81,7 @@ programaPrincipal();
 exit(0);
 
 function printHelp() {
-    print "-r radar_list     | --radar-list radar_list (lista entre comillas)" . PHP_EOL;
+    print "-r radar_list     | --radar-list radar_list (lista entre comillas, si lista vacía coje todos los disponibles)" . PHP_EOL;
     print "-m max_range      | --max-range max_range (in NM)" . PHP_EOL;
     print "-1 (default)      | --monoradar (default)" . PHP_EOL;
     print "-2                | --multiradar" . PHP_EOL;
@@ -77,16 +90,15 @@ function printHelp() {
     print "                  | --no-rascal" . PHP_EOL;
     print "   -p             | --parcial (multicobertura por radar y tipo->mono,doble,triple...)" . PHP_EOL;
     print "-f                | --force (ignore cache)" . PHP_EOL;
-    print "-l                | --list" . PHP_EOL;
+    print "-l                | --list (of available radars)" . PHP_EOL;
     print "-s min,max,step   | --steps min,max,step (in FL)" . PHP_EOL;
     print "-h                | --help" . PHP_EOL;
     return;
 }
 
 function programaPrincipal(){
-    global $argv, $argc;
+    global $argv, $argc, $config;
     // default values, calculate everything
-    $lugares = explode(" ", "aitana alcolea alicante alicantetwr_adsb aspontes auchlias barajas barcelona barcelona-psr begas begas-psr biarritz bilbaotwr_adsb canchoblanco canchoblanco_adsb ced_adsb elgoro eljudio eljudio-psr erillas espineiras espineiras-psr foia fuerteventura gazules girona grancanaria grancanaria-psr inoges lapalma malaga1 malaga2 malaga2-psr monflorite montecodi montejunto montpellier motril lanzarote lanzarote_adsb palmamallorca palmamallorca-psr paracuellos1 paracuellos1-psr paracuellos2 paracuellos2-psr penaschache penaschachemil portosanto pozonieves randa randa-psr randa_asdb sierraespuna soller solorzano taborno tanger tenerifesur tenerifesur-psr turrillas turrillas_adsb valdespina valencia valencia-psr valladolid villatobas");
     $flMin = 1;
     $flMax = 400;
     $paso = 1;
@@ -121,13 +133,16 @@ function programaPrincipal(){
                 break;
             case 'list':
             case 'l':
-                print_r( $lugares );
+                print_r( $config['lugares'] );
                 exit(0);
                 break;
             case 'radar-list':
             case 'r':
-                $lugares = explode( " ", $value );
-                print "INFO Ejecutando con la siguiente selección de radar(es) [" . implode(",", $lugares) . "]" . PHP_EOL;
+                var_dump($value);
+                if ( "" != $value ) {
+                    $config['lugares'] = explode( " ", $value );
+                } // else coje la lista completa por defecto
+                print "INFO Ejecutando con la siguiente selección de radar(es) [" . implode(",", $config['lugares']) . "]" . PHP_EOL;
                 break;
             case 'max-range':
             case 'm':
@@ -146,6 +161,8 @@ function programaPrincipal(){
                 break;
             case '1':
             case 'monoradar':
+                $modo = 'monoradar';
+                print "INFO Modo *monoradar* activado" . PHP_EOL;
                 break;
             case '2':
             case 'multiradar':
@@ -181,11 +198,10 @@ function programaPrincipal(){
         }
     }
 
-    $path = "/home/eval/%rassv6%/spain.tsk";
     $rutaResultados = "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR;
     $poligono = false;
     $altMode = altitudeModetoString($altitudeMode = 0);
-    $infoCoral = getRadars($path, $parse_all = true);
+    $infoCoral = getRadars($config['path'], $parse_all = true);
 
     print "INFO Pasos configurados (min,max,paso): (${flMin},${flMax},${paso})" . PHP_EOL;
 
@@ -193,7 +209,7 @@ function programaPrincipal(){
 
     //pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
     // recorremos todas las localizaciones que nos ha dado el usuario
-    foreach($lugares as $lugar) {
+    foreach($config['lugares'] as $lugar) {
         print "INFO Procesando $lugar" . PHP_EOL;
         $lugar = strtolower($lugar);
         // carga el fichero de screening en memoria
