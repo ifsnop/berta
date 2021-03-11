@@ -20,7 +20,7 @@ $config = array(
         "alcolea",
         "monflorite"
     ),
-    'path' => "spain.tsk/",
+    'radar-database' => "spain.tsk/",
 );
 
 if ( file_exists('inc.config.php') ) {
@@ -91,7 +91,8 @@ function printHelp() {
     print "   -p             | --parcial (multicobertura por radar y tipo->mono,doble,triple...)" . PHP_EOL;
     print "-f                | --force (ignore cache)" . PHP_EOL;
     print "-l                | --list (of available radars)" . PHP_EOL;
-    print "-s min,max,step   | --steps min,max,step (in FL)" . PHP_EOL;
+    print "-d                | --radar-data (path of radar_data.rbk, default ./spain.tsk)" . PHP_EOL;
+    print "-s min,max,step   | --steps min,max,step (in FL) default (1,400,1)" . PHP_EOL;
     print "-h                | --help" . PHP_EOL;
     return;
 }
@@ -116,9 +117,10 @@ function programaPrincipal(){
     // $shortopts .= "r"; // multi rascal <- choca con radar name
     $shortopts .= "f"; // forzado (ignorar cache)
     $shortopts .= "l"; // list available radars
+    $shortopts .= "d:"; // radar database path
     $shortopts .= "h"; // help
     $shortopts .= "s:"; // steps
-    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "help", "steps:" );
+    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:" );
     $options = getopt( $shortopts, $longopts );
     if ( 0 == count($options) ) {
         printHelp();
@@ -136,6 +138,10 @@ function programaPrincipal(){
                 print_r( $config['lugares'] );
                 exit(0);
                 break;
+            case 'radar-data':
+            case 'd':
+		$config['radar-data'] = $value;
+		break;
             case 'radar-list':
             case 'r':
                 var_dump($value);
@@ -201,7 +207,7 @@ function programaPrincipal(){
     $rutaResultados = "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR;
     $poligono = false;
     $altMode = altitudeModetoString($altitudeMode = 0);
-    $infoCoral = getRadars($config['path'], $parse_all = true);
+    $infoCoral = getRadars($config['radar-data'], $parse_all = true);
 
     print "INFO Pasos configurados (min,max,paso): (${flMin},${flMax},${paso})" . PHP_EOL;
 

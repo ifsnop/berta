@@ -21,10 +21,9 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
         print_r($radar);
         die("ERROR no ha sido posible leer el fichero: >" . $radar['screening'] . "<" . PHP_EOL);
     }
-
     // TRATAMIENTO DE LA INFORMACION CAPTURADA (Primera parte del fichero)
     $screening = array(
-        'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
+	'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
 	'k-factor' 	=> doubleval(substr(trim($contenidoFichero[1]), DISTANCIA_A_K_FACTOR)),
 	'method'   	=> doubleval(substr(trim($contenidoFichero[2]), DISTANCIA_A_METHOD)),
 	'towerHeight' 	=> doubleval(substr(trim($contenidoFichero[3]), DISTANCIA_A_TOWER_HEIGHT)),
