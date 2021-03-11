@@ -129,7 +129,7 @@ function writeKMZ($fileName, $radarWithFL, $content) {
  * @return boolean, para comprobar si la funcion a tenido exito o no (SALIDA)
  */
 function crearCarpetaResultados($ruta) {
-	
+
     if ( !is_dir( $ruta ) ) {
         //clearstatcache();
         //$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
@@ -456,7 +456,7 @@ function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
     $kmlPolygonFooter_1 = PHP_EOL .
 '                </coordinates></LinearRing></outerBoundaryIs>';
 
-    $kmlPolygonFooter_2 = PHP_EOL . 
+    $kmlPolygonFooter_2 = PHP_EOL .
 '                </Polygon>';
 
     $kmlInnerHeader = '<innerBoundaryIs><LinearRing><coordinates>';
@@ -482,7 +482,7 @@ function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
         foreach ( $polygon['inside'] as &$polygons_inside ) {
             $kmlInner = "";
             foreach ($polygons_inside['polygon'] as &$p_inside) {
-                $kmlInner .=  $p[1] . "," . $p[0] . "," . $p[2] . " ";
+                $kmlInner .=  $p_inside[1] . "," . $p_inside[0] . "," . $p_inside[2] . " ";
             }
             if ( "" != $kmlInner ) {
                 $kml .= $kmlInnerHeader . PHP_EOL . $kmlInner . PHP_EOL . $kmlInnerFooter;
