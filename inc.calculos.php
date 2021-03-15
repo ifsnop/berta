@@ -1345,7 +1345,10 @@ function determinaContornos2_joinContornos($c) {
     // polígono actual
     $nFixed = array();
     // cogemos el primer segmento de la lista de normales
-    list($vertex1, $vertex2) = each($nDirNor); array_shift($nDirNor);
+    // print_r($nDirNor);exit(0);
+    // list($vertex1, $vertex2) = each($nDirNor); array_shift($nDirNor); // each is deprecated
+    $vertex1 = key($nDirNor); $vertex2 = current($nDirNor); array_shift($nDirNor);
+
     // print PHP_EOL . $vertex1 . "=>" . $vertex2 . PHP_EOL;
     list($x1, $y1) = explode(";", $vertex1); list($x2, $y2) = explode(";", $vertex2);
     // lo insertamos en la lista de definitivos, buscando leftCorner de lo que será el polígono
@@ -1376,7 +1379,7 @@ function determinaContornos2_joinContornos($c) {
             count($nDirOver3)+
             count($nInvOver3)
             ) > 0 ) {
-        $cuentaActual = count($nDirNor) + count($nDirOver1)  + count($nDirOver2) + count($nDirOver3);
+        $cuentaActual = count($nDirNor) + count($nDirOver1) + count($nDirOver2) + count($nDirOver3);
         // buscamos el siguiente segmento, solo estará en uno de los cuatro
         $found = false;
         $vertex1 = $vertex2;
@@ -1418,21 +1421,29 @@ function determinaContornos2_joinContornos($c) {
             $nFixed = array();
             // buscamos la lista que todavía tenga elementos y escogemos uno
             if ( count($nDirNor) > 0 ) {
-                list($vertex1, $vertex2) = each($nDirNor); array_shift($nDirNor);
+		$vertex1 = key($nDirNor); $vertex2 = current($nDirNor); array_shift($nDirNor);
+                // list($vertex1, $vertex2) = each($nDirNor); array_shift($nDirNor);
             } elseif ( count($nDirOver1) > 0 ) {
-                list($vertex1, $vertex2) = each($nDirOver1); array_shift($nDirOver1);
+		$vertex1 = key($nDirOver1); $vertex2 = current($nDirOver1); array_shift($nDirOver1);
+                // list($vertex1, $vertex2) = each($nDirOver1); array_shift($nDirOver1);
             } elseif ( count($nInvNor) > 0 ) {
-                list($vertex1, $vertex2) = each($nInvNor); array_shift($nInvNor);
+		$vertex1 = key($nInvNor); $vertex2 = current($nInvNor); array_shift($nInvNor);
+                // list($vertex1, $vertex2) = each($nInvNor); array_shift($nInvNor);
             } elseif ( count($nInvOver1) > 0 ) {
-                list($vertex1, $vertex2) = each($nInvOver1); array_shift($nInvOver1);
+		$vertex1 = key($nInvOver1); $vertex2 = current($nInvOver1); array_shift($nInvOver1);
+                // list($vertex1, $vertex2) = each($nInvOver1); array_shift($nInvOver1);
             } elseif ( count($nDirOver2) > 0 ) {
-                list($vertex1, $vertex2) = each($nDirOver2); array_shift($nDirOver2);
+		$vertex1 = key($nDirOver2); $vertex2 = current($nDirOver2); array_shift($nDirOver2);
+                // list($vertex1, $vertex2) = each($nDirOver2); array_shift($nDirOver2);
             } elseif ( count($nInvOver2) > 0 ) {
-                list($vertex1, $vertex2) = each($nInvOver2); array_shift($nInvOver2);
+		$vertex1 = key($nInvOver2); $vertex2 = current($nInvOver2); array_shift($nInvOver2);
+                // list($vertex1, $vertex2) = each($nInvOver2); array_shift($nInvOver2);
             } elseif ( count($nDirOver3) > 0 ) {
-                list($vertex1, $vertex2) = each($nDirOver3); array_shift($nDirOver3);
+		$vertex1 = key($nDirOver3); $vertex2 = current($nDirOver3); array_shift($nDirOver3);
+                // list($vertex1, $vertex2) = each($nDirOver3); array_shift($nDirOver3);
             } elseif ( count($nInvOver3) > 0 ) {
-                list($vertex1, $vertex2) = each($nInvOver3); array_shift($nInvOver3);
+		$vertex1 = key($nInvOver3); $vertex2 = current($nInvOver3); array_shift($nInvOver3);
+                // list($vertex1, $vertex2) = each($nInvOver3); array_shift($nInvOver3);
             }
             list($x1, $y1) = explode(";", $vertex1); list($x2, $y2) = explode(";", $vertex2);
             // print "NEW LIST" . PHP_EOL . $vertex1 . "=>" . $vertex2 . PHP_EOL;
@@ -1445,7 +1456,7 @@ function determinaContornos2_joinContornos($c) {
 
             // borramos el inverso del segmento que acabamos de coger (tiene que ser igual key y value!)
             $assert = 0;
-            if ( isset($nDirNor[$vertex2]) && ($nDirNor[$vertex2]==$vertex1) ) { unset($nDirNor[$vertex2]); $assert++; }
+            if ( isset($nDirNor[$vertex2]) && ($nDirNor[$vertex2] == $vertex1) ) { unset($nDirNor[$vertex2]); $assert++; }
             elseif ( isset($nDirOver1[$vertex2]) && ($nDirOver1[$vertex2]==$vertex1) ) { unset($nDirOver1[$vertex2]); $assert++; }
             elseif ( isset($nInvNor[$vertex2]) && ($nInvNor[$vertex2]==$vertex1) ) { unset($nInvNor[$vertex2]); $assert++; }
             elseif ( isset($nInvOver1[$vertex2]) && ($nInvOver1[$vertex2]==$vertex1) ) { unset($nInvOver1[$vertex2]); $assert++; }

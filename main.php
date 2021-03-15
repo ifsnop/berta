@@ -237,7 +237,7 @@ function programaPrincipal(){
 
 	$radar = cargarDatosTerreno( $infoCoral[$lugar], $range );
 
-        if ( true ) {
+        if ( false ) {
             // para la herramienta de cálculo de kmz de matlab
             generateMatlabFiles($radar, $rutaResultados);
             //continue;
@@ -307,7 +307,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'mo
         $radar['screening']['range'] = round($newRange);
         $radar['range'] = round($newRange);
         $listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
-        	
+
         // codigo para generar malla por encima para la multicobertura
         // con listaContornos2 ya podemos generar una cobertura vectorial
         $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
