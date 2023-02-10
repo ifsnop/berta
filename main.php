@@ -20,7 +20,7 @@ $config = array(
         "alcolea",
         "monflorite"
     ),
-    'radar-database' => "spain.tsk/",
+    'radar-data' => "spain.tsk/",
 );
 
 if ( file_exists('inc.config.php') ) {
@@ -32,6 +32,7 @@ CONST RADIO_TERRESTRE = 6371000;
 CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
 CONST GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 CONST GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
+CONST ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
 
 /*
 $prueba = array(
@@ -93,6 +94,7 @@ function printHelp() {
     print "-l                | --list (of available radars)" . PHP_EOL;
     print "-d                | --radar-data (path of radar_data.rbk, default ./spain.tsk)" . PHP_EOL;
     print "-s min,max,step   | --steps min,max,step (in FL) default (1,400,1)" . PHP_EOL;
+    print "-c                | --calculo-cono (activa cálculo del cono de silencio)" . PHP_EOL;
     print "-h                | --help" . PHP_EOL;
     return;
 }
@@ -106,6 +108,7 @@ function programaPrincipal(){
     $maxRange = false;
     $force = false;
     $modo = 'monoradar';
+    $calculoCono = false;
     $calculosMode = array('unica' => false, 'parcial' => false, 'rascal' => true);
 
     $shortopts  = "r:"; // radar name
@@ -120,7 +123,8 @@ function programaPrincipal(){
     $shortopts .= "d:"; // radar database path
     $shortopts .= "h"; // help
     $shortopts .= "s:"; // steps
-    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:" );
+    $shortopts .= "c"; // cálculo del cono
+    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "calculo-cono" );
     $options = getopt( $shortopts, $longopts );
     if ( 0 == count($options) ) {
         printHelp();
@@ -144,12 +148,17 @@ function programaPrincipal(){
 		break;
             case 'radar-list':
             case 'r':
-                var_dump($value);
+                // var_dump($value);
                 if ( "" != $value ) {
                     $config['lugares'] = explode( " ", $value );
                 } // else coje la lista completa por defecto
                 print "INFO Ejecutando con la siguiente selección de radar(es) [" . implode(",", $config['lugares']) . "]" . PHP_EOL;
                 break;
+	    case 'calculo-cono':
+	    case 'c':
+		$calculoCono = true;
+		print "INFO Implementando cálculo de cono de silencio en cobertura" . PHP_EOL;
+		break;
             case 'max-range':
             case 'm':
                 $maxRange = $value;
@@ -173,6 +182,11 @@ function programaPrincipal(){
             case '2':
             case 'multiradar':
                 $modo = 'multiradar';
+		$testGD = get_extension_funcs("gd"); // grab function list
+		if ( !$testGD ) {
+		    print "ERROR la extensión GD para PHP no está instalada" . PHP_EOL;
+		    exit(1);
+		}
                 print "INFO Modo *multiradar* activado" . PHP_EOL;
                 break;
             case 'u':
@@ -240,7 +254,7 @@ function programaPrincipal(){
         if ( false ) {
             // para la herramienta de cálculo de kmz de matlab
             generateMatlabFiles($radar, $rutaResultados);
-            //continue;
+            // continue;
         }
 
         $ruta = array();
@@ -293,7 +307,7 @@ function programaPrincipal(){
 /*
  * @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
  */
-function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'monoradar') {
+function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono = false) { //, $modo = 'monoradar') {
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
     $flm = $fl*100*FEET_TO_METERS; // fl en metros
@@ -301,16 +315,80 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'mo
     // DISTINCIÓN DE CASOS 
     if ( $flm >= $hA ) { // CASO A (nivel de vuelo por encima de la posición del radar)
         // inicio para calculo por encima con método vectorial
+	// se devuelve para cada azimut, la distancia más lejana
         $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
-
+	if ( $calculoCono ) {
+	    $radioConom = ($flm-$hA)*tan(deg2rad(ANGULO_CONO));
+	    $radioCono = $radioConom / MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
+	    $distanciasConos = array_fill(0, count($distanciasAlcances), $radioCono);
+	    printf("[radioCono %3.2fNM / %3.2fm]", $radioCono, $radioConom);
+	}
         $newRange = obtieneMaxAnguloConCoberturaA($distanciasAlcances);
         $radar['screening']['range'] = round($newRange);
         $radar['range'] = round($newRange);
+	
         $listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
+	if ( $calculoCono ) {
+	    $listaContornosConos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasConos);
+	}
+/*
+	// todo esto no nos hace falta, ya sabemos que la lista exterior de alcances va a estar
+	// CW y tenemos que invertirla (porque se calcula siguiendo los azimut de 0 a 360ª)
+	// y la interior igual.
+
+	// vamos a comprobar la orientación, recordemos que para un kml deberíamos tener:
+	// * exterior rings: counter-clockwise
+	// * interior rings (holes): clockwise direction
+	// buscamos el punto más a la izquiera y abajo para llamar al cálculo de la orientación
+	$listaContornosConos2[0]['polygon'] = array_reverse($listaContornosConos2[0]['polygon']);
+
+	$leftCorner = array(
+	    'xMin' => $listaContornos2[0]['polygon'][0]['lon'],
+	    'yMin' => $listaContornos2[0]['polygon'][0]['lat'],
+	    'key' => 0
+	);
+	foreach($listaContornos2[0]['polygon'] as $k => $vertex) {
+	    $leftCorner = findLeftCorner($vertex['lon'], $vertex['lat'], $leftCorner, false, $k);
+	}
+	// para el cono de silencio, al ser un círculo, leftCorner siempre será el azimuth 270º,
+	// o 540 si estamos con pasos de 0.5º)
+	$orientacion = comprobarOrientacion( $listaContornos2[0]['polygon'], $leftCorner );
+	// bool true = CCW, false = CW
+	if ( $orientacion ) print "[orientación listaContornos2: CCW]"; else print "[orientación listaContornos2: CW]";
+
+	$leftCorner = array(
+	    'xMin' => $listaContornosConos2[0]['polygon'][0]['lon'],
+	    'yMin' => $listaContornosConos2[0]['polygon'][0]['lat'],
+	    'key' => 0
+	);
+	foreach($listaContornosConos2[0]['polygon'] as $k => $vertex) {
+	    $leftCorner = findLeftCorner($vertex['lon'], $vertex['lat'], $leftCorner, false, $k);
+	}
+	// para el cono de silencio, al ser un círculo, leftCorner siempre será el azimuth 270º,
+	// o 540 si estamos con pasos de 0.5º)
+	$orientacion = comprobarOrientacion( $listaContornosConos2[0]['polygon'], $leftCorner );
+	// bool true = CCW, false = CW
+	if ( $orientacion ) print "[orientación listaContornosConos2: CCW]"; else print "[orientación listaContornosConos2: CW]";
+	if ( $orientacion ) {
+	    array_reverse($listaContornosConos2[0]['polygon']);
+	}
+*/
+	$listaContornos2[0]['polygon'] = array_reverse($listaContornos2[0]['polygon']);
+
+	// si el nivel de vuelo por encima de la posición del radar, sólo hay 1 polígono
+	if ( $calculoCono ) {
+	    $listaContornosConos2[0]['level'] = 1;
+	    $listaContornos2[0]['inside'] = array( ( $listaContornosConos2[0]) );
+	}
+	// print_r($distanciasAlcances); exit(0);
+	// print_r($distanciasConos); exit(0);
+	// print_r($listaContornos2); exit(0);
+	// print_r($listaContornos2); exit(0);
 
         // codigo para generar malla por encima para la multicobertura
         // con listaContornos2 ya podemos generar una cobertura vectorial
         $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
+	// $mallado['mallaLatLon'] = false;
 
         // print_r(array_keys($mallado['mallaLatLon']));exit(0);
         // con esto generamos cobertura matricial en el kml, que no creo que sea
@@ -359,9 +437,9 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode) { //, $modo = 'mo
 	    return false;
 	}
 	printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
-
         print "[calculaCoordenadasGeograficasB]";
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
+	// print_r($listaContornos2); exit(0);
     }
     print "[crearKml]" . PHP_EOL;
     creaKml2(

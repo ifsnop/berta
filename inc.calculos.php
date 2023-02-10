@@ -107,7 +107,7 @@ function calculosFLencimaRadar($radar, $flm ){
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm); // AlphaRange en Matlab
     $earthToFl = $radioTerrestreAumentado + $flm;
     $earthToRadar = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'] + $radioTerrestreAumentado;
-	
+
     // recorremos los azimuths
     for ( $i=0; $i < $radar['screening']['totalAzimuths']; $i++ ) {
 
@@ -1580,7 +1580,7 @@ function determinaContornos2_joinContornos($c) {
 /**
  * Helper de determinaContornos2. Ordena la jerarquía de una lista de
  * contornos cerrados, para saber quién depende de quién. También rota
- *los contornos dependiendo de si están dentro o fuera de otro.
+ * los contornos dependiendo de si están dentro o fuera de otro.
  * @param array $contorno lista de contornos cerrados (ENTRADA)
  * @return array jerarquía de contornos ya clasificados y rotados
  */
@@ -1695,7 +1695,7 @@ function determinaContornos2_sortContornos($listaContornos) {
  * @param array $malla (ENTRADA)
  * @return array $listaContornos (SALIDA)
  */
-function determinaContornos2($malla){
+function determinaContornos2($malla) {
 
     //if ( NULL === ($listaContornos = json_decode(@file_get_contents("turrillas.json"), true)) ) {
         $c = determinaContornos2_getContornos($malla);
@@ -1822,9 +1822,23 @@ function comprobarOrientacion($contornoFixed, $leftCorner) {
 
     // 0 1 2 3 4 5 6 7   8
     //               ^
-    $xA = $contornoFixed[(($k-1) + $n) % $n]['fila']; $yA = $contornoFixed[(($k-1) + $n) % $n]['col'];
-    $xB = $contornoFixed[$k]['fila']; $yB = $contornoFixed[$k]['col'];
-    $xC = $contornoFixed[($k+1) % $n]['fila']; $yC = $contornoFixed[($k+1) % $n]['col'];
+    // cuando lo llamamos para contornos creados de malla, trabajamos con fila/col, pero
+    // si el contorno viene directamente una cobertura por encima del radar, tendremos
+    // lat/lon
+    if ( !isset($contornoFixed[0]['fila']) ) {
+	// $fila = 'lat'; $col = 'lon';
+	$fila = 'lon'; $col = 'lat'; //después de varias pruebas, esto debe ser así
+    } else {
+	$fila = 'fila'; $col = 'col';
+    }
+
+//    $xA = $contornoFixed[(($k-1) + $n) % $n]['fila']; $yA = $contornoFixed[(($k-1) + $n) % $n]['col'];
+//    $xB = $contornoFixed[$k]['fila']; $yB = $contornoFixed[$k]['col'];
+//    $xC = $contornoFixed[($k+1) % $n]['fila']; $yC = $contornoFixed[($k+1) % $n]['col'];
+    $xA = $contornoFixed[(($k-1) + $n) % $n][$fila]; $yA = $contornoFixed[(($k-1) + $n) % $n][$col];
+    $xB = $contornoFixed[$k][$fila]; $yB = $contornoFixed[$k][$col];
+    $xC = $contornoFixed[($k+1) % $n][$fila]; $yC = $contornoFixed[($k+1) % $n][$col];
+
     $det = (( $xB - $xA )*( $yC - $yA )) - (( $xC - $xA )*( $yB - $yA ));
 
     if ( $det>0 )
