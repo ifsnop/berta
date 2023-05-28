@@ -108,6 +108,8 @@ class Algorithm
     {
         // https://github.com/darthmelak/martinez-rueda-php/commit/29340d1284bf8572f2a906fbe74b5d10116c6632
         $result = null;
+	// https://github.com/BardoQi/polygon_utils/commit/1e46be8861603b7b1fc66432298b6cc58e0a7807
+	$result = new Polygon(array());
 
         // Test for 1 trivial result case
         if ($subject->ncontours() * $clipping->ncontours() == 0) {

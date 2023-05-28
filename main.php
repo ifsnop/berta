@@ -12,15 +12,24 @@ include_once('inc.conrec.php');
 include_once('inc.calculos.php');
 include_once('inc.multiCalculos.php');
 include_once('inc.guardar.php');
-// include_once('MartinezRueda/Algorithm.php');
+include_once('MartinezRueda/Algorithm.php');
 
 $config = array(
-    'lugares' => array(
+    'sensores' => array(
         "paracuellos1",
         "alcolea",
         "monflorite"
     ),
     'radar-data' => "spain.tsk/",
+    'fl' => array('min' => 1, 'max' => 400, 'step' => 1),
+    'cone' => false,
+    'max-range' => false,
+    'force' => false,
+    'path' => array(
+	'resultados' => "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR,
+	'cache' => "." . DIRECTORY_SEPARATOR . "cache" . DIRECTORY_SEPARATOR,
+    ),
+    'mode' => array(), // monoradar, multiradar
 );
 
 if ( file_exists('inc.config.php') ) {
@@ -77,40 +86,33 @@ creaKml2($listaContornos2, "PRUEBA", array("./"), 100, "absolute");
 //printContornos($listaContornos2, $prueba);
 exit(0);
 */
+
 programaPrincipal();
+
+logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " . "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
 exit(0);
 
 function printHelp() {
     print "-r radar_list     | --radar-list radar_list (lista entre comillas, si lista vacía coje todos los disponibles)" . PHP_EOL;
-    print "-m max_range      | --max-range max_range (in NM)" . PHP_EOL;
+    print "-m max_range      | --max-range (alcance máximo en NM)" . PHP_EOL;
     print "-1 (default)      | --monoradar (default)" . PHP_EOL;
     print "-2                | --multiradar" . PHP_EOL;
     print "   -u             | --unica (multicobertura como una sola suma de todas)" . PHP_EOL;
     print "   -r (default)   | --rascal (multicobertura estilo rascal)" . PHP_EOL;
     print "                  | --no-rascal" . PHP_EOL;
     print "   -p             | --parcial (multicobertura por radar y tipo->mono,doble,triple...)" . PHP_EOL;
-    print "-f                | --force (ignore cache)" . PHP_EOL;
-    print "-l                | --list (of available radars)" . PHP_EOL;
+    print "-f                | --force (ignora cache)" . PHP_EOL;
+    print "-l                | --list (lista radares disponibles)" . PHP_EOL;
     print "-d                | --radar-data (path of radar_data.rbk, default ./spain.tsk)" . PHP_EOL;
     print "-s min,max,step   | --steps min,max,step (in FL) default (1,400,1)" . PHP_EOL;
-    print "-c                | --calculo-cono (activa cálculo del cono de silencio)" . PHP_EOL;
+    print "-c                | --cone (activa cálculo del cono de silencio)" . PHP_EOL;
     print "-h                | --help" . PHP_EOL;
     return;
 }
 
 function programaPrincipal(){
     global $argv, $argc, $config;
-    // default values, calculate everything
-    $flMin = 1;
-    $flMax = 400;
-    $paso = 1;
-    $maxRange = false;
-    $force = false;
-    $modo = 'monoradar';
-    $calculoCono = false;
-    $calculosMode = array('unica' => false, 'parcial' => false, 'rascal' => true);
-
     $shortopts  = "r:"; // radar name
     $shortopts .= "m:"; // max range in NM
     $shortopts .= "1"; // modo monoradar
@@ -124,7 +126,7 @@ function programaPrincipal(){
     $shortopts .= "h"; // help
     $shortopts .= "s:"; // steps
     $shortopts .= "c"; // cálculo del cono
-    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "calculo-cono" );
+    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "cone" );
     $options = getopt( $shortopts, $longopts );
     if ( 0 == count($options) ) {
         printHelp();
@@ -139,7 +141,7 @@ function programaPrincipal(){
                 break;
             case 'list':
             case 'l':
-                print_r( $config['lugares'] );
+                print_r( $config['sensores'] );
                 exit(0);
                 break;
             case 'radar-data':
@@ -150,19 +152,23 @@ function programaPrincipal(){
             case 'r':
                 // var_dump($value);
                 if ( "" != $value ) {
-                    $config['lugares'] = explode( " ", $value );
+                    $config['sensores'] = explode( " ", $value );
+		    foreach($config['sensores'] as $index => $sensor)
+			$config['sensores'][$index] = strtolower($sensor);
                 } // else coje la lista completa por defecto
-                print "INFO Ejecutando con la siguiente selección de radar(es) [" . implode(",", $config['lugares']) . "]" . PHP_EOL;
+                logger(" I> Ejecutando con la siguiente selección de sensor(es) (" . implode(",", $config['sensores']) . ")");
                 break;
-	    case 'calculo-cono':
+	    case 'cone':
 	    case 'c':
-		$calculoCono = true;
-		print "INFO Implementando cálculo de cono de silencio en cobertura" . PHP_EOL;
+		$config['cone'] =  true;
+		logger(" I> Implementando cálculo del cono de silencio en cobertura");
 		break;
             case 'max-range':
             case 'm':
-                $maxRange = $value;
-                print "INFO Alcance forzado a $value NM" . PHP_EOL;
+                $config['max-range'] = $value;
+                logger(" I> Alcance forzado a $value NM");
+		$config['force'] = true; // forzar alcance implica ignorar caché y forzar recálculo
+		logger(" I> Modo *forzado* activado");
                 break;
             case 'steps':
             case 's':
@@ -172,23 +178,24 @@ function programaPrincipal(){
                     printHelp();
                     exit(0);
                 }
-                $flMin = $steps[0]; $flMax = $steps[1]; $paso = $steps[2];
+                $config['fl'] = array('min' => $steps[0], 'max' => $steps[1], 'step' => $steps[2]);
                 break;
             case '1':
             case 'monoradar':
-                $modo = 'monoradar';
-                print "INFO Modo *monoradar* activado" . PHP_EOL;
+                $config['mode']['monoradar'] = true; // $config['modoCalculo'] = 'monoradar';
+                logger(" I> Modo *monoradar* activado");
                 break;
             case '2':
             case 'multiradar':
-                $modo = 'multiradar';
-		$testGD = get_extension_funcs("gd"); // grab function list
-		if ( !$testGD ) {
-		    print "ERROR la extensión GD para PHP no está instalada" . PHP_EOL;
-		    exit(1);
-		}
-                print "INFO Modo *multiradar* activado" . PHP_EOL;
+                $config['mode']['multiradar'] = true;
+//		$testGD = get_extension_funcs("gd"); // grab function list
+//		if ( !$testGD ) {
+//		    print "ERROR la extensión GD para PHP no está instalada" . PHP_EOL;
+//		    exit(1);
+//		}
+                logger(" I> Modo *multiradar* activado");
                 break;
+/*
             case 'u':
             case 'unica':
                 $calculosMode['unica'] = true;
@@ -207,10 +214,11 @@ function programaPrincipal(){
                 $calculosMode['parcial'] = true;
                 print "INFO calculo *multiradar por radares y tipo (mono,doble,triple...)* activado" . PHP_EOL;
                 break;
+*/
             case 'f':
             case 'force':
-                $force = true;
-                print "INFO Modo *forzado* activado" . PHP_EOL;
+                $config['force'] = true;
+		logger(" I> Modo *forzado* activado");
                 break;
             default:
                 print "ERROR Parámetro no esperado: $key" . PHP_EOL;
@@ -218,18 +226,179 @@ function programaPrincipal(){
         }
     }
 
+    if ( count($config['mode']) == 0 )
+	$config['mode']['monoradar'] = true;
+/*
+    // default values, calculate everything
+    $modo = 'monoradar';
+    $calculosMode = array('unica' => false, 'parcial' => false, 'rascal' => true);
+    $radarTerrain = false; // para guardar el fichero de screening una vez leido
     $rutaResultados = "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR;
     $poligono = false;
     $altMode = altitudeModetoString($altitudeMode = 0);
+*/
+    $timer = microtime(true);
+    logger(" D> Leyendo información de radares de >" . $config['radar-data'] . "<");
     $infoCoral = getRadars($config['radar-data'], $parse_all = true);
+    logger(" V> Información de radares procesada (" . round(microtime(true) - $timer,2) . "s)");
+    logger(" I> Pasos configurados (min,max,paso): ({$config['fl']['min']},{$config['fl']['max']},{$config['fl']['step']})");
+    // comprobamos que todos los sensores solicitados existen
+    foreach($config['sensores'] as $sensor) {
+        if ( !isset($infoCoral[$sensor]) ) {
+	    logger(" E> El sensor $sensor no está configurado en la bbdd del SASS-C"); exit(-1);
+	}
+    }
 
-    print "INFO Pasos configurados (min,max,paso): (${flMin},${flMax},${paso})" . PHP_EOL;
+    // print_r($config);
+
+    $coberturas = array(); // array con las coberturas
+    for ($fl = $config['fl']['min']; $fl <= $config['fl']['max']; $fl += $config['fl']['step']) {
+	$nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
+	logger( " V> Generando nivel de vuelo {$fl}00ft");
+	foreach($config['sensores'] as $sensor) {
+	    logger(" V> Generando sensor {$sensor}");
+	    $coberturas[$sensor]['contornos'] = false;
+	    $cache_file = $config['path']['cache'] . $sensor . DIRECTORY_SEPARATOR ."{$sensor}-FL{$nivelVuelo}.json";
+	    logger(" D> Evaluando si leer de la caché {$cache_file}");
+	    if ( false === $config['force'] ) {
+		if ( file_exists($cache_file) ) {
+		    if ( false === ($fecha_modificado_cache = filemtime($cache_file)) ) {
+			logger(" E> Error leyendo fecha del fichero caché >{$cache_file}<"); exit(-1);
+		    }
+		    
+		    if ( $fecha_modificado_cache >= $infoCoral[$sensor]['fecha_modificado'] ) {
+			$cache = file_get_contents( $cache_file );
+			if ( false !== $cache ) {
+			    $coberturas[$sensor]['contornos'] = json_decode($cache, $assoc = true);
+			    logger (" V> Leyendo caché del fichero >{$cache_file}<");
+			} else {
+			    logger (" E> Error leyendo fichero caché >{$cache_file}<");
+			}
+		    } else {
+			logger(" V> El caché ha quedado invalidado: la fecha de creación del caché (" .
+			    date("Y/m/d H:i:s", $fecha_modificado_cache) .
+			    ") es anterior a la última modificación del fichero radar (" .
+			    date("Y/m/d H:i:s", $infoCoral[$sensor]['fecha_modificado']) . ")");
+		    }
+		} else {
+		    logger(" V> No había datos en la caché {$cache_file}");
+		}
+	    } else {
+		logger(" I> Modo forzado, Ignorando caché");
+	    }
+
+            // como no había nada en la caché, hay que calcularlo todo
+            if ( false === $coberturas[$sensor]['contornos'] ) {
+		$timer = microtime(true);
+		logger(" D> Leyendo información del terreno de {$sensor}");
+		// ¿tenemos datos del terreno cargados? vamos a cargarlos una sola vez
+		if ( !isset($coberturas[$sensor]['terreno']) || false === $coberturas[$sensor]['terreno'] ) {
+		    $coberturas[$sensor]['terreno'] = cargarDatosTerreno( $infoCoral[$sensor], $config['max-range'] );
+		    logger(" V> Información del terreno procesada (" . round(microtime(true) - $timer,2) . "s)");
+		    if ( false ) {
+			// para la herramienta de cálculo de kmz de matlab
+			generateMatlabFiles($coberturas[$sensor]['terreno'], false); // $rutaResultados);
+		    }
+
+		}
+		$coberturas[$sensor]['contornos'] = calculosFL($coberturas[$sensor]['terreno'], $fl, $nivelVuelo, $config['cone']);
+		crearCarpetaResultados($config['path']['cache'] . $sensor);
+		// guardar el cálculo en la cache, siempre que no hayamos forzado el alcance
+		// si se ha forzado el alcance, la caché está invalidada automáticamente.
+		if ( false === $config['max-range'] ) {
+		    file_put_contents($cache_file, json_encode($coberturas[$sensor]['contornos']));
+		}
+
+	    }
+	    // si estamos en mono cobertura, generamos ya el kml
+	    $rutas = array(
+		'por_nivel' =>  $config['path']['resultados'] . $nivelVuelo . DIRECTORY_SEPARATOR ,
+		'por_sensor' => $config['path']['resultados'] . $sensor . DIRECTORY_SEPARATOR ,
+	    );
+	    if ( isset($config['mode']['monoradar']) ) {
+		creaKml2(
+		    $coberturas[$sensor]['contornos'],
+		    $sensor,
+		    $rutas,
+		    $fl,
+		    altitudeModetoString($altitudeMode = 0),
+		    $appendToFilename = '',
+		    $coverageLevel = 'mono'
+		);
+	    }
+
+/*
+    print "[crearKml]" . PHP_EOL;
+ // @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
+
+    creaKml2(
+        $listaContornos2,
+        $radar['screening']['site'],
+        $ruta,
+        $fl,
+        $altMode,
+        $appendToFilename = '',
+        $coverageLevel = 'mono'
+    );
+*/
+
+
+
+	logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " . "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+	}
+    }
+exit(0);
+/*
+            $ret = false; $from_cache = false;
+            $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
+            $ruta[GUARDAR_POR_NIVEL] = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
+            crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
+            logger( " V> Generando: ${fl}00 feet");
+            // mira primero si la malla está en la cache, siempre que no estemos en modo forzado!
+	    // en lugar de mirar si existe el kml/kmz, miramos si existe el json y lo cargamos, pero luego
+	    // no se usa.
+	    $cache_file = $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.contornos";
+	    logger( " D> Fichero de caché >{$cache_file}<");
+            if ( !$force && file_exists($cache_file) ) {
+                $cache = file_get_contents( $cache_file );
+                if ( false !== $cache ) {
+		    $ret = array();
+                    $ret['contornos'] = json_decode($cache, $assoc = true);
+                    $from_cache = true;
+                    logger (" V> Leyendo caché del fichero >{$cache_file}<");
+                }
+            }
+
+            // como no había nada en la caché, hay que calcularlo todo
+            if ( $ret === NULL || $ret === false ) {
+
+                $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono);
+
+
+            }
+            // si hemos generado malla nueva, y la malla es correcta, la guardamos en la cache
+            if ( false == $from_cache && false !== $ret ) {
+		logger(" V> Guardando contornos en caché >" . $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.contornos<");
+                file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.contornos", json_encode($ret['contornos']));
+            }
+            // si estamos en modo multiradar, y la malla es correcta, la guardamos para el procesado multiradar
+            if ( 'multiradar' == $modo && false !== $ret ) {
+                $multiCoberturas['contornos'][$lugar] = $ret['contornos'];
+                // print "DEBUG Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
+                //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
+            }
+        } // for interno
+
+
+    exit(0);
 
     $multiCoberturas = array();
 
+*/
+
     //pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
     // recorremos todas las localizaciones que nos ha dado el usuario
-    foreach($config['lugares'] as $lugar) {
+    foreach($config['sensores'] as $sensor) {
         print "INFO Procesando $lugar" . PHP_EOL;
         $lugar = strtolower($lugar);
         // carga el fichero de screening en memoria
@@ -249,13 +418,14 @@ function programaPrincipal(){
             $range = $maxRange;
         }
 
+	$timer = microtime(true);
+	logger(" D> Leyendo información del terreno");
 	$radar = cargarDatosTerreno( $infoCoral[$lugar], $range );
-
-        if ( false ) {
-            // para la herramienta de cálculo de kmz de matlab
-            generateMatlabFiles($radar, $rutaResultados);
-            // continue;
-        }
+	logger(" V> Información del terreno procesada (" . round(microtime(true) - $timer,2) . "s)");
+	if ( false ) {
+	    // para la herramienta de cálculo de kmz de matlab
+	    generateMatlabFiles($radar, $rutaResultados);
+	}
 
         $ruta = array();
         $ruta[GUARDAR_POR_RADAR] = $rutaResultados . $radar['screening']['site'] . DIRECTORY_SEPARATOR;
@@ -265,29 +435,37 @@ function programaPrincipal(){
             $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
             $ruta[GUARDAR_POR_NIVEL] = $rutaResultados . $nivelVuelo . DIRECTORY_SEPARATOR;
             crearCarpetaResultados($ruta[GUARDAR_POR_NIVEL]);
-            print "INFO Generando: ${fl}00 feet";
+            logger( " V> Generando: ${fl}00 feet");
             // mira primero si la malla está en la cache, siempre que no estemos en modo forzado!
-            if ( !$force && file_exists($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json") ) {
-                $ret = file_get_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.json");
-                if ( false !== $ret ) {
-                    $ret = json_decode($ret, $assoc = true);
+	    // en lugar de mirar si existe el kml/kmz, miramos si existe el json y lo cargamos, pero luego
+	    // no se usa.
+	    $cache_file = $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] . "-FL${nivelVuelo}.contornos";
+	    logger( " D> Fichero de caché >{$cache_file}<");
+            if ( !$force && file_exists($cache_file) ) {
+                $cache = file_get_contents( $cache_file );
+                if ( false !== $cache ) {
+		    $ret = array();
+                    $ret['contornos'] = json_decode($cache, $assoc = true);
                     $from_cache = true;
-                    print " [cached]";
+                    logger (" V> Leyendo caché del fichero >{$cache_file}<");
                 }
             }
 
-            print PHP_EOL;
             // como no había nada en la caché, hay que calcularlo todo
             if ( $ret === NULL || $ret === false ) {
-                $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode);
+
+                $ret = calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono);
+
+
             }
             // si hemos generado malla nueva, y la malla es correcta, la guardamos en la cache
             if ( false == $from_cache && false !== $ret ) {
-                file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.json", json_encode($ret));
+		logger(" V> Guardando contornos en caché >" . $ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.contornos<");
+                file_put_contents($ruta[GUARDAR_POR_RADAR] . $radar['screening']['site'] .  "-FL${nivelVuelo}.contornos", json_encode($ret['contornos']));
             }
             // si estamos en modo multiradar, y la malla es correcta, la guardamos para el procesado multiradar
             if ( 'multiradar' == $modo && false !== $ret ) {
-                $multiCoberturas[$lugar] = $ret;
+                $multiCoberturas['contornos'][$lugar] = $ret['contornos'];
                 // print "DEBUG Uso memoria: " . convertBytes(memory_get_usage(false)) . " " .
                 //    "Pico uso memoria: " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
             }
@@ -304,10 +482,7 @@ function programaPrincipal(){
     return;
 }
 
-/*
- * @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
- */
-function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono = false) { //, $modo = 'monoradar') {
+function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo = 'monoradar') {
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
     $flm = $fl*100*FEET_TO_METERS; // fl en metros
@@ -376,6 +551,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono = fa
 	$listaContornos2[0]['polygon'] = array_reverse($listaContornos2[0]['polygon']);
 
 	// si el nivel de vuelo por encima de la posición del radar, sólo hay 1 polígono
+	// no hay cálculo del cono para nivel de vuelo por debajo de la posición del radar
 	if ( $calculoCono ) {
 	    $listaContornosConos2[0]['level'] = 1;
 	    $listaContornos2[0]['inside'] = array( ( $listaContornosConos2[0]) );
@@ -387,7 +563,15 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono = fa
 
         // codigo para generar malla por encima para la multicobertura
         // con listaContornos2 ya podemos generar una cobertura vectorial
+        print "[generacionMalladoLatLon start]"; $timer0 = microtime(true);
         $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
+        printf("[generacionMalladoLatLon ended %3.4fs]", microtime(true) - $timer0);
+        // comprobación si hay cobertura en las esquinas de la malla. En ese caso,
+        // determinaContornos2 podría fallar
+        print "[check coverage overflow "; $timer0 = microtime(true);
+        checkCoverageOverflow($mallado['malla']);
+        printf(" %3.4fs]", microtime(true) - $timer0);
+
 	// $mallado['mallaLatLon'] = false;
 
         // print_r(array_keys($mallado['mallaLatLon']));exit(0);
@@ -412,6 +596,9 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono = fa
 
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
+	if ( $calculoCono ) {
+	    print "INFO no se calcula cono para niveles de vuelo por debajo de la ubicación del radar" . PHP_EOL;
+	}
         print "[calculosFLdebajoRadar]";
 	calculosFLdebajoRadar($radar, $flm);
         $newRange = obtieneMaxAnguloConCoberturaB($radar);
@@ -441,6 +628,9 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono = fa
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
 	// print_r($listaContornos2); exit(0);
     }
+
+    // print_r($listaContornos2);exit(0);
+/*
     print "[crearKml]" . PHP_EOL;
     creaKml2(
         $listaContornos2,
@@ -451,5 +641,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $ruta, $altMode, $calculoCono = fa
         $appendToFilename = '',
         $coverageLevel = 'mono'
     );
-    return $mallado['mallaLatLon'];
+*/
+    print PHP_EOL;
+    return $listaContornos2;
 }

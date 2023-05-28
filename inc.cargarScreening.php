@@ -18,8 +18,7 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 
     // esta funcion guarda el contenido del fichero en un array 
     if ( false === ($contenidoFichero = @file($radar['screening'], FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
-        print_r($radar);
-        die("ERROR no ha sido posible leer el fichero: >" . $radar['screening'] . "<" . PHP_EOL);
+        logger(" E> No ha sido posible leer el fichero: >" . $radar['screening'] . "<"); exit(-1);
     }
     // TRATAMIENTO DE LA INFORMACION CAPTURADA (Primera parte del fichero)
     $screening = array(
@@ -37,7 +36,8 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
     $lineaActual = 7; // primera línea donde comienzan los AZIMUT
 
     // recorremos los azimuths
-    print "INFO Cargando contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")" . PHP_EOL;
+    logger(" V> Cargando contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")");
+    $timer = microtime(true);
     $acimutOld = 0;
     for( $i = 0; $i < $screening['totalAzimuths']; $i++ ) {
         $listaObstaculos = array();
@@ -45,18 +45,22 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 	while ( "AZIMUTH" != substr($contenidoFichero[$lineaActual], 0, 7) ){
 	    $lineaActual++;
 	}
-	print ".";
 	// anotamos el acimut actual
 	$acimutActual = substr($contenidoFichero[$lineaActual++], 8) + 0;
 
 	// comprobación de coherencia entre acimuts
         if ( ($acimutActual - $acimutOld) > 1 ) {
-            die( "ERROR Problema en el fichero >" . $radar['screening'] .
-                "<, salto entre los acimut $acimutOld y $acimutActual" .
-                PHP_EOL);
+	    logger( "E> Problema leyendo el fichero >" . $radar['screening'] .
+                "<, salto entre los acimut {$acimutOld} y {$acimutActual}");
+	    exit(-1);
         }
 	// anotamos el número de obstaculos para ese acimut
 	$contadorObstaculos = $contenidoFichero[$lineaActual++];
+
+	if ( 0 == $contadorObstaculos ) {
+	    logger(" E> El azimut $i no tiene obstáculos definidos"); exit(-1);
+	}
+
         // insertamos el radar como primer obstaculo, para resolver el caso de que
         // el primer obstaculo este muy alejado. En matlab no se pinta nada hasta que no
         // llega al primer obstaculo.
@@ -71,7 +75,8 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 	    $pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';
 	    if ( false === ($cuenta = preg_match($pattern, $contenidoFichero[$lineaActual], $salida)) && (3 == $cuenta) ) {
 	        // $salida tiene 3 posiciones, las dos ultimas contienen los strings que necesitamos
-		die("ERROR durante la comparacion linea($lineaActual) contenido(" . $contenidoFichero[$lineaActual] . ")");
+		logger(" E> Error durante la comparacion linea($lineaActual) contenido(" . $contenidoFichero[$lineaActual] . ")");
+		exit(-1);
 	    }
 	    // convierte el string a numero y los almacena en el array
 	    $listaObstaculos[] = array(
@@ -87,8 +92,7 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
 	$acimutOld = $acimutActual;
 
     } // end for exterior
-    print PHP_EOL;
-
+    logger(" I> Cargado contenido de >" . $radar['screening'] . "< en " . round(microtime(true)-$timer,3) . "s");
     // Camprobacion extra para algunos valores
     if ($screening['k-factor'] <= 0) {
         $screening['radioTerrestreAumentado'] = (4/3) * RADIO_TERRESTRE;
@@ -104,17 +108,14 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
         $radar['range'] = $screening['range'] * MILLA_NAUTICA_EN_METROS;
     }
 
-    print "INFO El alcance del radar es de " .
-        ($radar['range'] / MILLA_NAUTICA_EN_METROS) . 
-        "NM / " . $radar['range'] . "m" . PHP_EOL;
+    logger(" I> El alcance del radar es de " . ($radar['range'] / MILLA_NAUTICA_EN_METROS) .
+        "NM / " . $radar['range'] . "m");
 
     $radar['screening_file'] = $radar['screening'];
     $radar['screening'] = $screening;
 
-    //print_r($radar);
-    
     if ( false !== strpos($radar['radar'], "-psr") ) {
-        print "Detectado PSR" . PHP_EOL;
+        logger(" I> Detectado PSR, ajustando nombre, REVISAR porque ahora screening|site no se usa"); exit(-1);
         $radar['screening']['site'] = $radar['screening']['site'] . "_PSR";
     }
     return $radar;

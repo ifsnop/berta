@@ -1,2 +1,4 @@
 *.kml
 inc.config.php
+RESULTADOS/*
+cache/*

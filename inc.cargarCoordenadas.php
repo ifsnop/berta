@@ -17,13 +17,11 @@ function getRadars($eval_dir, $parse_all = false) {
 
     $radars = array();
 
-    print "cargando la información de los radares de >$eval_dir<";
-
     if ( !file_exists($eval_dir) ) {
-        die(PHP_EOL . "ERROR path >$eval_dir< doesn't exist" . PHP_EOL);
+        logger(" E> El path >$eval_dir< no existe"); exit(-1);
     }
 
-    if ( false === $parse_all) {  
+    if ( false === $parse_all) {
 	// obtenemos el nombre del fichero que contiene todos los radares activos en la evaluación
 	exec("/usr/bin/find $eval_dir -name  \"recording_details.par\" | grep -v \"\\.eva\" | grep -v \"\\.cfg\" 2> /dev/null", $recording_details_file);
 	if ( 0 == count($recording_details_file) ) {
@@ -59,10 +57,10 @@ function getRadars($eval_dir, $parse_all = false) {
     	    $name = $pathinfo['filename'];
     	    if ( $name[0] == "%" )
     	        continue;
-	    print ".";
+	    // print ".";
             $radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, -1) );
 	}
-	print PHP_EOL;
+	// print PHP_EOL;
     }
     return $radars;
 }
@@ -73,7 +71,7 @@ function getRadars($eval_dir, $parse_all = false) {
  * (Convierte altitud total y posición a grados WGS-84)
  *
  * @param string $eval_dir Directorio donde está configurada la evaluación
- * @param string $name Nombre del radar
+ * @param string $name Nombre del radar[1~
  * @param string $sassc_id Identificador del radar para el SASS-C
  *
  * @return array Listado de parámetros asociados a un radar
@@ -81,8 +79,15 @@ function getRadars($eval_dir, $parse_all = false) {
 function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
 
     if ( false === ($radar_rbk_contents = file_get_contents($radar_rbk_file)) ) {
-        die("ERROR couldn't file_get_contents from $radar_rbk_file" . PHP_EOL);
+	logger(" E> No se puede acceder al contenido de >{$radar_rbk_file}<"); exit(-1);
     }
+    clearstatcache();
+    if ( false === ($fechaUltimaModificacion = filemtime($radar_rbk_file)) ) {
+	logger(" E> No se pudo obtener fecha de última modificación de >{$radar_rbk_file}<"); exit(-1);
+    };
+
+    logger(" D> Última modificación de >" . basename($radar_rbk_file) . "< el " .
+	date("Y/m/d H:i:s", $fechaUltimaModificacion));
 
     $lat = $lon = ""; $radarGroundAltitude = 0; $values = array(); $radar = array();
     // quita las terminaciones de línea msdos/unix y separa por líneas en un array
@@ -123,13 +128,16 @@ function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
 	}
     }
     if ( !empty($lat) && !empty($lon) ) {
-    	$radar[$name] = array(
-            'radar' => $name,
+	$radar[$name] = array(
+	    'radar' => $name,
 	    'lat' => $lat,
 	    'lon' => $lon,
-	    'sassc_id' => $sassc_id
+	    'sassc_id' => $sassc_id,
 	);
 	$radar[$name] = array_merge($radar[$name], $values);
+
+	$radar[$name]['fecha_modificado'] = $fechaUltimaModificacion;
+
 	// si en el fichero se definen dos radares (PSR y SSR, hay que devolver dos radares, no uno!)
         if ( false !== strpos($radar[$name]['radarType'], "primary") ) {
             // copiamos en un radar nuevo los datos
@@ -138,7 +146,7 @@ function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
             $radar[$name . "-psr"]['radar'] = $radar[$name . "-psr"]['radar'] . "-psr";
         }
     } else {
-        print PHP_EOL . "WARNING: El radar $name no tiene coordenadas definidas, se ignora" . PHP_EOL;
+        logger(" I> El radar {$name} no tiene coordenadas definidas, se ignora");
     }
     return $radar;
 }

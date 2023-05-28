@@ -216,3 +216,19 @@ function countSetBits($num) {
     return $num_to_bits[$nibble] +
            countSetBits($num >> 4);
 }
+
+/*
+ * escribe la cadena enviada a stderr, añadiendo fecha
+ * si insert_EOL, añade fecha y salto de línea
+ *
+ */
+function logger($str, $insert_EOL = true) {
+
+    $d = new DateTime();
+    if ( $insert_EOL )
+        $ret = $d->format("Y-m-d H:i:s.v") . $str . PHP_EOL;
+    else
+        $ret = $str;
+    fwrite(STDERR, $ret);
+    return true;
+}

@@ -7,13 +7,13 @@ CONST PERMISOS = 0775;
  *
  * @param array $listaContornos (ENTRADA)
  * @param array|string $radarName Radares que se han utilizado para esta cobertura (ENTRADA)
- * @param string $ruta Path donde guardar el fichero generado (ENTRADA)
+ * @param array string $ruta Paths donde guardar el fichero generado (ENTRADA)
  * @param int $fl Nivel de vuelo (ENTRADA)
  * @param string $altMode Si el KML está pegado al suelo o la altura es relativa/absoluta (ENTRADA)
  * @param string|array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
  * @return bool
  */
-function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFilename="", $coverageLevel = 'mono', $epsilon = false) {
+function creaKml2($listaContornos, $radarName, $rutas, $fl, $altMode, $appendToFilename="", $coverageLevel = 'mono', $epsilon = false) {
 
     $nivelVuelo = str_pad( (string)$fl, 3, "0", STR_PAD_LEFT );
 
@@ -36,7 +36,7 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
     }
 
     if ( is_array($radarName) ) {
-        $radarWithFL = implode("_", $radarName) . "-" .
+        $radarWithFL = implode(",", $radarName) . "-" .
             $coverageLevel . "-FL" .  $nivelVuelo . $appendToFilename;
     } else {
         $radarWithFL = $radarName . "-FL" .  $nivelVuelo . $appendToFilename;
@@ -59,49 +59,60 @@ function creaKml2($listaContornos, $radarName, $ruta, $fl, $altMode, $appendToFi
     foreach( $listaContornos as &$contorno ) {
         $vertexCount = 0; // estadísticas
         $polygon = array();
-        foreach ( $contorno['polygon'] as &$p ) {
-            if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
-                $polygon[] = array($p['lat'], $p['lon'], $p['alt']);
-            } elseif ( isset($p['fila']) && isset($p['col']) ) {
-                $polygon[] = array($p['col'], $p['fila'], $fl*100*FEET_TO_METERS);
-            } elseif ( isset($p[0]) && isset($p[1]) ) {
-                $polygon[] = array($p[0], $p[1], $fl*100*FEET_TO_METERS);
-            } else {
-                die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
-            }
-            $vertexCount++; // estadísticas
-        }
-
+	if ( isset($contorno['polygon']) ) {
+	    foreach ( $contorno['polygon'] as &$p ) {
+		if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
+		    // generado en calculaCoordenadasGeograficasA/B
+		    $polygon[] = array($p['lat'], $p['lon'], $p['alt']);
+		} elseif ( isset($p['fila']) && isset($p['col']) ) {
+		    // generado en calculaCoordenadasGeograficasB
+		    $polygon[] = array($p['col'], $p['fila'], $fl*100*FEET_TO_METERS);
+		} elseif ( isset($p[0]) && isset($p[1]) ) {
+		    $polygon[] = array($p[0], $p[1], $fl*100*FEET_TO_METERS);
+		} else {
+		    die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
+		}
+		$vertexCount++; // estadísticas
+	    } // foreach
+	} else {
+	    foreach ( $contorno as &$p ) {
+		$polygon[] = array($p[0], $p[1], $fl*100*FEET_TO_METERS);
+		$vertexCount++; // estadísticas
+	    }
+	}
         $inside = array(); $vertexCountInside = array();
-        foreach ( $contorno['inside'] as &$contorno_inside ) {
-            $polygon_inside = array();
-            $currentCountInside = 0;
-            foreach ($contorno_inside['polygon'] as &$p_inside) {
-                if ( isset($p_inside['lat']) && isset($p_inside['lon']) && isset($p_inside['alt']) ) {
-                    $polygon_inside[] = array($p_inside['lat'], $p_inside['lon'], $p_inside['alt']);
-                } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
-                    $polygon_inside[] = array($p_inside['col'], $p_inside['fila'], $fl*100*FEET_TO_METERS);
-                } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
-                    $polygon_inside[] = array($p_inside[0], $p_inside[1], $fl*100*FEET_TO_METERS);
-                } else {
-                    die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
-                }
-                $currentCountInside++; // estadísticas
-            }
-            $inside[] = array('polygon' => $polygon_inside);
-            $vertextCountInside[] = $currentCountInside; // estadísticas
-        }
-        $group[] = array('polygon' => $polygon, 'inside' => $inside);
-        if ( 0 == count( $vertexCountInside ) ) $vertexCountInside = false;
-        $vertex[] = array('polygon' => $vertexCount, 'inside' => $vertexCountInside);
+	if ( isset($contorno['inside']) ) {
+	    foreach ( $contorno['inside'] as &$contorno_inside ) {
+		$polygon_inside = array();
+		$currentCountInside = 0;
+		foreach ($contorno_inside['polygon'] as &$p_inside) {
+            	    if ( isset($p_inside['lat']) && isset($p_inside['lon']) && isset($p_inside['alt']) ) {
+                	$polygon_inside[] = array($p_inside['lat'], $p_inside['lon'], $p_inside['alt']);
+            	    } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
+                	$polygon_inside[] = array($p_inside['col'], $p_inside['fila'], $fl*100*FEET_TO_METERS);
+            	    } elseif ( isset($p_inside[0]) && isset($p_inside[1]) ) {
+                	$polygon_inside[] = array($p_inside[0], $p_inside[1], $fl*100*FEET_TO_METERS);
+            	    } else {
+                	die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
+            	    }
+            	    $currentCountInside++; // estadísticas
+        	}
+        	$inside[] = array('polygon' => $polygon_inside);
+        	$vertextCountInside[] = $currentCountInside; // estadísticas
+	    }
+	}
+	$group[] = array('polygon' => $polygon, 'inside' => $inside);
+	if ( 0 == count( $vertexCountInside ) ) $vertexCountInside = false;
+	$vertex[] = array('polygon' => $vertexCount, 'inside' => $vertexCountInside);
     }
     // $group tiene la geometría necesaria para pintar todo, en el formato
     // 0=>lat, 1=>lon, 2=>height
     // FIN
     $kml = fromPolygons2KML($group, $radarWithFL, $rgb, $altMode);
 
-    foreach($ruta as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
-        writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $kml);
+    foreach($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
+	crearCarpetaResultados($val);
+	writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $kml);
     }
     return true;
 }
@@ -471,7 +482,7 @@ function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
     foreach( $polygons as &$polygon ) {
         $kmlOuter = "";
         if ( 10000 < count($polygon['polygon']) ) {
-            print "DEBUG current/refined vertex cound => " . count($polygon['polygon']) . "/";
+            print "DEBUG current/refined vertex count => " . count($polygon['polygon']) . "/";
             $polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
             print count($polygon['polygon']) . PHP_EOL;
         }

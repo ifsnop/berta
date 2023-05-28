@@ -1,8 +1,22 @@
 <?php
 
 /**
+ * Helper para convertir los contornos que generamos (lat,lon) en una lista
+ * de vértices (0=>lat, 1=>lon) que espera MartinezRueda.
+ * Sólo vamos a soportar los polígonos sin agujeros.
+ *
+ */
+function get_vertex($arr) {
+    $p = array();
+    foreach($arr as $v) {
+	$p[] = array($v['lat'], $v['lon']);
+    }
+    return $p;
+}
+
+/**
 * Funcion que crea una malla de cobertura global a partir de la cobertura individual
-* de las mallas incluidas en $malla y crea el kml correspondiente, con distintos 
+* de las mallas incluidas en $malla y crea el kml correspondiente, con distintos
 * colores dependiendo del tipo de cobertura (simple, doble, triple, cuadruple, etc).
 *
 * @param array $mallas arrays de mallas con coberturas (ENTRADA)
@@ -10,7 +24,7 @@
 * @param string $ruta donde se genera el archivo(ENTRADA)
 * @param string $altMode si lo queres absolute o relative(ENTRADA)
 */
-         
+
 function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('parcial' => true, 'rascal'=>true, 'unica' => true) ) {
 
     if ( !isset($mallas) || count($mallas) == 0 ) {
@@ -24,6 +38,79 @@ function multicobertura($mallas, $fl, $ruta, $altMode, $calculosMode = array('pa
         "cuadruple", "quintuple", "sextuple",
         "septuple", "octuple", "nonuple"
     );
+    $contornos = $mallas['contornos']; // por si usamos martinezrueda
+
+    $radares = array();
+    $mr = array();
+    foreach ($contornos as $radar => $contornos_por_radar) {
+	$radares[] = $radar;
+	print "[MR-contornos $radar";
+	$polygon = array();
+	foreach($contornos_por_radar as $indice => $contorno) {
+	    $polygon[] = get_vertex($contorno['polygon']);
+	    if ( !isset($contorno['inside']) )
+		continue;
+	    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
+		$polygon[] = get_vertex($contorno_inside['polygon']);
+	    }
+	}
+	$mr_polygon[] = new \MartinezRueda\Polygon($polygon);
+	print "]";
+    }
+    print PHP_EOL;
+    $timer_mr = microtime(true);
+    print "[MR-union " . $radares[0] . "," . $radares[1] . "";
+    $mr_algorithm = new \MartinezRueda\Algorithm();
+    $result = $mr_algorithm->getUnion($mr_polygon[0], $mr_polygon[1]);
+    for( $i=2; $i<count($mr_polygon); $i++) {
+	print " (" . round(microtime(true) - $timer_mr,4) . ")][MR-union " . $radares[$i];
+	$timer_mr = microtime(true);
+	$result = $mr_algorithm->getUnion($result, $mr_polygon[$i]);
+    }
+    print "(" . round(microtime(true) - $timer_mr,4) . ")]" . PHP_EOL;
+    $result_arr = $result->toArray();
+
+    $listaContornos = array();
+    foreach($result_arr as $index => $polygon) {
+	if ( 0 == count($polygon) )
+	    continue;
+	$computeArea = computeArea($polygon);
+	// print count($polygon) . "] " . computeArea($polygon) . PHP_EOL;
+	logger(" V Polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "m2");
+	if ( $computeArea < 0.1 ) {
+	    logger(" I Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "m2");
+	    continue;
+	}
+
+	$leftCorner = array();
+	foreach($polygon as $k => $vertex)
+	    $leftCorner = findLeftCorner($vertex[1], $vertex[0], $leftCorner, $polygon, $k);
+	$listaContornos[] = array(
+	    'level' => -1,
+	    'polygon' => $polygon,
+	    'inside' => array(),
+	    'leftCorner' => $leftCorner,
+	);
+    }
+    // usaremos is_in_polygon porque $listaContornos tiene '0' y '1' como índices de los
+    // vértices en lugar de 'fila' y col.
+    $listaContornos = determinaContornos2_sortContornos($listaContornos, 'is_in_polygon');
+
+    print PHP_EOL;
+
+    creaKml2(
+        $listaContornos,
+	$radares,
+        $ruta,
+        $fl,
+        $altMode,
+        $appendToFilename = "",
+        $coverageLevel = 'unica'
+    );
+    return;
+
+
+    $mallas = $mallas['mallado'];
     $radares = array_keys($mallas);
     $radaresName = implode(" ", $radares);
     $radaresCount = count($mallas);
@@ -578,4 +665,61 @@ function printBoundingBox($bounding) {
         "lat_inf:" .   $bounding['lat_inf'] . "c (" . round($bounding['lat_inf']/REDONDEO_LATLON,3) . "º) " .
         "lon_lef:" .   $bounding['lon_lef'] . "c (" . round($bounding['lon_lef']/REDONDEO_LATLON,3) . "º)";
     return $ret;
+}
+
+/**
+ * Returns the area of a closed path on Earth.
+ * @param path A closed path.
+ * @return The path's area in square meters.
+ */
+function computeArea($path) {
+    return abs(computeSignedArea($path)/1000000.0);
+}
+
+/**
+ * Returns the signed area of a closed path on Earth. The sign of the area may be used to
+ * determine the orientation of the path.
+ * "inside" is the surface that does not contain the South Pole.
+ * @param path A closed path.
+ * @return The loop's area in square meters.
+ */
+function computeSignedArea($path) {
+    return computeSignedAreaP($path, RADIO_TERRESTRE);
+}
+
+/**
+ * Returns the signed area of a closed path on a sphere of given radius.
+ * The computed area uses the same units as the radius squared.
+ * Used by SphericalUtilTest.
+ */
+function computeSignedAreaP($path,  $radius) {
+        $size = count($path);
+        if ($size < 3) { return 0; }
+        $total = 0;
+        $prev = $path[$size - 1];
+        $prevTanLat = tan((M_PI / 2 - deg2rad($prev[0])) / 2); // lat
+        $prevLng = deg2rad($prev[1]); //lon
+        // For each edge, accumulate the signed area of the triangle formed by the North Pole
+        // and that edge ("polar triangle").
+        foreach($path as $point) {
+            $tanLat = tan((M_PI / 2 - deg2rad($point[0])) / 2); // lat
+            $lng = deg2rad($point[1]); // lon
+            $total += polarTriangleArea($tanLat, $lng, $prevTanLat, $prevLng);
+            $prevTanLat = $tanLat;
+            $prevLng = $lng;
+        }
+        return $total * ($radius * $radius);
+    }
+
+/**
+ * Returns the signed area of a triangle which has North Pole as a vertex.
+ * Formula derived from "Area of a spherical triangle given two edges and the included angle"
+ * as per "Spherical Trigonometry" by Todhunter, page 71, section 103, point 2.
+ * See http://books.google.com/books?id=3uBHAAAAIAAJ&pg=PA71
+ * The arguments named "tan" are tan((pi/2 - latitude)/2).
+ */
+function polarTriangleArea($tan1,  $lng1, $tan2, $lng2) {
+        $deltaLng = $lng1 - $lng2;
+        $t = $tan1 * $tan2;
+        return 2 * atan2($t * sin($deltaLng), 1 + $t * cos($deltaLng));
 }
