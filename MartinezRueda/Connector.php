@@ -7,7 +7,7 @@ namespace MartinezRueda;
  */
 class Connector
 {
-    public $open_polygons = array(); /*[];*(
+    public $open_polygons = array(); /*[];*/
     public $closed_polygons = array(); /*[];*/
 
     /**

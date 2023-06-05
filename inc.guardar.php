@@ -11,11 +11,12 @@ CONST PERMISOS = 0775;
  * @param int $fl Nivel de vuelo (ENTRADA)
  * @param string $altMode Si el KML está pegado al suelo o la altura es relativa/absoluta (ENTRADA)
  * @param string|array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
+ * @param bool $kmz true or false for kml
  * @return bool
  */
-function creaKml2($listaContornos, $radarName, $rutas, $fl, $altMode, $appendToFilename="", $coverageLevel = 'mono', $epsilon = false) {
+function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $appendToFilename="", $coverageLevel = 'mono', $disableKmz = true) {
 
-    $nivelVuelo = str_pad( (string)$fl, 3, "0", STR_PAD_LEFT );
+    $fl = $nivelVuelo * 100.0 * FEET_TO_METERS;
 
     switch ( $coverageLevel ) { 
         case "unica": $rgb = "7d00ff00"; break;         // igual que mono
@@ -29,6 +30,8 @@ function creaKml2($listaContornos, $radarName, $rutas, $fl, $altMode, $appendToF
         // case "cuadruple": $rgb = "e67bf600"; break;     // Rascal
         case "quintuple": $rgb = "7dff00ff"; break;
         case "sextuple": $rgb = "7d00ffff"; break;
+	default:
+	    $rgb = "7d00ffff"; break;
     }
 
     if ( is_array($appendToFilename) ) {
@@ -108,24 +111,35 @@ function creaKml2($listaContornos, $radarName, $rutas, $fl, $altMode, $appendToF
     // $group tiene la geometría necesaria para pintar todo, en el formato
     // 0=>lat, 1=>lon, 2=>height
     // FIN
-    $kml = fromPolygons2KML($group, $radarWithFL, $rgb, $altMode);
+    $kmlContent = fromPolygons2KML($group, $radarWithFL, $rgb, $altMode);
 
     foreach($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
 	crearCarpetaResultados($val);
-	writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $kml);
+	writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $kmlContent, $disableKmz);
     }
     return true;
 }
 
-function writeKMZ($fileName, $radarWithFL, $content) {
+function writeKMZ($fileName, $radarWithFL, $content, $disableKmz) {
 
-    print "INFO guardando fichero: " . $fileName . ".kmz" . PHP_EOL;
+    if ( true === $disableKmz || !class_exists('ZipArchive') ) {
+	// generar kml y volver
+	logger(" V> Guardando fichero {$fileName}.kml");
+	if ( false === ($ret = file_put_contents("{$fileName}.kml", $content)) ) {
+	    logger(" E> Problema al guardar {$fileName}.kml");
+	    return false;
+	}
+
+	return true;
+    }
+    logger(" V> Guardando fichero {$fileName}.kmz");
+
     $zip = new ZipArchive();
     if ( false === $zip->open(
         $fileName . ".kmz",
         ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE)
     ) {
-        die("ERROR can't create " . $fileName . ".kmz" . PHP_EOL);
+	logger(" E> No se puede crear el fichero {$filename}.kmz"); exit(-1);
     }
     $zip->addFromString($radarWithFL . ".kml", $content);
     $zip->close();
@@ -142,11 +156,14 @@ function writeKMZ($fileName, $radarWithFL, $content) {
 function crearCarpetaResultados($ruta) {
 
     if ( !is_dir( $ruta ) ) {
+	logger(" V> Creando carpeta >{$ruta}<");
         //clearstatcache();
         //$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
         if (mkdir($ruta, PERMISOS, true)) {
+	    logger(" V> Carpeta >{$ruta}< creada correctamente");
             return true;
         } else {
+	    logger(" E> Error creando carpeta >{$ruta}<"); exit(-1);
             return false;
         }
     }
@@ -455,13 +472,13 @@ function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
             <PolyStyle><color>' . $rgb . '</color></PolyStyle>
 	</Style>
 	<Placemark>
-            <name>' .  $radarWithFL . '</name>
+	    <name>' .  $radarWithFL . '</name>
 	    <styleUrl>#transGreenPoly</styleUrl>
 	    <MultiGeometry>';
 
     $kmlPolygonHeader = PHP_EOL .
 '                <Polygon>
-                <extrude>1</extrude>
+		<extrude>1</extrude>
 		<altitudeMode>' . $altMode . '</altitudeMode>
 		<outerBoundaryIs><LinearRing><coordinates>' . PHP_EOL;
     $kmlPolygonFooter_1 = PHP_EOL .

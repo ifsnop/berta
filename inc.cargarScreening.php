@@ -14,7 +14,7 @@ CONST DISTANCIA_A_TERRAIN_HEIGHT = 14;
  * @param int $forzarAlance Alcance por defecto del radar en caso de no existir dato en el fichero de screening
  * @return array $radar datos del radar con la información del fichero de screening incorporado
  */
-function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
+function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 
     // esta funcion guarda el contenido del fichero en un array 
     if ( false === ($contenidoFichero = @file($radar['screening'], FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
@@ -100,23 +100,26 @@ function cargarDatosTerreno ($radar, $forzarAlcance = 0) {
         $screening['radioTerrestreAumentado'] = $screening['k-factor'] * RADIO_TERRESTRE;
     }
 
-    if ( $forzarAlcance > 0 ) {
+    if ( false !== $forzarAlcance && $forzarAlcance > 0 ) {
         // utiliza el alcance que pasamos a la función
 	$radar['range'] = $forzarAlcance * MILLA_NAUTICA_EN_METROS;
+	logger(" I> Se ha forzado un alcance de " . ($radar['range'] / MILLA_NAUTICA_EN_METROS) .
+	    "NM / " . $radar['range'] . "m");
     } else {
         // utiliza el alcance definido en el fichero de screening
         $radar['range'] = $screening['range'] * MILLA_NAUTICA_EN_METROS;
+	logger(" I> El alcance definido en el fichero de terreno es de " . ($radar['range'] / MILLA_NAUTICA_EN_METROS) .
+	    "NM / " . $radar['range'] . "m");
     }
-
-    logger(" I> El alcance del radar es de " . ($radar['range'] / MILLA_NAUTICA_EN_METROS) .
-        "NM / " . $radar['range'] . "m");
 
     $radar['screening_file'] = $radar['screening'];
     $radar['screening'] = $screening;
 
+/*
     if ( false !== strpos($radar['radar'], "-psr") ) {
         logger(" I> Detectado PSR, ajustando nombre, REVISAR porque ahora screening|site no se usa"); exit(-1);
         $radar['screening']['site'] = $radar['screening']['site'] . "_PSR";
     }
+*/
     return $radar;
 }

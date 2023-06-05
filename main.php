@@ -4,6 +4,15 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('memory_limit', '16G');
 
+// DEFINICIÓN DE CONSTANTES
+CONST RADIO_TERRESTRE = 6371000;
+CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
+CONST GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
+CONST GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
+CONST ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
+
+
+
 // INCLUSIÓN DE FICHEROS
 include_once('inc.cargarScreening.php');
 include_once('inc.cargarCoordenadas.php');
@@ -14,36 +23,40 @@ include_once('inc.multiCalculos.php');
 include_once('inc.guardar.php');
 include_once('MartinezRueda/Algorithm.php');
 
+
 $config = array(
-    'sensores' => array(
-        "paracuellos1",
+    'sensores' => array(),
+/*        "paracuellos1",
         "alcolea",
         "monflorite"
     ),
+*/
     'radar-data' => "spain.tsk/",
     'fl' => array('min' => 1, 'max' => 400, 'step' => 1),
     'cone' => false,
     'max-range' => false,
     'force' => false,
     'path' => array(
-	'resultados' => "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR,
+	'resultados_mono' => "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR . "MONO" . DIRECTORY_SEPARATOR,
 	'cache' => "." . DIRECTORY_SEPARATOR . "cache" . DIRECTORY_SEPARATOR,
+	'resultados_multi' => "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR . "MULTI" . DIRECTORY_SEPARATOR,
     ),
     'mode' => array(), // monoradar, multiradar
+    'disable-kmz' => false,
 );
 
 if ( file_exists('inc.config.php') ) {
     include_once('inc.config.php');
 }
 
-// DEFINICIÓN DE CONSTANTES
-CONST RADIO_TERRESTRE = 6371000;
-CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
-CONST GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
-CONST GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
-CONST ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
+/*
 
 /*
+$path = array( array(41,-10), array(42,-10), array(42,-9), array(41,-9), array(41,-10));
+print computeArea($path) . PHP_EOL;
+/*
+
+
 $prueba = array(
     array(0,0,0,0,0,0,0,0,0,0,0),
     array(0,1,1,1,0,0,0,0,0,0,0),
@@ -89,7 +102,8 @@ exit(0);
 
 programaPrincipal();
 
-logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " . "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+    "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
 exit(0);
 
@@ -107,6 +121,7 @@ function printHelp() {
     print "-d                | --radar-data (path of radar_data.rbk, default ./spain.tsk)" . PHP_EOL;
     print "-s min,max,step   | --steps min,max,step (in FL) default (1,400,1)" . PHP_EOL;
     print "-c                | --cone (activa cálculo del cono de silencio)" . PHP_EOL;
+    print "-z                | --disable-kmz (desactiva kmz y genera kml)" . PHP_EOL;
     print "-h                | --help" . PHP_EOL;
     return;
 }
@@ -126,7 +141,8 @@ function programaPrincipal(){
     $shortopts .= "h"; // help
     $shortopts .= "s:"; // steps
     $shortopts .= "c"; // cálculo del cono
-    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "cone" );
+    $shortopts .= "z"; // desactiva kmz y genera kml
+    $longopts = array( "radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "cone", "disable-kmz" );
     $options = getopt( $shortopts, $longopts );
     if ( 0 == count($options) ) {
         printHelp();
@@ -220,6 +236,11 @@ function programaPrincipal(){
                 $config['force'] = true;
 		logger(" I> Modo *forzado* activado");
                 break;
+	    case 'z':
+	    case 'disable-kmz':
+		$config['disable-kmz'] = true;
+		logger(" I> Generación KMZ desactivada");
+		break;
             default:
                 print "ERROR Parámetro no esperado: $key" . PHP_EOL;
                 exit(0);
@@ -237,6 +258,10 @@ function programaPrincipal(){
     $poligono = false;
     $altMode = altitudeModetoString($altitudeMode = 0);
 */
+    if ( !class_exists('ZipArchive') ) {
+	logger(" I> La clase ZipArchive no está instalda, generación KMZ desactivada");
+    }
+
     $timer = microtime(true);
     logger(" D> Leyendo información de radares de >" . $config['radar-data'] . "<");
     $infoCoral = getRadars($config['radar-data'], $parse_all = true);
@@ -250,7 +275,6 @@ function programaPrincipal(){
     }
 
     // print_r($config);
-
     $coberturas = array(); // array con las coberturas
     for ($fl = $config['fl']['min']; $fl <= $config['fl']['max']; $fl += $config['fl']['step']) {
 	$nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
@@ -265,7 +289,7 @@ function programaPrincipal(){
 		    if ( false === ($fecha_modificado_cache = filemtime($cache_file)) ) {
 			logger(" E> Error leyendo fecha del fichero caché >{$cache_file}<"); exit(-1);
 		    }
-		    
+
 		    if ( $fecha_modificado_cache >= $infoCoral[$sensor]['fecha_modificado'] ) {
 			$cache = file_get_contents( $cache_file );
 			if ( false !== $cache ) {
@@ -293,7 +317,13 @@ function programaPrincipal(){
 		logger(" D> Leyendo información del terreno de {$sensor}");
 		// ¿tenemos datos del terreno cargados? vamos a cargarlos una sola vez
 		if ( !isset($coberturas[$sensor]['terreno']) || false === $coberturas[$sensor]['terreno'] ) {
-		    $coberturas[$sensor]['terreno'] = cargarDatosTerreno( $infoCoral[$sensor], $config['max-range'] );
+		    $coberturas[$sensor]['terreno'] = cargarDatosTerreno( $infoCoral[$sensor], $config['max-range'] !== false ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange'] );
+		    if ( false !== strpos($sensor, "-psr") ) {
+			logger(" V> Detectado PSR, ajustando alcance");
+			$coberturas[$sensor]['terreno']['range'] = $infoCoral[$sensor]['primaryMaximumRange'] * MILLA_NAUTICA_EN_METROS;
+			logger(" I>  El alcance definido para el PSR es de " . ($coberturas[$sensor]['terreno']['range'] / MILLA_NAUTICA_EN_METROS) .
+			    "NM / " . $coberturas[$sensor]['terreno']['range'] . "m");
+		    }
 		    logger(" V> Información del terreno procesada (" . round(microtime(true) - $timer,2) . "s)");
 		    if ( false ) {
 			// para la herramienta de cálculo de kmz de matlab
@@ -306,24 +336,27 @@ function programaPrincipal(){
 		// guardar el cálculo en la cache, siempre que no hayamos forzado el alcance
 		// si se ha forzado el alcance, la caché está invalidada automáticamente.
 		if ( false === $config['max-range'] ) {
+		    logger(" V> Guardando caché para el sensor >{$sensor}< en >{$cache_file}<");
 		    file_put_contents($cache_file, json_encode($coberturas[$sensor]['contornos']));
 		}
 
 	    }
 	    // si estamos en mono cobertura, generamos ya el kml
-	    $rutas = array(
-		'por_nivel' =>  $config['path']['resultados'] . $nivelVuelo . DIRECTORY_SEPARATOR ,
-		'por_sensor' => $config['path']['resultados'] . $sensor . DIRECTORY_SEPARATOR ,
-	    );
 	    if ( isset($config['mode']['monoradar']) ) {
+		$rutas = array(
+		    'por_nivel' =>  $config['path']['resultados_mono'] . $nivelVuelo . DIRECTORY_SEPARATOR ,
+		    'por_sensor' => $config['path']['resultados_mono'] . $sensor . DIRECTORY_SEPARATOR ,
+		);
+
 		creaKml2(
 		    $coberturas[$sensor]['contornos'],
 		    $sensor,
 		    $rutas,
-		    $fl,
+		    $nivelVuelo,
 		    altitudeModetoString($altitudeMode = 0),
 		    $appendToFilename = '',
-		    $coverageLevel = 'mono'
+		    $coverageLevel = 'mono',
+		    $config['disable-kmz']
 		);
 	    }
 
@@ -343,11 +376,35 @@ function programaPrincipal(){
 */
 
 
-
 	logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " . "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 	}
+	if ( isset($config['mode']['multiradar']) ) {
+	    crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
+
+	    multicobertura(
+		$coberturas,
+		$nivelVuelo,
+		array($config['path']['resultados_multi'] . $nivelVuelo . DIRECTORY_SEPARATOR),
+		altitudeModetoString($altitudeMode = 0),
+		/* $calculosMode*/
+	    );
+	    /*
+	    creaKml2(
+		$coberturas[$sensor]['contornos'],
+		$sensor,
+		$rutas,
+		$fl,
+		altitudeModetoString($altitudeMode = 0),
+		$appendToFilename = '',
+		$coverageLevel = 'multi',
+		$config['disable-kmz']
+	    );
+	    */
+	}
     }
-exit(0);
+    exit(0);
+
+}
 /*
             $ret = false; $from_cache = false;
             $nivelVuelo = str_pad( (string)$fl,3,"0", STR_PAD_LEFT );
@@ -395,7 +452,7 @@ exit(0);
     $multiCoberturas = array();
 
 */
-
+/*
     //pedirDatosUsuario($flMin, $flMax, $paso, $altitudeMode, $poligono, $lugares);
     // recorremos todas las localizaciones que nos ha dado el usuario
     foreach($config['sensores'] as $sensor) {
@@ -481,7 +538,7 @@ exit(0);
 
     return;
 }
-
+*/
 function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo = 'monoradar') {
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
@@ -571,7 +628,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
         print "[check coverage overflow "; $timer0 = microtime(true);
         checkCoverageOverflow($mallado['malla']);
         printf(" %3.4fs]", microtime(true) - $timer0);
-
+	print PHP_EOL;
 	// $mallado['mallaLatLon'] = false;
 
         // print_r(array_keys($mallado['mallaLatLon']));exit(0);
@@ -597,7 +654,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
 	if ( $calculoCono ) {
-	    print "INFO no se calcula cono para niveles de vuelo por debajo de la ubicación del radar" . PHP_EOL;
+	    logger(" I> No se calcula cono para niveles de vuelo por debajo de la ubicación del radar");
 	}
         print "[calculosFLdebajoRadar]";
 	calculosFLdebajoRadar($radar, $flm);
@@ -619,12 +676,13 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
 
 	print "[determinaContornos2 start]"; $timer0 = microtime(true);
         $listaContornos2 = determinaContornos2($mallado['malla']);
+	printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
+	print PHP_EOL;
 	if ( 0 == count($listaContornos2) ) {
-	    print PHP_EOL . "INFO: No se genera KML/PNG/TXT porque no existe cobertura al nivel de vuelo FL" . $nivelVuelo . PHP_EOL;
+	    logger(" I> No se generan contornos porque no existe cobertura del sensor {$radar['radar']} a FL{$nivelVuelo}");
 	    return false;
 	}
-	printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
-        print "[calculaCoordenadasGeograficasB]";
+        logger(" D> CcalculaCoordenadasGeograficasB");
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
 	// print_r($listaContornos2); exit(0);
     }
@@ -642,6 +700,5 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
         $coverageLevel = 'mono'
     );
 */
-    print PHP_EOL;
     return $listaContornos2;
 }
