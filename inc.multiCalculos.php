@@ -74,42 +74,48 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
     $vr[] = array($radares);
     //exit(0);
     $radares_interseccion_cache = array();
+    $radares_resta_cache = array();
+    $radares_suma_cache = array();
 
     foreach($vr as $numero_solape => $grupo_solape) {
 	print "=======" . $coverageName[$numero_solape] . "======" . PHP_EOL;
 
 	foreach($grupo_solape as $grupo_radares_interseccion) {
 
-	    logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
-		"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+	    //logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+	//	"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
 	    $grupo_radares_resta = array_values(array_diff($radares, $grupo_radares_interseccion));
+
+	    print "INTERSEC: " . implode(',', $grupo_radares_interseccion) . PHP_EOL;
+	    print "RESTA: " . implode(',', $grupo_radares_resta) . PHP_EOL;
+
 	    // bucle principal, aquí tendríamos que calcular todas las coberturas.
 	    $mr_algorithm = new \MartinezRueda\Algorithm();
-	    // interseccionar
-	    print "INTERSEC: " . implode(',', $grupo_radares_interseccion) . PHP_EOL;
 
+	    // interseccionar
 	    $count_grupo_radares_interseccion = count($grupo_radares_interseccion);
 	    if ( $count_grupo_radares_interseccion == 1 ) {
 		$result_inter = $mr_polygon[$grupo_radares_interseccion[0]];
-	    } else if ( $count_grupo_radares_interseccion == 2 ) {
+	    } else if ( $count_grupo_radares_interseccion == 2 ) { // estos nunca estarán en caché
+		$nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
+		// print "QUERY: $nombre_grupo_interseccion" . PHP_EOL;
 		$result_inter = $mr_algorithm->getIntersection(
 		    $mr_polygon[$grupo_radares_interseccion[0]],
 		    $mr_polygon[$grupo_radares_interseccion[1]]
 		);
-		$nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
 		$radares_interseccion_cache[$nombre_grupo_interseccion] = $result_inter;
 		print "STORED: $nombre_grupo_interseccion" . PHP_EOL;
-
-		print "CACHESTATUS: " . implode(',' , array_keys($radares_interseccion_cache)). PHP_EOL;
-
 	    } else { // 3 o más
-		print "CACHESTATUS: " . implode(',' , array_keys($radares_interseccion_cache)). PHP_EOL;
+		//print "CACHESTATUS: " . implode(',' , array_keys($radares_interseccion_cache)). PHP_EOL;
 
+		// los anteriores ya están en la caché, sólo hay que calcular la intersección con el nuevo
+		// se cogen todos los radares menos el último y se generan dos listas, subgrupo y el resto.
 		$subgrupo = array_slice($grupo_radares_interseccion,
 		    0,
 		    $count_grupo_radares_interseccion - 1
 		);
+		// nombre del último radar, para la intersección
 		$resto = $grupo_radares_interseccion[$count_grupo_radares_interseccion - 1];
 
 		$nombre_subgrupo_interseccion = implode('^', $subgrupo);
@@ -126,22 +132,107 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 	    }
 
 
-	    print PHP_EOL;
 	    if ( 0 == count($result_inter->contours) ) {
 		print "Intersección vacia, no hay resultado" . PHP_EOL;
 		continue;
 	    }
 
 	    // podríamos implementar esto como una suma de grupos a restar y luego una resta
-	    $result_resta = array();
-	    print "RESTA (metodo2): " . implode(',', $grupo_radares_resta);
+	    // print "RESTA: " . implode(',', $grupo_radares_resta) . PHP_EOL;
 	    $mr_algorithm = new \MartinezRueda\Algorithm();
+	    $result_suma = false;
+	    $count_grupo_radares_resta = count($grupo_radares_resta);
+	    continue;
 
-	    $result_resta = false;
-	    if ( count($grupo_radares_resta) == 1 ) {
+	    $Combinations = new Combinations($grupo_radares_resta);
+	    $vr_sumas = $Combinations->getCombinations($count_grupo_radares_resta-1, false);
+	    foreach($vr_sumas as $suma) {
+		$nombre_suma = implode('_U_', $suma);
+		if ( isset($radares_suma_cache[$nombre_suma]) ) {
+		    print_r(array_diff($grupo_radares_resta, $suma));
+		    $result_suma = $radares_suma_cache[$nombre_suma];
+		    $result_suma = $mr_algorithm->getUnion(
+			$result_suma,
+			array_diff($grupo_radares_resta, $suma)
+		    );
+		} else {
+		    // sumarlo porque no se ha sumado antes
+
+
+		}
+	    }
+	    exit(0);
+
+
+	    if ( $count_grupo_radares_resta == 1 ) {
 		// print ">grr: {$grupo_radares_resta[0]}" . PHP_EOL;
 		$result_resta = $mr_polygon[$grupo_radares_resta[0]];
-	    } else if ( count($grupo_radares_resta) > 1 ) {
+	    } else if ( $count_grupo_radares_resta > 1 ) {
+
+		for($i = $count_grupo_radares_resta; $i>0; $i-- ) {
+		    $subgrupo = array_slice($grupo_radares_resta, 0, $i );
+		    $nombre_subgrupo_resta = implode('_U_', $subgrupo);
+		    print "QUERY: $nombre_subgrupo_resta" . PHP_EOL;
+		    if ( !isset($radares_resta_cache[$nombre_subgrupo_resta]) ) {
+			// calcular
+			$result_resta = $mr_algorithm->getUnion(
+			    $mr_polygon[$grupo_radares_resta[0]],
+			    $mr_polygon[$grupo_radares_resta[1]]
+			);
+			for($i=2; $i<$count_grupo_radares_resta; $i++) {
+			    print ".";
+			    // print ">grr{$i}: {$grupo_radares_resta[$i]}" . PHP_EOL;
+			    $result_resta = $mr_algorithm->getUnion(
+				$result_resta,
+				$mr_polygon[$grupo_radares_resta[$i]]
+			    );
+			}
+			$radares_resta_cache[$nombre_subgrupo_resta] = $result_resta;
+			print "STORING: $nombre_subgrupo_resta" . PHP_EOL;
+		    } else {
+			$result_resta = $radares_resta_cache[$nombre_subgrupo_resta];
+			print "RETRIEVED: $nombre_subgrupo_resta" . PHP_EOL;
+		    }
+
+		}
+/*
+		// buscar si grupo_radares_resta está en la cache
+
+		$subgrupo = array_slice($grupo_radares_resta, 0, $count_grupo_radares_resta - 1 );
+		$nombre_subgrupo_resta = implode('U', $subgrupo);
+		if ( !isset($radares_resta_cache[$nombre_subgrupo_resta]) ) {
+
+		    $result_resta = $mr_algorithm->getUnion(
+			$mr_polygon[$grupo_radares_resta[0]],
+			$mr_polygon[$grupo_radares_resta[1]]
+		    );
+		    for($i=2; $i<$count_grupo_radares_resta; $i++) {
+			print ".";
+		    //    print ">grr{$i}: {$grupo_radares_resta[$i]}" . PHP_EOL;
+			$result_resta = $mr_algorithm->getUnion(
+			    $result_resta,
+			    $mr_polygon[$grupo_radares_resta[$i]]
+			);
+		    }
+
+		    print "STORING: $nombre_subgrupo_resta" . PHP_EOL;
+
+		    // calcula
+		} else {
+		    print "RETRIEVED: $nombre_subgrupo_resta" . PHP_EOL;
+		    print "    ADDING " . $grupo_radares_resta[$count_grupo_radares_resta-1] . PHP_EOL;
+		    $suma = $radares_resta_cache[$nombre_subgrupo_resta];
+		    $result_resta = $mr_algorithm->getUnion(
+			$suma,
+			$mr_polygon[$grupo_radares_resta[$count_grupo_radares_resta-1]]
+		    );
+
+
+		}
+		print $nombre_subgrupo_resta . PHP_EOL;
+		//$radares_resta_cache
+
+
 		// print ">grr0: {$grupo_radares_resta[0]}" . PHP_EOL;
 		// print ">grr1: {$grupo_radares_resta[1]}" . PHP_EOL;
 		$result_resta = $mr_algorithm->getUnion(
@@ -158,6 +249,12 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 		}
 	    }
 	    print PHP_EOL;
+
+*/
+	    }
+
+
+
 
 	    if ( false === $result_resta ) {
 		$result = $result_inter;
@@ -184,8 +281,22 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 	}
     }
 
-    logger(" V> Fin del cálculo de la cobertura multiradar, duración " . round(microtime(true) - $timer_multiradar,2));
 
+    $timer_diff = microtime(true) - $timer_multiradar; // string = date('Y/m/d H:i:s', round(microtime(true) - $timer_multiradar);
+
+    if ( $timer_diff > 24*60*60 ) {
+	$format = "d H:i:s";
+    } else if ( $timer_diff > 60*60 ) {
+	$format = "H:i:s";
+    } else if ( $timer_diff > 120 ) {
+	$format = "i:s";
+    } else {
+	$format = "s";
+    }
+
+    $timer_string = date($format, $timer_diff);
+
+    logger(" V> Fin del cálculo de la cobertura multiradar, duración $timer_string");
     //print_r($vr);
     exit(0);
 
