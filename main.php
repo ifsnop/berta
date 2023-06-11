@@ -23,8 +23,21 @@ include_once('inc.multiCalculos.php');
 include_once('inc.guardar.php');
 include_once('MartinezRueda/Algorithm.php');
 
+/*
+$cmp = (3) & ~(8 + 2 +1);
+print $cmp . PHP_EOL;
+$cmp = (8 + 2 +1) & ~3;
+print $cmp . PHP_EOL;
+exit(0);
 
-$config = array(
+
+estos son los radares que hay que sumar: 506
+CANDIDATO 510 para tener cacheado la petición 506
+CANDIDATO 507 para tener cacheado la petición 506
+
+
+*/
+    $config = array(
     'sensores' => array(),
 /*        "paracuellos1",
         "alcolea",
