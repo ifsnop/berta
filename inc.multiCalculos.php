@@ -151,37 +151,40 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 	    } else if ( $count_grupo_radares_resta > 1 ) {
 
 		// calcula un id según los radares que haya en el grupo
-		$id = getBitsRadares($radares2bits, $grupo_radares_resta);
-		print "estos son los radares que hay que sumar: $id" . PHP_EOL;
+		$bits = getBitsRadares($radares2bits, $grupo_radares_resta);
+//		print "estos son los radares que hay que sumar:" . PHP_EOL;
+//		print_r($bits);
 		// obtiene de todas las sumas que hay que hacer, las que ya están hechas.
-		$resto = 0;
-		$result_suma = getSumasCache($radares2bits, $id, $radares_suma_cache, $suma_bits, $resto_bits);
-		//hay que averiguar qué suma está hecha y sumar lo que quede pendiente
-		// por ahora siempre va a estar todo pendiente
+		$resto = 0; $suma_bits = 0;
+		$result_suma = getSumasFromCache($radares2bits, $bits2radares, $bits, $radares_suma_cache, $suma_bits, $resto_bits);
+		// hay que averiguar qué suma está hecha y sumar lo que quede pendiente
 		$resto_radares = getRadaresBits($bits2radares, $resto_bits);
-		print "result_suma: " . count($result_suma->contours) . PHP_EOL;
-		print "resto readres" . PHP_EOL;
-		print_r($resto_radares);
-		print "cache suma: " . count($radares_suma_cache) . PHP_EOL;
-		// exit(-1);
-		$count_resto_radares = count($resto_radares);
+		$is_empty = $result_suma->ncontours() > 0 ? false : true;
+//		print "result_suma: " . count($result_suma->contours) . PHP_EOL;
+//		print "resto radares" . PHP_EOL;
+//		print_r($resto_radares);
+//		print "cache suma: " . count($radares_suma_cache) . PHP_EOL;
+		
 		// ahora hay que sumar resto_radares
-		for($i = 0; $i < $count_resto_radares; $i++) {
-		    print "sumando : " . $resto_radares[$i]. PHP_EOL;
+		for($i = 0; $i < count($resto_radares); $i++) {
+//		    print "sumando : " . $resto_radares[$i]. PHP_EOL;
 		    $result_suma = $mr_algorithm->getUnion(
 		        $result_suma,
 		        $mr_polygon[$resto_radares[$i]]
 		    );
 		    $suma_bits += $radares2bits[$resto_radares[$i]];
-		    // no guardamos el primero, porque no se ha sumado con nadie
-		    if ( $i != 0 && !isset($radares_suma_cache[$suma_bits]) ) {
-			print "GUARDANDO ($suma_bits)" . PHP_EOL;
+		    // comprobamos que getSumasFromCache devolvió datos, porque entonces
+		    // la primera suma hay que guardarla en caché.
+		    if ( false == $is_empty ) {
+//			print "GUARDANDO ($suma_bits)" . PHP_EOL;
+			if ( isset($radares_suma_cache[$suma_bits]) ) {
+			    print "OJO, estamos guardando en la caché algo que ya existía" . PHP_EOL; exit(-1);
+			}
 			$radares_suma_cache[$suma_bits] = $result_suma;
-		    } else {
-			print "CLAVE YA EXISTÍA" . PHP_EOL;
 		    }
-
-		    // hay que ir guardando en la caché las sumas que se van haciendo
+		    // a partir de la primera iteración, el resultado de la suma siempre
+		    // se deberá cachear
+		    $is_empty = false;
 		}
 		// todos sumados en result_suma
 		$result_resta = $result_suma;
@@ -237,12 +240,21 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
     return true;
 }
 
-function getBitsRadares($radares2bits, $grupo_radares_resta) {
-    $id = 0;
-    foreach($grupo_radares_resta as $radar)
-	$id += $radares2bits[$radar];
+/*
+ * Devuelve la suma de los radares activos y un array con los bits
+ * de cada uno de los radares
+ *
+ */
 
-    return $id;
+function getBitsRadares($radares2bits, $grupo_radares_resta) {
+    $bits = array( 'suma' => 0, 'bits' => array() );
+    $bits['suma'] = 0;
+    foreach($grupo_radares_resta as $radar) {
+	$bits['suma'] += $radares2bits[$radar];
+	$bits['bits'][] = $radares2bits[$radar];
+    }
+
+    return $bits;
 }
 
 // si se devuelve resto, son los radares que quedan por sumar, que no se han
@@ -250,14 +262,57 @@ function getBitsRadares($radares2bits, $grupo_radares_resta) {
 // la función devuelve el polígono con las sumas, false si no hay ninguna 
 // en la cache
 
-function getSumasCache($radares2bits, $id, $radares_suma_cache, &$suma_bits, &$resto_bits) {
+function getSumasFromCache($radares2bits, $bits2radares, $bits, $radares_suma_cache, &$suma_bits, &$resto_bits) {
+
 
 // id = 5 y en suma_cache no hay 5, sólo hay 4... así que tengo que descomponer id en su suma de factores
     $resto_bits = 0;
     $suma_bits = 0;
 
-    print "SEARCH START" . PHP_EOL;
+//    print_r($radares2bits); print_r($bits2radares); exit(1);
 
+    // print "SEARCH START" . PHP_EOL;
+
+    $id = $bits['suma'];
+
+    $vsr = array(); // variaciones sin repetición
+    for($i = count($bits['bits']); $i>1; $i--) {
+	$Combinations = new Combinations($bits['bits']);
+	$vsr[$i] = $Combinations->getCombinations($i, false);
+	//print "$i] " .  count($vsr[$i]) . PHP_EOL;
+	foreach($vsr[$i] as $variacion_radares) {
+	    $suma = array_sum($variacion_radares);
+	    // print "SEARCHING $suma" . PHP_EOL;
+	//    if ( count($variacion_radares) == 7 ){
+	//	print "variacion_radares:" . PHP_EOL;
+	//	print_r($variacion_radares);
+	//    }
+	    foreach($radares_suma_cache as $key => $polygon) {
+		if ( $suma == $key ) {
+	//	    print "MATCH!!! $key" . PHP_EOL;
+		    $resto_bits = array_sum(array_diff($bits['bits'], $variacion_radares));
+	//	    print "resto_bits: $resto_bits" . PHP_EOL;
+		    $suma_bits = $suma;
+	//	    print "variacion radares" . PHP_EOL;
+		    //print_r($variacion_radares);
+	//	    foreach($variacion_radares as $bit) {
+	//		print $bits2radares[$bit] . " " ;
+	//	    }
+	//	    print PHP_EOL;
+/*		    print "resto radares sin sumar" . PHP_EOL;
+		    foreach($resto_bits as $bit) {
+			print $bits2radares[$bit] . " " ;
+		    }
+		    print PHP_EOL;
+*/		    //print_r($resto_bits);
+		    //exit(-1);
+		    return $polygon;
+		}
+	    }
+	}
+    }
+
+/*
     // exact match
     if ( isset($radares_suma_cache[$id]) ) {
 	$resto_bits = 0;
@@ -295,7 +350,7 @@ function getSumasCache($radares2bits, $id, $radares_suma_cache, &$suma_bits, &$r
 	    return $polygon;
 	}
 */
-    }
+/*    }
 
     if ( false !== $found_key ) {
 	print "SEARCH SOMETHING FOUND" . PHP_EOL;
@@ -303,20 +358,22 @@ function getSumasCache($radares2bits, $id, $radares_suma_cache, &$suma_bits, &$r
 	$resto_bits = $found_key ^ $id;
 	return $radares_suma_cache[$found_key];
     }
-
-    print "SEARCH NOT FOUND" . PHP_EOL;
-    $resto_bits = $id;
+*/
+//    print "SEARCH NOT FOUND" . PHP_EOL;
+    $resto_bits = $bits['suma'];
     return new \MartinezRueda\Polygon(array());
 }
 
 // devuelve un array de radares, según los bits activos en resto_bits
 function getRadaresBits($bits2radares, $resto_bits) {
 
+//    print "resto_bits: $resto_bits" . PHP_EOL;
+
     $ret = array();
     $bit_str = decbin($resto_bits);
     $len = strlen($bit_str) - 1;
-    for($i = 0, $pow = pow(2,$len); $i <= $len; $i++, $pow>>=1) {
-	// print "bit_str($bit_str) i($i) pow($pow) bit_str[i](" . $bit_str[$i] . ")" . PHP_EOL;
+    for($i = $len, $pow = 1; $i >= 0; $i--, $pow<<=1) {
+//	print "bit_str($bit_str) i($i) pow($pow) bit_str[i](" . $bit_str[$i] . ")" . PHP_EOL;
 	if ( 1 == $bit_str[$i] ) {
 	    $ret[] = $bits2radares[$pow];
 	}
