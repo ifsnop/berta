@@ -134,6 +134,8 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 		print "STORED: $nombre_grupo_interseccion" . PHP_EOL;
 	    }
 
+	    logger(" D> Polígonos en intersección: " . $result_inter->ncontours()) . PHP_EOL;
+
 	    if ( 0 == count($result_inter->contours) ) {
 		print "Intersección vacia, no hay resultado" . PHP_EOL;
 		continue;
@@ -142,7 +144,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 	    // podríamos implementar esto como una suma de grupos a restar y luego una resta
 	    // print "RESTA: " . implode(',', $grupo_radares_resta) . PHP_EOL;
 	    $mr_algorithm = new \MartinezRueda\Algorithm();
-	    $result_suma = false;
+	    $result_resta = false;
 	    $count_grupo_radares_resta = count($grupo_radares_resta);
 
 	    if ( $count_grupo_radares_resta == 1 ) {
@@ -178,7 +180,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 		    if ( false == $is_empty ) {
 //			print "GUARDANDO ($suma_bits)" . PHP_EOL;
 			if ( isset($radares_suma_cache[$suma_bits]) ) {
-			    print "OJO, estamos guardando en la caché algo que ya existía" . PHP_EOL; exit(-1);
+			    logger(" E> Guardando en caché un elemento que previamente existía: $suma_bits"); exit(-1);
 			}
 			$radares_suma_cache[$suma_bits] = $result_suma;
 		    }
@@ -190,8 +192,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 		$result_resta = $result_suma;
 	    }
 
-
-
+	    logger(" D> Polígonos en resta: " . ($result_resta !== false ? $result_resta->ncontours() : 0));
 
 	    if ( false === $result_resta ) {
 		$result = $result_inter;
@@ -287,6 +288,14 @@ function getSumasFromCache($radares2bits, $bits2radares, $bits, $radares_suma_ca
 	//	print "variacion_radares:" . PHP_EOL;
 	//	print_r($variacion_radares);
 	//    }
+
+	    if ( isset($radares_suma_cache[$suma]) ) {
+		
+		    $resto_bits = array_sum(array_diff($bits['bits'], $variacion_radares));
+		    $suma_bits = $suma;
+		    return $radares_suma_cache[$suma ];
+	    }
+/*
 	    foreach($radares_suma_cache as $key => $polygon) {
 		if ( $suma == $key ) {
 	//	    print "MATCH!!! $key" . PHP_EOL;
@@ -299,16 +308,17 @@ function getSumasFromCache($radares2bits, $bits2radares, $bits, $radares_suma_ca
 	//		print $bits2radares[$bit] . " " ;
 	//	    }
 	//	    print PHP_EOL;
-/*		    print "resto radares sin sumar" . PHP_EOL;
-		    foreach($resto_bits as $bit) {
-			print $bits2radares[$bit] . " " ;
-		    }
-		    print PHP_EOL;
-*/		    //print_r($resto_bits);
+//		    print "resto radares sin sumar" . PHP_EOL;
+//		    foreach($resto_bits as $bit) {
+//			print $bits2radares[$bit] . " " ;
+//		    }
+//		    print PHP_EOL;
+//		    //print_r($resto_bits);
 		    //exit(-1);
 		    return $polygon;
 		}
 	    }
+*/
 	}
     }
 
