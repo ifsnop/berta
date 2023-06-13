@@ -398,7 +398,7 @@ function programaPrincipal(){
 		$coberturas,
 		$nivelVuelo,
 		array($config['path']['resultados_multi'] . $nivelVuelo . DIRECTORY_SEPARATOR),
-		altitudeModetoString($altitudeMode = 0),
+		altitudeModetoString($altitudeMode = 0)
 		/* $calculosMode*/
 	    );
 	    /*

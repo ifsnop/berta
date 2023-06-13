@@ -34,8 +34,11 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
     $coverageName = array( 0 => "ninguna",
         "mono", "doble", "triple",
         "cuadruple", "quintuple", "sextuple",
-        "septuple", "octuple", "nonuple"
+        "septuple", "octuple", "nonuple",
+        "decuplo", "undecuplo", "duodecuplo",
+        "terciodecuplo",
     );
+
     $radares = array();
     $mr = array();
     $mr_polygon = array();
@@ -86,16 +89,20 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
     $radares_suma_cache = array();
 
     foreach($vr as $numero_solape => $grupo_solape) {
-	print "=======" . $coverageName[$numero_solape] . "======" . PHP_EOL;
+	if ( isset($coverageName[$numero_solape]) )
+	    $nombre_solape = $coverageName[$numero_solape];
+	else
+	    $nombre_solape = $numero_solape;
+	logger(" I> Cálculo de cobertura {$nombre_solape}");
 
 	foreach($grupo_solape as $grupo_radares_interseccion) {
-	    //logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
-	    //	"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+	    logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+		"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
 	    $grupo_radares_resta = array_values(array_diff($radares, $grupo_radares_interseccion));
 
-	    print "INTERSEC: " . implode(',', $grupo_radares_interseccion) . PHP_EOL;
-	    print "RESTA: " . implode(',', $grupo_radares_resta) . PHP_EOL;
+	    logger(" V> Radares intersección: " .  implode(',', $grupo_radares_interseccion));
+	    logger(" V> Radares resta: " . implode(',', $grupo_radares_resta));
 
 	    // bucle principal, aquí tendríamos que calcular todas las coberturas.
 	    $mr_algorithm = new \MartinezRueda\Algorithm();
@@ -137,7 +144,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 	    logger(" D> Polígonos en intersección: " . $result_inter->ncontours()) . PHP_EOL;
 
 	    if ( 0 == count($result_inter->contours) ) {
-		print "Intersección vacia, no hay resultado" . PHP_EOL;
+		logger(" V> Intersección vacia, no hay resultado");
 		continue;
 	    }
 
@@ -157,7 +164,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 //		print "estos son los radares que hay que sumar:" . PHP_EOL;
 //		print_r($bits);
 		// obtiene de todas las sumas que hay que hacer, las que ya están hechas.
-		$resto = 0; $suma_bits = 0;
+		$resto_bits = 0; $suma_bits = 0;
 		$result_suma = getSumasFromCache($radares2bits, $bits2radares, $bits, $radares_suma_cache, $suma_bits, $resto_bits);
 		// hay que averiguar qué suma está hecha y sumar lo que quede pendiente
 		$resto_radares = getRadaresBits($bits2radares, $resto_bits);
