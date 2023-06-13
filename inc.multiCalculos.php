@@ -23,7 +23,7 @@ function get_vertex($arr) {
 * @param string $altMode si lo queres absolute o relative(ENTRADA)
 */
 
-function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calculosMode = array('parcial' => true, 'rascal'=>true, 'unica' => true) ) {
+function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode) { // , $calculosMode = array('parcial' => true, 'rascal'=>true, 'unica' => true) ) {
 
     if ( !isset($coberturas) || count($coberturas) == 0 ) {
         return false;
@@ -40,7 +40,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
     );
 
     $radares = array();
-    $mr = array();
+    // $mr = array();
     $mr_polygon = array();
     // asigna un número único a cada radar
     $radares2bits = array();
@@ -68,13 +68,52 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
     }
     sort($radares);
 
-    print_r($radares2bits);
-    print_r($bits2radares);
+    // print_r($radares2bits); print_r($bits2radares);
 
     if ( 1 >= count($radares) ) {
 	logger(" E> No existen coberturas suficientes para seguir calculando");
 	return false;
     }
+
+    if ( isset($calculoMode['multiradar_unica']) && true === $calculoMode['multiradar_unica'] ) {
+	logger(" I> Creando cobertura única/suma");
+
+	if ( count($radares) < 2 ) {
+	    logger(" E> Necesitamos dos radares para hacer un cálculo multiradar");
+	    exit(-1);
+	}
+
+	$result_suma = new \MartinezRueda\Polygon(array());
+	$mr_algorithm = new \MartinezRueda\Algorithm();
+
+	foreach($mr_polygon as $k => $p) {
+	    logger(" D> Añadiendo {$k} al cálculo");
+	    $result_suma = $mr_algorithm->getUnion(
+	        $result_suma,
+	        $p
+	    );
+	}
+
+	$result_arr = $result_suma->toArray();
+
+	$listaContornos = genera_contornos($result_arr);
+
+	creaKml2(
+	    $listaContornos,
+	    $radares, //$radares,
+	    $ruta,
+	    $nivelVuelo,
+	    $altMode,
+	    $appendToFilename = "",
+	    $coverageLevel = "unica"
+	);
+
+	logger(" V> Finalizado en " . round(microtime(true) - $timer_multiradar,3) . " segundos");
+	return true;
+	exit(0);
+    }
+
+
     $vr = array(); // variaciones con repetición
     for($i = 1; $i<count($radares); $i++) {
 	$Combinations = new Combinations($radares);
