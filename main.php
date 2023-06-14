@@ -326,6 +326,9 @@ function programaPrincipal(){
 
 		}
 		$coberturas[$sensor]['contornos'] = calculosFL($coberturas[$sensor]['terreno'], $fl, $nivelVuelo, $config['cone']);
+		if ( false === $coberturas[$sensor]['contornos']) {
+		    continue;
+		}
 		crearCarpetaResultados($config['path']['cache'] . $sensor);
 		// guardar el cálculo en la cache, siempre que no hayamos forzado el alcance
 		// si se ha forzado el alcance, la caché está invalidada automáticamente.
