@@ -376,7 +376,7 @@ function programaPrincipal(){
 
 	}
 	if ( (isset($config['mode']['multiradar']) && $config['mode']['multiradar'] === true ) ||
-	    (isset($config['mode']['multiradar_unica']) && $config['mode']['multiradar_unicar'] === true) ) {
+	    (isset($config['mode']['multiradar_unica']) && $config['mode']['multiradar_unica'] === true) ) {
 
 	    crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
 	    multicobertura(
@@ -473,6 +473,8 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
 
         // codigo para generar malla por encima para la multicobertura
         // con listaContornos2 ya podemos generar una cobertura vectorial
+
+/* // probando a quitar esto ahora
         print "[generacionMalladoLatLon start]"; $timer0 = microtime(true);
         $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances);
         printf("[generacionMalladoLatLon ended %3.4fs]", microtime(true) - $timer0);
@@ -482,6 +484,8 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
         checkCoverageOverflow($mallado['malla']);
         printf(" %3.4fs]", microtime(true) - $timer0);
 	print PHP_EOL;
+*/
+
 	// $mallado['mallaLatLon'] = false;
 
         // print_r(array_keys($mallado['mallaLatLon']));exit(0);
