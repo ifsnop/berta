@@ -375,9 +375,10 @@ function programaPrincipal(){
 	logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " . "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
 	}
-	if ( isset($config['mode']['multiradar']) || isset($config['mode']['multiradar_unica']) ) {
-	    crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
+	if ( (isset($config['mode']['multiradar']) && $config['mode']['multiradar'] === true ) ||
+	    (isset($config['mode']['multiradar_unica']) && $config['mode']['multiradar_unicar'] === true) ) {
 
+	    crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
 	    multicobertura(
 		$coberturas,
 		$nivelVuelo,
