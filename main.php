@@ -49,6 +49,15 @@ if ( file_exists('inc.config.php') ) {
 }
 
 /*
+$p1 = array(array( array(0,0), array(3,0), array( 3,3), array(0,3), array(0,0) ));
+$p2 = array(array( array(1,0), array(2,0), array( 2,4), array(1,4), array(1,0) ));
+$mr1 = new \MartinezRueda\Polygon($p1);
+$mr2 = new \MartinezRueda\Polygon($p2);
+$mr_algorithm = new \MartinezRueda\Algorithm();
+$res = $mr_algorithm->getDifference($mr1, $mr2);
+print_r($res->toArray());
+*/
+
 
 /*
 $path = array( array(41,-10), array(42,-10), array(42,-9), array(41,-9), array(41,-10));
@@ -288,7 +297,11 @@ function programaPrincipal(){
 			$cache = file_get_contents( $cache_file );
 			if ( false !== $cache ) {
 			    $coberturas[$sensor]['contornos'] = json_decode($cache, $assoc = true);
-			    logger (" V> Leyendo caché del fichero >{$cache_file}<");
+			    logger(" V> Leyendo caché del fichero >{$cache_file}<");
+			    if ( false === $coberturas[$sensor]['contornos'] ) {
+				logger(" D> La caché no contenía datos, no hay cobertura en FL{$nivelVuelo} para {$sensor}");
+				continue;
+			    }
 			} else {
 			    logger (" E> Error leyendo fichero caché >{$cache_file}<");
 			}
@@ -326,16 +339,17 @@ function programaPrincipal(){
 
 		}
 		$coberturas[$sensor]['contornos'] = calculosFL($coberturas[$sensor]['terreno'], $fl, $nivelVuelo, $config['cone']);
+
+		if ( false === $config['max-range'] ) {
+		    logger(" V> Guardando caché para el sensor >{$sensor}< en >{$cache_file}<");
+		    file_put_contents($cache_file, json_encode($coberturas[$sensor]['contornos']));
+		}
 		if ( false === $coberturas[$sensor]['contornos']) {
 		    continue;
 		}
 		crearCarpetaResultados($config['path']['cache'] . $sensor);
 		// guardar el cálculo en la cache, siempre que no hayamos forzado el alcance
 		// si se ha forzado el alcance, la caché está invalidada automáticamente.
-		if ( false === $config['max-range'] ) {
-		    logger(" V> Guardando caché para el sensor >{$sensor}< en >{$cache_file}<");
-		    file_put_contents($cache_file, json_encode($coberturas[$sensor]['contornos']));
-		}
 
 	    }
 	    // si estamos en mono cobertura, generamos ya el kml
@@ -357,22 +371,8 @@ function programaPrincipal(){
 		);
 	    }
 
-/*
-    print "[crearKml]" . PHP_EOL;
- // @param string $altMode cadena para que el KML utilice la altura como relativa o absoluta...
-
-    creaKml2(
-        $listaContornos2,
-        $radar['screening']['site'],
-        $ruta,
-        $fl,
-        $altMode,
-        $appendToFilename = '',
-        $coverageLevel = 'mono'
-    );
-*/
-
-	logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " . "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+	    logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+		"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
 	}
 	if ( (isset($config['mode']['multiradar']) && $config['mode']['multiradar'] === true ) ||

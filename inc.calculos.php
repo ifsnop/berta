@@ -229,7 +229,7 @@ function calculosFLencimaRadar($radar, $flm ){
 function calculaCoordenadasGeograficasA( $radar, $flm, $distanciasAlcances ){
 
     $listaContornos = array();
-    
+
     // Calcula el paso en funcion del numero maximo de azimuth (puede ser desde 360 o 720)
     $paso = 360.0 / $radar['screening']['totalAzimuths'];
 
@@ -1466,7 +1466,10 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
         $c = array_shift( $listaContornos );
         if ( -1 != $c['level'] ) {
             // nunca deberíamos comprobar dos veces si un polígono tiene elementos dentro
-            die("ERROR al analizar la jerarquía de contornos" . PHP_EOL . print_r($c, true) . PHP_EOL);
+	    logger(" E> Error al analizar la jerarquía de contornos, " .
+		"nunca deberíamos comprobar dos veces si un polígono tiene elementos dentro");
+	    print_r($c);
+	    exit(-1);
         }
 
 
@@ -1510,7 +1513,7 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
                     $l['polygon'] = array_reverse( $l['polygon'] );
                 }
                 // no lo vamos a necesitar mas, así que lo podemos borrar
-                unset($l['leftCorner']);
+                 unset($l['leftCorner']);
                 // metemos el que estaba dentro en su sitio
                 $c['inside'][] = $l;
                 // borramos $l de lista contornos (referenciado por $k)
