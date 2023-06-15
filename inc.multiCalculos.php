@@ -6,10 +6,35 @@
  */
 function get_vertex($arr) {
     $p = array();
+
+    for($i=12903;$i<12946;$i++) {
+	$p[] = array($arr[$i]['lat'], $arr[$i]['lon']);
+    }
+
+    $p2 = array();
+    for($i=0;$i<count($p)-1;$i++) {
+	$x = abs($p[0][0] - $p[1][0]);
+	$y = abs($p[0][1] - $p[1][1]);
+
+	print "$x $y" . PHP_EOL;
+	if ( $x<0.000001 || $y<0.000001 )
+	    continue;
+	print "añadiendo:" . print_r($p[$i], true);
+	$p2[] = $p[$i];
+    }
+
+    /*
     foreach($arr as $v) {
 	$p[] = array($v['lat'], $v['lon']);
     }
-    return $p;
+    */
+    // $p2[] = array_pop(array_reverse($p2));
+    $p2[] = reset($p);
+
+    //$p = ramer_douglas_peucker($p, 0.01);
+    //$p[1][0] = $p[1][0]+0.1;
+    //$p[1][0] = $p[1][0]+0.1;
+    return $p2;
 }
 
 /**
@@ -55,16 +80,34 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	$bits2radares[$i] = $radar;
 	$i <<= 1;
 	$polygons = array();
+	$j = 0;
+
+	if ( $radar == "erillas" ) {
+	    $polygons = array(array( array(40,-7), array(34,-7), array( 40,-5), array(40,-7) ));
+
+	} else 
+
 	foreach($contornos_por_radar['contornos'] as $indice => $contorno) {
-	    $polygon = get_vertex($contorno['polygon']);
-	    $polygons[] = ramer_douglas_peucker($polygon, 0.001);
+	    //if ( $j>4 ) break; $j++;
+	    if ( count($contorno['polygon'])>1000)
+		$polygons[] = get_vertex($contorno['polygon']);
+	    else continue;
+
+	    //$polygons[] = ramer_douglas_peucker($polygon, 0.001);
 	    if ( !isset($contorno['inside']) )
 		continue;
+	    $k = 0;
+/*
 	    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
-		$polygon = get_vertex($contorno_inside['polygon']);
-		$polygons[] = ramer_douglas_peucker($polygon, 0.001);
+		//if ( $k>4) break; $k++;
+		// if (count($contorno_inside['polygon'])>1000)
+		$polygons[] = get_vertex($contorno_inside['polygon']);
+		//else continue;
+		//$polygons[] = ramer_douglas_peucker($polygon, 0.001);
 	    }
+*/
 	}
+	print_r($polygons);
 	$mr_polygon[$radar] = new \MartinezRueda\Polygon($polygons);
     }
     sort($radares);
@@ -113,25 +156,20 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	return true;
     }
 
-
-
-
-
-
-    $vr = array(); // variaciones sin repetición
+    $vsr = array(); // variaciones sin repetición
     for($i = 1; $i<count($radares); $i++) {
 	$Combinations = new Combinations($radares);
-	$vr[$i] = $Combinations->getCombinations($i, false);
-	print_r($vr[$i]);
+	$vsr[$i] = $Combinations->getCombinations($i, false);
+	// print_r($vsr[$i]);
     }
-    $vr[] = array($radares);
+    $vsr[] = array($radares);
     logger(" D> Estructuras generadas en " . round(microtime(true) - $timer, 3) . "s");
 
     $radares_interseccion_cache = array();
     $radares_resta_cache = array();
     $radares_suma_cache = array();
 
-    foreach($vr as $numero_solape => $grupo_solape) {
+    foreach($vsr as $numero_solape => $grupo_solape) {
 	if ( $numero_solape >= count($coverageName) ) {
 	    $coverageName_fixed = "de más de {$numero_solape}";
 	} else {
@@ -286,7 +324,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
     } else if ( $timer_diff > 120 ) {
 	$format = "i:s";
     } else {
-	$format = "s";
+	$format = "U";
 	$timer_unidad = "segundos";
     }
 

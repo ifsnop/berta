@@ -1227,6 +1227,8 @@ function determinaContornos2_joinContornos($c) {
     $cuentaTotal = count($nDirNor)+count($nDirOver1)+count($nInvNor)+count($nInvOver1);
     print "[nSegmentos: $cuentaTotal][00%]";
 
+
+
     // ejecutar mientras tenga elementos en las listas
     while ( (count($nDirNor)+
             count($nInvNor)+

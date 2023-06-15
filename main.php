@@ -50,14 +50,14 @@ if ( file_exists('inc.config.php') ) {
 
 /*
 $p1 = array(array( array(0,0), array(3,0), array( 3,3), array(0,3), array(0,0) ));
-$p2 = array(array( array(1,0), array(2,0), array( 2,4), array(1,4), array(1,0) ));
+$p2 = array(array( array(1,0), array(1.5,0), array(2,0), array(4,0), array( 4,4), array(1,4), array(1,0) ));
 $mr1 = new \MartinezRueda\Polygon($p1);
 $mr2 = new \MartinezRueda\Polygon($p2);
 $mr_algorithm = new \MartinezRueda\Algorithm();
 $res = $mr_algorithm->getDifference($mr1, $mr2);
 print_r($res->toArray());
+exit();
 */
-
 
 /*
 $path = array( array(41,-10), array(42,-10), array(42,-9), array(41,-9), array(41,-10));
