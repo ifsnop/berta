@@ -23,7 +23,7 @@ function get_vertex($arr) {
 * @param string $altMode si lo queres absolute o relative(ENTRADA)
 */
 
-function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calculosMode = array('parcial' => true, 'rascal'=>true, 'unica' => true) ) {
+function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode) { // , $calculosMode = array('parcial' => true, 'rascal'=>true, 'unica' => true) ) {
 
     if ( !isset($coberturas) || count($coberturas) == 0 ) {
         return false;
@@ -34,7 +34,9 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
     $coverageName = array( 0 => "ninguna",
         "mono", "doble", "triple",
         "cuadruple", "quintuple", "sextuple",
-        "septuple", "octuple", "nonuple"
+        "septuple", "octuple", "nonuple",
+        "decuplo", "undecuplo", "duodecuplo",
+        "terciodecuplo",
     );
     $radares = array();
     $mr = array();
@@ -73,11 +75,54 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 	logger(" E> No existen coberturas suficientes para seguir calculando");
 	return false;
     }
-    $vr = array(); // variaciones con repetición
+
+
+    if ( isset($calculoMode['multiradar_unica']) && true === $calculoMode['multiradar_unica'] ) {
+	logger(" I> Creando cobertura única/suma");
+
+	if ( count($radares) < 2 ) {
+	    logger(" E> Necesitamos dos radares para hacer un cálculo multiradar");
+	    exit(-1);
+	}
+
+	$result_suma = new \MartinezRueda\Polygon(array());
+	$mr_algorithm = new \MartinezRueda\Algorithm();
+
+	foreach($mr_polygon as $k => $p) {
+	    logger(" D> Añadiendo {$k} al cálculo");
+	    $result_suma = $mr_algorithm->getUnion(
+		$result_suma,
+		$p
+	    );
+	}
+
+	$result_arr = $result_suma->toArray();
+
+	$listaContornos = genera_contornos($result_arr);
+
+	creaKml2(
+	    $listaContornos,
+	    $radares, //$radares,
+	    $ruta,
+	    $nivelVuelo,
+	    $altMode,
+	    $appendToFilename = "",
+	    $coverageLevel = "unica"
+	);
+	logger(" V> Finalizado en " . round(microtime(true) - $timer_multiradar,3) . " segundos");
+	return true;
+    }
+
+
+
+
+
+
+    $vr = array(); // variaciones sin repetición
     for($i = 1; $i<count($radares); $i++) {
 	$Combinations = new Combinations($radares);
 	$vr[$i] = $Combinations->getCombinations($i, false);
-	//print_r($vr[$i]);
+	print_r($vr[$i]);
     }
     $vr[] = array($radares);
     logger(" D> Estructuras generadas en " . round(microtime(true) - $timer, 3) . "s");
@@ -233,6 +278,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 
     $timer_diff = microtime(true) - $timer_multiradar; // string = date('Y/m/d H:i:s', round(microtime(true) - $timer_multiradar);
 
+    $timer_unidad = "";
     if ( $timer_diff > 24*60*60 ) {
 	$format = "d H:i:s";
     } else if ( $timer_diff > 60*60 ) {
@@ -241,11 +287,12 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode) { // , $calcu
 	$format = "i:s";
     } else {
 	$format = "s";
+	$timer_unidad = "segundos";
     }
 
     $timer_string = date($format, $timer_diff);
 
-    logger(" V> Fin del cálculo de la cobertura multiradar, duración $timer_string");
+    logger(" V> Fin del cálculo de la cobertura multiradar, duración $timer_string $timer_unidad");
 
     return true;
 }
