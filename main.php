@@ -342,12 +342,13 @@ function programaPrincipal(){
 
 		if ( false === $config['max-range'] ) {
 		    logger(" V> Guardando caché para el sensor >{$sensor}< en >{$cache_file}<");
+		    crearCarpetaResultados($config['path']['cache'] . $sensor);
 		    file_put_contents($cache_file, json_encode($coberturas[$sensor]['contornos']));
 		}
 		if ( false === $coberturas[$sensor]['contornos']) {
 		    continue;
 		}
-		crearCarpetaResultados($config['path']['cache'] . $sensor);
+
 		// guardar el cálculo en la cache, siempre que no hayamos forzado el alcance
 		// si se ha forzado el alcance, la caché está invalidada automáticamente.
 

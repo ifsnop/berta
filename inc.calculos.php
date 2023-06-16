@@ -114,7 +114,7 @@ function calculosFLencimaRadar($radar, $flm ){
         // obtenemos la última linea del array para cada azimut.
 	if ( !isset($radar['screening']['listaAzimuths'][$i]) ) {
 	    print_r($radar);
-	    print "ERROR el azimut $i no existe" . PHP_EOL;
+	    logger(" E> El azimut $i no existe");
 	    exit(-1);
 	}
 	$count = count($radar['screening']['listaAzimuths'][$i]);
@@ -138,7 +138,7 @@ function calculosFLencimaRadar($radar, $flm ){
 	    if ( 0  == $distancia ) {
 		// si el ángulo es 0, la distancia es 0, y el ángulo entre la vertical del radar y el obstáculo
 		// más alto dará una visión por cero. No hay solución posible, daremos error.
-		print "ERROR distancia $distancia para obstaculoLimitante $obstaculoLimitante con angulo $angulo" . PHP_EOL;
+		logger(" E> La distancia $distancia para obstaculoLimitante $obstaculoLimitante con angulo $angulo impide continuar. No debería suceder.");
 		exit(-1);
 	    }
             // ángulo formado entre la vertical del radar (hacia el centro de la tierra) y el obstáculo más alto
@@ -709,7 +709,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
 
         // safety check
         if ( !isset($listaObstaculosAmpliada) || !is_array($listaObstaculosAmpliada) ) {
-            die ("buscaDistanciaMenor: $$listaObstaculos debería ser un array");
+            logger(" E> buscaDistanciaMenor: $$listaObstaculos debería ser un array"); exit(-1);
         }
         // metemos la lista de obstaculos nueva en la estructura
         $radar['screening']['listaAzimuths'][$i] = $listaObstaculosAmpliada;
@@ -1769,15 +1769,15 @@ function obtieneMaxAnguloConCoberturaB($radar) {
         }
     }
     // printf("[%3.4fs]", microtime(true) - $timerStart0);
-    print "[ánguloAlcanceMáximo: " . round($maxAnguloConCobertura,3) . "º]";
+    logger(" V> ánguloAlcanceMáximo: " . round($maxAnguloConCobertura,3) . "º");
     $newRange = $maxAnguloConCobertura*$radar['screening']['radioTerrestreAumentado'];
-    print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
+    logger(" V> distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m");
     // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
     // una milla adicional, para que la matriz nunca acabe con cobertura en una de
     // sus esquinas
     // no debería hacer falta hacer un round
     $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
-    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m]";
+    logger(" V> distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m");
 
     return $newRange;
 }
@@ -1795,13 +1795,13 @@ function obtieneMaxAnguloConCoberturaB($radar) {
 function obtieneMaxAnguloConCoberturaA($distanciasAlcances) {
     // Como es por encima, habrá un array con la máxima distancia en millas
     $newRange = max($distanciasAlcances)*MILLA_NAUTICA_EN_METROS;
-    print "[distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m]";
+    logger(" V> distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m");
     // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
     // una milla adicional, para que la matriz nunca acabe con cobertura en una de
     // sus esquinas
     $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
     // no debería hacer falta hacer un round
-    print "[distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m]";
+    logger(" V> distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m");
 
     return $newRange;
 }
