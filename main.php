@@ -245,8 +245,8 @@ function programaPrincipal(){
 		logger(" I> Generación KMZ desactivada");
 		break;
             default:
-                print "ERROR Parámetro no esperado: $key" . PHP_EOL;
-                exit(0);
+                logger(" E> Parámetro no esperado: $key");
+                exit(-1);
         }
     }
 
@@ -264,7 +264,6 @@ function programaPrincipal(){
     if ( !class_exists('ZipArchive') ) {
 	logger(" I> La clase ZipArchive no está instalda, generación de KMZ desactivada");
     }
-
     $timer = microtime(true);
     logger(" D> Leyendo información de radares de >" . $config['radar-data'] . "<");
     $infoCoral = getRadars($config['radar-data'], $parse_all = true);
