@@ -7,10 +7,17 @@
 function get_vertex($arr) {
     $p = array();
 
-    for($i=12903;$i<12946;$i++) {
+    for($i=12916;$i<12924;$i++) {
+	$x = abs($arr[$i]['lat'] - $arr[$i+1]['lat']);
+	$y = abs($arr[$i]['lon'] - $arr[$i+1]['lon']);
+	print "$i] ===================" . PHP_EOL;
+	print "$i] " . $arr[$i]['lat'] . " - " . $arr[$i+1]['lat'] . PHP_EOL;
+	print "$i] " . $arr[$i]['lon'] . " - " . $arr[$i+1]['lon'] . PHP_EOL;
+        print "$i] $x $y" . PHP_EOL;
 	$p[] = array($arr[$i]['lat'], $arr[$i]['lon']);
-    }
 
+    }
+/*
     $p2 = array();
     for($i=0;$i<count($p)-1;$i++) {
 	$x = abs($p[0][0] - $p[1][0]);
@@ -22,19 +29,19 @@ function get_vertex($arr) {
 	print "añadiendo:" . print_r($p[$i], true);
 	$p2[] = $p[$i];
     }
-
+*/
     /*
     foreach($arr as $v) {
 	$p[] = array($v['lat'], $v['lon']);
     }
     */
     // $p2[] = array_pop(array_reverse($p2));
-    $p2[] = reset($p);
+//    $p2[] = reset($p2);
 
     //$p = ramer_douglas_peucker($p, 0.01);
     //$p[1][0] = $p[1][0]+0.1;
     //$p[1][0] = $p[1][0]+0.1;
-    return $p2;
+    return $p;
 }
 
 /**
