@@ -513,16 +513,16 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
 	if ( $calculoCono ) {
 	    logger(" I> No se calcula cono para niveles de vuelo por debajo de la ubicación del radar");
 	}
-        print "[calculosFLdebajoRadar]";
+        logger(" D> calculosFLdebajoRadar");;
 	calculosFLdebajoRadar($radar, $flm);
         $newRange = obtieneMaxAnguloConCoberturaB($radar);
         $radar['screening']['range'] = round($newRange);
         $radar['range'] = round($newRange);
 
         // if ( 'multiradar' == $modo ) { // puede ser hasta 10 segundos más lenta que sin LatLon en 170NM
-        print "[generacionMalladoLatLon start]"; $timer0 = microtime(true);
+        logger(" D> generacionMalladoLatLon start"); $timer0 = microtime(true);
         $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances = array());
-        printf("[generacionMalladoLatLon ended %3.4fs]", microtime(true) - $timer0);
+        logger(" D> generacionMalladoLatLon ended %3.4fs", microtime(true) - $timer0);
         // }
 
         // comprobación si hay cobertura en las esquinas de la malla. En ese caso,

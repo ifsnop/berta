@@ -71,9 +71,9 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
 		    // generado en calculaCoordenadasGeograficasB
 		    $polygon[] = array($p['col'], $p['fila'], $fl*100*FEET_TO_METERS);
 		} elseif ( isset($p[0]) && isset($p[1]) ) {
-		    $polygon[] = array($p[0], $p[1], $fl*100*FEET_TO_METERS);
+		    $polygon[] = array($p[0]/100.0, $p[1], $fl*100*FEET_TO_METERS);
 		} else {
-		    die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
+		    logger(" E> Formato de punto incorrecto: " . print_r($p, true));
 		}
 		$vertexCount++; // estadísticas
 	    } // foreach
@@ -500,7 +500,7 @@ function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
         $kmlOuter = "";
         if ( 10000 < count($polygon['polygon']) ) {
             print "DEBUG current/refined vertex count => " . count($polygon['polygon']) . "/";
-            $polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
+            //$polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
             print count($polygon['polygon']) . PHP_EOL;
         }
         foreach ( $polygon['polygon'] as &$p ) {

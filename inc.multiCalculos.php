@@ -6,7 +6,7 @@
  */
 function get_vertex($arr) {
     $p = array();
-
+/*
     for($i=12916;$i<12924;$i++) {
 	$x = abs($arr[$i]['lat'] - $arr[$i+1]['lat']);
 	$y = abs($arr[$i]['lon'] - $arr[$i+1]['lon']);
@@ -17,7 +17,9 @@ function get_vertex($arr) {
 	$p[] = array($arr[$i]['lat'], $arr[$i]['lon']);
 
     }
+*/
 /*
+
     $p2 = array();
     for($i=0;$i<count($p)-1;$i++) {
 	$x = abs($p[0][0] - $p[1][0]);
@@ -30,11 +32,11 @@ function get_vertex($arr) {
 	$p2[] = $p[$i];
     }
 */
-    /*
+
     foreach($arr as $v) {
-	$p[] = array($v['lat'], $v['lon']);
+	$p[] = array($v['lat']*100.0, $v['lon']);
     }
-    */
+
     // $p2[] = array_pop(array_reverse($p2));
 //    $p2[] = reset($p2);
 
@@ -89,10 +91,10 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	$polygons = array();
 	$j = 0;
 
-	if ( $radar == "erillas" ) {
-	    $polygons = array(array( array(40,-7), array(34,-7), array( 40,-5), array(40,-7) ));
-
-	} else 
+//	if ( $radar == "erillas" ) {
+//	    $polygons = array(array( array(40,-7), array(34,-7), array( 40,-5), array(40,-7) ));
+//
+//	} else 
 
 	foreach($contornos_por_radar['contornos'] as $indice => $contorno) {
 	    //if ( $j>4 ) break; $j++;
@@ -104,7 +106,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	    if ( !isset($contorno['inside']) )
 		continue;
 	    $k = 0;
-/*
+
 	    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
 		//if ( $k>4) break; $k++;
 		// if (count($contorno_inside['polygon'])>1000)
@@ -112,9 +114,9 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 		//else continue;
 		//$polygons[] = ramer_douglas_peucker($polygon, 0.001);
 	    }
-*/
+
 	}
-	print_r($polygons);
+	//print_r($polygons);
 	$mr_polygon[$radar] = new \MartinezRueda\Polygon($polygons);
     }
     sort($radares);
