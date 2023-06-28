@@ -52,7 +52,7 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
     }
 
     if ( 0 == count($listaContornos) ) {
-        print "INFO No se genera fichero para FL $nivelVuelo porque no hay cobertura" . PHP_EOL;
+        logger(" E> No se genera fichero kmz para FL $nivelVuelo porque no hay cobertura");
         return false;
     }
 
@@ -60,7 +60,7 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
     // porque sino es un lio.
     $group = array(); $vextex = array(); // estadísticas
     foreach( $listaContornos as &$contorno ) {
-        $vertexCount = 0; // estadísticas
+        // $vertexCount = 0; // estadísticas
         $polygon = array();
 	if ( isset($contorno['polygon']) ) {
 	    foreach ( $contorno['polygon'] as &$p ) {
@@ -75,38 +75,41 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
 		} else {
 		    logger(" E> Formato de punto incorrecto: " . print_r($p, true));
 		}
-		$vertexCount++; // estadísticas
+		// $vertexCount++; // estadísticas
 	    } // foreach
 	} else {
 	    foreach ( $contorno as &$p ) {
 		$polygon[] = array($p[0], $p[1], $fl*100*FEET_TO_METERS);
-		$vertexCount++; // estadísticas
+		// $vertexCount++; // estadísticas
 	    }
 	}
+
         $inside = array(); $vertexCountInside = array();
+
 	if ( isset($contorno['inside']) ) {
 	    foreach ( $contorno['inside'] as &$contorno_inside ) {
 		$polygon_inside = array();
-		$currentCountInside = 0;
+		// $currentCountInside = 0;
 		foreach ($contorno_inside['polygon'] as &$p_inside) {
             	    if ( isset($p_inside['lat']) && isset($p_inside['lon']) && isset($p_inside['alt']) ) {
                 	$polygon_inside[] = array($p_inside['lat'], $p_inside['lon'], $p_inside['alt']);
             	    } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
                 	$polygon_inside[] = array($p_inside['col'], $p_inside['fila'], $fl*100*FEET_TO_METERS);
             	    } elseif ( isset($p_inside[0]) && isset($p_inside[1]) ) {
-                	$polygon_inside[] = array($p_inside[0], $p_inside[1], $fl*100*FEET_TO_METERS);
+                	$polygon_inside[] = array($p_inside[0]/100.0, $p_inside[1], $fl*100*FEET_TO_METERS);
             	    } else {
-                	die("ERROR, formato de punto incorrecto: " . print_r($p, true) . PHP_EOL);
+                	logger(" E> Formato de punto incorrecto: " . print_r($p, true));
             	    }
-            	    $currentCountInside++; // estadísticas
+            	    // $currentCountInside++; // estadísticas
         	}
         	$inside[] = array('polygon' => $polygon_inside);
-        	$vertextCountInside[] = $currentCountInside; // estadísticas
+        	// $vertextCountInside[] = $currentCountInside; // estadísticas
 	    }
 	}
+
 	$group[] = array('polygon' => $polygon, 'inside' => $inside);
-	if ( 0 == count( $vertexCountInside ) ) $vertexCountInside = false;
-	$vertex[] = array('polygon' => $vertexCount, 'inside' => $vertexCountInside);
+	// if ( 0 == count( $vertexCountInside ) ) $vertexCountInside = false;
+	// $vertex[] = array('polygon' => $vertexCount, 'inside' => $vertexCountInside);
     }
     // $group tiene la geometría necesaria para pintar todo, en el formato
     // 0=>lat, 1=>lon, 2=>height
@@ -498,11 +501,15 @@ function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
     $kml = $kmlHeader;
     foreach( $polygons as &$polygon ) {
         $kmlOuter = "";
-        if ( 10000 < count($polygon['polygon']) ) {
-            print "DEBUG current/refined vertex count => " . count($polygon['polygon']) . "/";
-            //$polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
-            print count($polygon['polygon']) . PHP_EOL;
-        }
+        //if ( 10000 < count($polygon['polygon']) ) {
+	$count = count($polygon['polygon']);
+        //    print "DEBUG current/refined vertex count => " . count($polygon['polygon']) . "/";
+        $polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
+	$new_count = count($polygon['polygon']);
+	if ( $count != $new_count )
+	    logger(" V> current/refined vertex cound => $count/$new_count");
+        //    print count($polygon['polygon']) . PHP_EOL;
+        //}
         foreach ( $polygon['polygon'] as &$p ) {
             $kmlOuter .= $p[1] . "," . $p[0] . "," . $p[2] . " ";
         }

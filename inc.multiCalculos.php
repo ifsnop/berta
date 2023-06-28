@@ -89,7 +89,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	$bits2radares[$i] = $radar;
 	$i <<= 1;
 	$polygons = array();
-	$j = 0;
+	// $j = 0;
 
 //	if ( $radar == "erillas" ) {
 //	    $polygons = array(array( array(40,-7), array(34,-7), array( 40,-5), array(40,-7) ));
@@ -98,14 +98,14 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 
 	foreach($contornos_por_radar['contornos'] as $indice => $contorno) {
 	    //if ( $j>4 ) break; $j++;
-	    if ( count($contorno['polygon'])>1000)
+	    //if ( count($contorno['polygon'])>1000)
 		$polygons[] = get_vertex($contorno['polygon']);
-	    else continue;
+	    //else continue;
 
 	    //$polygons[] = ramer_douglas_peucker($polygon, 0.001);
 	    if ( !isset($contorno['inside']) )
 		continue;
-	    $k = 0;
+	    //$k = 0;
 
 	    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
 		//if ( $k>4) break; $k++;
