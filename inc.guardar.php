@@ -71,7 +71,7 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
 		    // generado en calculaCoordenadasGeograficasB
 		    $polygon[] = array($p['col'], $p['fila'], $fl*100*FEET_TO_METERS);
 		} elseif ( isset($p[0]) && isset($p[1]) ) {
-		    $polygon[] = array($p[0]/100.0, $p[1], $fl*100*FEET_TO_METERS);
+		    $polygon[] = array($p[0], $p[1], $fl*100*FEET_TO_METERS); // /100.0
 		} else {
 		    logger(" E> Formato de punto incorrecto: " . print_r($p, true));
 		}
@@ -96,7 +96,7 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
             	    } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
                 	$polygon_inside[] = array($p_inside['col'], $p_inside['fila'], $fl*100*FEET_TO_METERS);
             	    } elseif ( isset($p_inside[0]) && isset($p_inside[1]) ) {
-                	$polygon_inside[] = array($p_inside[0]/100.0, $p_inside[1], $fl*100*FEET_TO_METERS);
+                	$polygon_inside[] = array($p_inside[0], $p_inside[1], $fl*100*FEET_TO_METERS); //  /100.0
             	    } else {
                 	logger(" E> Formato de punto incorrecto: " . print_r($p, true));
             	    }

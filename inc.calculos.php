@@ -525,13 +525,13 @@ function calculosFLdebajoRadar(&$radar, $flm){
     $ptoExtra = array( 'angulo' => 0, 'altura' => 0, 'estePtoTieneCobertura' => false);
     $ptoMaxCob = array('angulo'=> $anguloMaxCob, 'altura'=> 0, 'estePtoTieneCobertura'=> true);
 
-    print "[00%]";
+    logger("[00%]", false);
     $countPct_old = 0;
 
     for ($i=0; $i < $radar['screening']['totalAzimuths']; $i++) {
 
         $countPct = $i*100.0 / $radar['screening']['totalAzimuths'];
-        if ( ($countPct - $countPct_old) > 10 ) { print "[" . round($countPct) . "%]"; $countPct_old = $countPct; }
+        if ( ($countPct - $countPct_old) > 10 ) { logger("[" . round($countPct) . "%]", false); $countPct_old = $countPct; }
 
         // Interpolamos puntos terreno
 	$listaObstaculosAmpliada = interpolarPtosTerreno(
@@ -723,7 +723,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
         }
         */
     } // for
-    print "[100%]";
+    logger("[100%]" . PHP_EOL, false);
     return;
 }
 

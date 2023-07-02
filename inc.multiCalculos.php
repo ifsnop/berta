@@ -34,7 +34,7 @@ function get_vertex($arr) {
 */
 
     foreach($arr as $v) {
-	$p[] = array($v['lat']*100.0, $v['lon']);
+	$p[] = array($v['lat'], $v['lon']); // 100.0
     }
 
     // $p2[] = array_pop(array_reverse($p2));
@@ -288,7 +288,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 		    // se deberá cachear
 		    $is_empty = false;
 		}
-		print PHP_EOL;
+		//print PHP_EOL;
 		// todos sumados en result_suma
 		$result_resta = $result_suma;
 	    }

@@ -373,7 +373,9 @@ class Algorithm
         $p1 = $segment1->begin();
         $d1 = new Point($segment1->end()->x - $p1->x, $segment1->end()->y - $p1->y);
 
-        $sqr_epsilon = 1e-7; // it was 1e-3 before
+        $sqr_epsilon = 1e-11; // it was 1e-3 before
+	$near_zero = 1e-8; // epison for zero comparison
+
         $E = new Point($p1->x - $p0->x, $p1->y - $p0->y);
         $kross = $d0->x * $d1->y - $d0->y * $d1->x;
         $sqr_kross = $kross * $kross;
@@ -396,19 +398,19 @@ class Algorithm
             // intersection of lines is a point an each segment
             $pi0 = new Point($p0->x + $s * $d0->x, $p0->y + $s * $d0->y);
 
-            if ($pi0->distanceTo($segment0->begin()) < 1e-8) {
+            if ($pi0->distanceTo($segment0->begin()) < $near_zero) {
                 $pi0 = $segment0->begin();
             }
 
-            if ($pi0->distanceTo($segment0->end()) < 1e-8) {
+            if ($pi0->distanceTo($segment0->end()) < $near_zero) {
                 $pi0 = $segment0->end();
             }
 
-            if ($pi0->distanceTo($segment1->begin()) < 1e-8) {
+            if ($pi0->distanceTo($segment1->begin()) < $near_zero) {
                 $pi0 = $segment1->begin();
             }
 
-            if ($pi0->distanceTo($segment1->end()) < 1e-8) {
+            if ($pi0->distanceTo($segment1->end()) < $near_zero) {
                 $pi0 = $segment1->end();
             }
 
