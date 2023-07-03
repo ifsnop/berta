@@ -58,7 +58,6 @@ $res = $mr_algorithm->getDifference($mr1, $mr2);
 print_r($res->toArray());
 exit();
 */
-
 /*
 $path = array( array(41,-10), array(42,-10), array(42,-9), array(41,-9), array(41,-10));
 print computeArea($path) . PHP_EOL;

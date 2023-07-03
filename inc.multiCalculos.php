@@ -138,10 +138,10 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	}
 
 	$result_suma = new \MartinezRueda\Polygon(array());
-	$mr_algorithm = new \MartinezRueda\Algorithm();
 
 	foreach($mr_polygon as $k => $p) {
 	    logger(" D> Añadiendo {$k} al cálculo");
+	    $mr_algorithm = new \MartinezRueda\Algorithm();
 	    $result_suma = $mr_algorithm->getUnion(
 		$result_suma,
 		$p
@@ -188,24 +188,25 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	logger(" N> Calculando cobertura $coverageName_fixed");
 
 	foreach($grupo_solape as $grupo_radares_interseccion) {
-	    logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
-		"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+	    //logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+	//	"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
 	    $grupo_radares_resta = array_values(array_diff($radares, $grupo_radares_interseccion));
 
 	    logger(" V> Intersección: " . implode(',', $grupo_radares_interseccion));
 	    logger(" V> Resta: " . implode(',', $grupo_radares_resta));
-
+	    continue;
 	    // bucle principal, aquí tendríamos que calcular todas las coberturas.
-	    $mr_algorithm = new \MartinezRueda\Algorithm();
 
 	    // interseccionar
 	    $count_grupo_radares_interseccion = count($grupo_radares_interseccion);
+	    $nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
 	    if ( $count_grupo_radares_interseccion == 1 ) {
 		$result_inter = $mr_polygon[$grupo_radares_interseccion[0]];
 	    } else if ( $count_grupo_radares_interseccion == 2 ) { // estos nunca estarán en caché
-		$nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
+		// $nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
 		// print "QUERY: $nombre_grupo_interseccion" . PHP_EOL;
+		$mr_algorithm = new \MartinezRueda\Algorithm();
 		$result_inter = $mr_algorithm->getIntersection(
 		    $mr_polygon[$grupo_radares_interseccion[0]],
 		    $mr_polygon[$grupo_radares_interseccion[1]]
@@ -225,6 +226,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 		$nombre_subgrupo_interseccion = implode('^', $subgrupo);
 		$nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
 		print "RETRIEVED: $nombre_subgrupo_interseccion" . PHP_EOL;
+		$mr_algorithm = new \MartinezRueda\Algorithm();
 		$result_inter = $mr_algorithm->getIntersection(
 		    $radares_interseccion_cache[$nombre_subgrupo_interseccion],
 		    $mr_polygon[$resto]
@@ -242,7 +244,6 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 
 	    // podríamos implementar esto como una suma de grupos a restar y luego una resta
 	    // print "RESTA: " . implode(',', $grupo_radares_resta) . PHP_EOL;
-	    $mr_algorithm = new \MartinezRueda\Algorithm();
 	    $result_resta = false;
 	    $count_grupo_radares_resta = count($grupo_radares_resta);
 
@@ -270,6 +271,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 		for($i = 0; $i < count($resto_radares); $i++) {
 		    print ".";
 //		    print "sumando : " . $resto_radares[$i]. PHP_EOL;
+		    $mr_algorithm = new \MartinezRueda\Algorithm();
 		    $result_suma = $mr_algorithm->getUnion(
 		        $result_suma,
 		        $mr_polygon[$resto_radares[$i]]
@@ -295,9 +297,42 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 
 	    logger(" D> Polígonos en resta: " . ($result_resta !== false ? $result_resta->ncontours() : 0));
 	    $timer_difference = microtime(true);
+
 	    if ( false === $result_resta ) {
 		$result = $result_inter;
 	    } else {
+		//imprimir result_inter
+		//imprimier result_resta
+/*
+		$result_arr2 = $result_inter->toArray();
+		$listaContornos = genera_contornos($result_arr2);
+		creaKml2(
+		    $listaContornos,
+		    $nombre_grupo_interseccion, //$radares,
+		    $ruta,
+		    $nivelVuelo,
+		    $altMode,
+		    $appendToFilename = "ESPECIAL",
+		    $coverageLevel = $coverageName[$numero_solape]
+		);
+
+		$result_arr2 = $result_resta->toArray();
+		$listaContornos = genera_contornos($result_arr2);
+		creaKml2(
+		    $listaContornos,
+		    implode(',', $grupo_radares_resta), //$radares,
+		    $ruta,
+		    $nivelVuelo,
+		    $altMode,
+		    $appendToFilename = "ESPECIAL",
+		    $coverageLevel = $coverageName[$numero_solape]
+		);
+*/
+
+
+
+
+		$mr_algorithm = new \MartinezRueda\Algorithm();
 		$result = $mr_algorithm->getDifference(
 		    $result_inter,
 		    $result_resta

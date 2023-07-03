@@ -107,7 +107,7 @@ class Algorithm
     protected function compute(Polygon $subject, Polygon $clipping, $operation)/* : Polygon*/
     {
         // https://github.com/darthmelak/martinez-rueda-php/commit/29340d1284bf8572f2a906fbe74b5d10116c6632
-        $result = null;
+        // $result = null;
 	// https://github.com/BardoQi/polygon_utils/commit/1e46be8861603b7b1fc66432298b6cc58e0a7807
 	$result = new Polygon(array());
 
@@ -125,14 +125,19 @@ class Algorithm
         }
 
         // Test 2 for trivial result case
-        $box = $subject->getBoundingBox();
-        $minsubj = $box['min'];
-        $maxsubj = $box['max'];
+        $box1 = $subject->getBoundingBox();
+        $minsubj = $box1['min'];
+        $maxsubj = $box1['max'];
 
-        $box = $clipping->getBoundingBox();
-        $minclip = $box['min'];
-        $maxclip = $box['max'];
-
+        $box2 = $clipping->getBoundingBox();
+        $minclip = $box2['min'];
+        $maxclip = $box2['max'];
+/*
+	print "MIN subj x: " . $minsubj->x . " y: " . $minsubj->y . PHP_EOL;
+	print "MAX subj x: " . $maxsubj->x . " y: " . $maxsubj->y . PHP_EOL;
+	print "MIN clip x: " . $minclip->x . " y: " . $minclip->y . PHP_EOL;
+	print "MAX clip x: " . $maxclip->x . " y: " . $maxclip->y . PHP_EOL;
+*/
         if ($minsubj->x > $maxclip->x || $minclip->x > $maxsubj->x
             || $minsubj->y > $maxclip->y || $minclip->y > $maxsubj->y) {
             // the bounding boxes do not overlap

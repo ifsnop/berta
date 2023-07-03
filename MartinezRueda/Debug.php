@@ -7,7 +7,7 @@ namespace MartinezRueda;
  */
 class Debug
 {
-    public static $debug_on = true;
+    public static $debug_on = false;
 
     public static function debug(/*callable */$callee)
     {
