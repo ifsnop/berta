@@ -171,7 +171,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 		    logger( " E> Se está insertando en suma_caché un valor que ya existe (1)"); exit(-1);
 		}
 		$radares_suma_cache[$nombre_grupo_radares_suma] = $result_suma;
-		logger(" V> cached $nombre_grupo_radares_suma -> >" . $grupo_radares[0] . "," . $grupo_radares[1] . "<");
+		logger(" V> cached $nombre_grupo_radares_suma -> >" . $grupo_radares[0] . "," . $grupo_radares[1] . "< md5: " . md5(serialize($result_suma)));
 
 
 		$result_suma_arr = $result_suma->toArray();
@@ -291,7 +291,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	    }
 
 	    $result_resta = false;
-	    logger(" D> 0 inicnado bloque resta");
+	    logger(" D> 0 iniciando bloque resta");
 	    if ( $count_grupo_radares_suma == 0 ) {
 		logger(" D> no existe polígono que recuperar para el grupo resta");
 		$result_suma = false;
@@ -299,7 +299,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 		logger(" D> recuperando de polygon suma: {$grupo_radares_suma[0]}");
 		$result_suma = $mr_polygon[$grupo_radares_suma[0]];
 	    } else {
-		logger(" D> recuperando de cache_suma: {$nombre_grupo_radares_suma}");
+		logger(" D> recuperando de cache_suma: {$nombre_grupo_radares_suma} md5: " . md5(serialize($radares_suma_cache[$nombre_grupo_radares_suma])));
 		$result_suma = $radares_suma_cache[$nombre_grupo_radares_suma];
 	    }
 	    logger(" D> Polígonos en interseccion: " . ($result_interseccion !== false ? $result_interseccion->ncontours() : 0));
