@@ -6,43 +6,9 @@
  */
 function get_vertex($arr) {
     $p = array();
-/*
-    for($i=12916;$i<12924;$i++) {
-	$x = abs($arr[$i]['lat'] - $arr[$i+1]['lat']);
-	$y = abs($arr[$i]['lon'] - $arr[$i+1]['lon']);
-	print "$i] ===================" . PHP_EOL;
-	print "$i] " . $arr[$i]['lat'] . " - " . $arr[$i+1]['lat'] . PHP_EOL;
-	print "$i] " . $arr[$i]['lon'] . " - " . $arr[$i+1]['lon'] . PHP_EOL;
-        print "$i] $x $y" . PHP_EOL;
-	$p[] = array($arr[$i]['lat'], $arr[$i]['lon']);
-
-    }
-*/
-/*
-
-    $p2 = array();
-    for($i=0;$i<count($p)-1;$i++) {
-	$x = abs($p[0][0] - $p[1][0]);
-	$y = abs($p[0][1] - $p[1][1]);
-
-	print "$x $y" . PHP_EOL;
-	if ( $x<0.000001 || $y<0.000001 )
-	    continue;
-	print "añadiendo:" . print_r($p[$i], true);
-	$p2[] = $p[$i];
-    }
-*/
-
     foreach($arr as $v) {
 	$p[] = array($v['lat'], $v['lon']); // 100.0
     }
-
-    // $p2[] = array_pop(array_reverse($p2));
-//    $p2[] = reset($p2);
-
-    //$p = ramer_douglas_peucker($p, 0.01);
-    //$p[1][0] = $p[1][0]+0.1;
-    //$p[1][0] = $p[1][0]+0.1;
     return $p;
 }
 
@@ -63,7 +29,6 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
         return false;
     }
 
-    $timer_multiradar = microtime(true);
 
     $coverageName = array( 0 => "ninguna",
         "mono", "doble", "triple",
@@ -73,40 +38,30 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
         "terciodecuplo",
     );
     $radares = array();
-    $mr = array();
     $mr_polygon = array();
     // asigna un número único a cada radar
-    $radares2bits = array();
+    // $radares2bits = array();
     // obtiene el radar según el número único
-    $bits2radares = array();
-    $i = 1;
+    // $bits2radares = array();
+    //$i = 1;
     $timer = microtime(true);
     foreach ($coberturas as $radar => $contornos_por_radar) {
 	if ( false === $contornos_por_radar['contornos'] )
 	    continue;
 	$radares[] = $radar;
-	$radares2bits[$radar] = $i;
-	$bits2radares[$i] = $radar;
-	$i <<= 1;
 	$polygons = array();
-	// $j = 0;
-
-//	if ( $radar == "erillas" ) {
-//	    $polygons = array(array( array(40,-7), array(34,-7), array( 40,-5), array(40,-7) ));
-//
-//	} else 
 
 	foreach($contornos_por_radar['contornos'] as $indice => $contorno) {
 	    //if ( $j>4 ) break; $j++;
 	    //if ( count($contorno['polygon'])>1000)
-		$polygons[] = get_vertex($contorno['polygon']);
+	    $polygons[] = get_vertex($contorno['polygon']);
 	    //else continue;
 
 	    //$polygons[] = ramer_douglas_peucker($polygon, 0.001);
 	    if ( !isset($contorno['inside']) )
 		continue;
 	    //$k = 0;
-
+	    /*
 	    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
 		//if ( $k>4) break; $k++;
 		// if (count($contorno_inside['polygon'])>1000)
@@ -114,6 +69,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 		//else continue;
 		//$polygons[] = ramer_douglas_peucker($polygon, 0.001);
 	    }
+	    */
 
 	}
 	//print_r($polygons);
@@ -121,21 +77,13 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
     }
     sort($radares);
 
-    // print_r($radares2bits); print_r($bits2radares);
-
     if ( 1 >= count($radares) ) {
 	logger(" E> No existen coberturas suficientes para seguir calculando");
 	return false;
     }
 
-
     if ( isset($calculoMode['multiradar_unica']) && true === $calculoMode['multiradar_unica'] ) {
 	logger(" I> Creando cobertura única/suma");
-
-	if ( count($radares) < 2 ) {
-	    logger(" E> Necesitamos dos radares para hacer un cálculo multiradar");
-	    exit(-1);
-	}
 
 	$result_suma = new \MartinezRueda\Polygon(array());
 
@@ -149,9 +97,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	}
 
 	$result_arr = $result_suma->toArray();
-
 	$listaContornos = genera_contornos($result_arr);
-
 	creaKml2(
 	    $listaContornos,
 	    $radares, //$radares,
@@ -161,23 +107,148 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	    $appendToFilename = "",
 	    $coverageLevel = "unica"
 	);
-	logger(" V> Finalizado en " . round(microtime(true) - $timer_multiradar,3) . " segundos");
+	logger(" V> Finalizado en " . round(microtime(true) - $timer,3) . " segundos");
 	return true;
     }
 
     $vsr = array(); // variaciones sin repetición
-    for($i = 1; $i<count($radares); $i++) {
-	$Combinations = new Combinations($radares);
-	$vsr[$i] = $Combinations->getCombinations($i, false);
+    $vsr_count = 0;
+    for($i = 1; $i<=count($radares); $i++) {
+	$combinations = new combinations($radares);
+	$vsr[$i] = $combinations->getCombinations($i, false);
+	$vsr_count += count($vsr[$i]);
 	// print_r($vsr[$i]);
     }
-    $vsr[] = array($radares);
-    logger(" D> Estructuras generadas en " . round(microtime(true) - $timer, 3) . "s");
+    // print_r($vsr);
+    logger(" D> " . $vsr_count . " estructuras generadas en " . round(microtime(true) - $timer, 3) . " segundos");
 
     $radares_interseccion_cache = array();
     $radares_resta_cache = array();
     $radares_suma_cache = array();
 
+    // cacheo de intersecciones y sumas
+    $count = 0;
+    foreach($vsr as $numero_solape => $grupo_solape) {
+	if ( $numero_solape >= count($coverageName) ) {
+	    $coverageName_fixed = "de más de {$numero_solape}";
+	} else {
+	    $coverageName_fixed = $coverageName[$numero_solape];
+	}
+	logger(" N> == Calculando cobertura $coverageName_fixed");
+
+	foreach($grupo_solape as $grupo_radares) {
+	    logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+		"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+
+	    logger( " N> $count/$vsr_count");
+	    $count++;
+
+	    $count_grupo_radares = count($grupo_radares);
+	    $nombre_grupo_radares_suma = implode('+', $grupo_radares);
+	    $nombre_grupo_radares_interseccion = implode('^', $grupo_radares);
+
+	    // si count == 1 no hacemos nada, no hay nada que cachear
+	    if ( $count_grupo_radares == 1 ) {
+		continue;
+	    } else if ( $count_grupo_radares == 2 ) { // estos nunca estarán en caché
+		$mr_algorithm = new \MartinezRueda\Algorithm();
+		$result_interseccion = $mr_algorithm->getIntersection(
+		    $mr_polygon[$grupo_radares[0]],
+		    $mr_polygon[$grupo_radares[1]]
+		);
+		if ( isset($radares_interseccion_cache[$nombre_grupo_radares_interseccion]) ) {
+		    logger( " E> Se está insertando en interseccion_caché un valor que ya existe (1)"); exit(-1);
+		}
+		$radares_interseccion_cache[$nombre_grupo_radares_interseccion] = $result_interseccion;
+		logger(" V> cached $nombre_grupo_radares_interseccion -> >" . $grupo_radares[0] . "," . $grupo_radares[1] . "<");
+
+		$mr_algorithm = new \MartinezRueda\Algorithm();
+		$result_suma = $mr_algorithm->getUnion(
+		    $mr_polygon[$grupo_radares[0]],
+		    $mr_polygon[$grupo_radares[1]]
+		);
+		if ( isset($radares_suma_cache[$nombre_grupo_radares_suma]) ) {
+		    logger( " E> Se está insertando en suma_caché un valor que ya existe (1)"); exit(-1);
+		}
+		$radares_suma_cache[$nombre_grupo_radares_suma] = $result_suma;
+		logger(" V> cached $nombre_grupo_radares_suma -> >" . $grupo_radares[0] . "," . $grupo_radares[1] . "<");
+
+
+		$result_suma_arr = $result_suma->toArray();
+		$listaContornos = genera_contornos($result_suma_arr);
+		creaKml2(
+		    $listaContornos,
+		    $nombre_grupo_radares_suma, //$radares,
+		    $ruta,
+		    $nivelVuelo,
+		    $altMode,
+		    $appendToFilename = "_sumaPRE",
+		    $coverageLevel = $coverageName[1]
+		);
+
+		$result_interseccion_arr = $result_interseccion->toArray();
+		$listaContornos = genera_contornos($result_interseccion_arr);
+		creaKml2(
+		    $listaContornos,
+		    $nombre_grupo_radares_interseccion, //$radares,
+		    $ruta,
+		    $nivelVuelo,
+		    $altMode,
+		    $appendToFilename = "_interseccionPRE",
+		    $coverageLevel = $coverageName[1]
+		);
+
+
+
+
+
+
+
+	    } else { // 3 o más
+		print "COUNT GRUPO RADARES: " . $count_grupo_radares . PHP_EOL;
+		// los anteriores ya están en la caché, sólo hay que calcular la suma/intersección con el nuevo
+		// se cogen todos los radares menos el último y se generan dos listas, subgrupo y el resto.
+		$subgrupo_radares = array_slice($grupo_radares,
+		    0,
+		    $count_grupo_radares - 1
+		);
+		// nombre del último radar, para la intersección
+		$ultimo_radar = $grupo_radares[$count_grupo_radares - 1]; // resto
+		$nombre_subgrupo_radares_suma = implode('+', $subgrupo_radares);
+		$nombre_subgrupo_radares_interseccion = implode('^', $subgrupo_radares);
+
+		logger(" V> retrieve $nombre_subgrupo_radares_suma");
+		$mr_algorithm = new \MartinezRueda\Algorithm();
+		$result_suma = $mr_algorithm->getUnion(
+		    $radares_suma_cache[$nombre_subgrupo_radares_suma],
+		    $mr_polygon[$ultimo_radar]
+		);
+		if ( isset($radares_suma_cache[$nombre_grupo_radares_suma]) ) {
+		    logger( " E> Se está insertando en suma_caché un valor que ya existe (2)"); exit(-1);
+		}
+		$radares_suma_cache[$nombre_grupo_radares_suma] = $result_suma;
+		logger(" V> cached $nombre_grupo_radares_suma");
+
+		logger(" V> retrieve $nombre_subgrupo_radares_interseccion");
+		$mr_algorithm = new \MartinezRueda\Algorithm();
+		$result_interseccion = $mr_algorithm->getIntersection(
+		    $radares_interseccion_cache[$nombre_subgrupo_radares_interseccion],
+		    $mr_polygon[$ultimo_radar]
+		);
+		if ( isset($radares_interseccion_cache[$nombre_grupo_radares_interseccion]) ) {
+		    logger( " E> Se está insertando en interseccion_caché un valor que ya existe (2)"); exit(-1);
+		}
+		$radares_interseccion_cache[$nombre_grupo_radares_interseccion] = $result_interseccion;
+		logger(" V> cached $nombre_grupo_radares_interseccion");
+	    }
+	}
+    }
+
+    logger(" V> radares_suma_cache: " . implode(',', array_keys($radares_suma_cache)));
+    logger(" V> radares_interseccion_cache: " . implode(',', array_keys($radares_interseccion_cache)));
+
+    // ejecución
+    $count = 0;
     foreach($vsr as $numero_solape => $grupo_solape) {
 	if ( $numero_solape >= count($coverageName) ) {
 	    $coverageName_fixed = "de más de {$numero_solape}";
@@ -185,180 +256,115 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	    $coverageName_fixed = $coverageName[$numero_solape];
 	}
 	
-	logger(" N> Calculando cobertura $coverageName_fixed");
+	logger(" N> == Calculando cobertura $coverageName_fixed");
 
-	foreach($grupo_solape as $grupo_radares_interseccion) {
+	foreach($grupo_solape as $grupo_radares) {
 	    //logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
 	//	"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+	    logger( " N> $count/$vsr_count");
+	    $count++;
 
-	    $grupo_radares_resta = array_values(array_diff($radares, $grupo_radares_interseccion));
+	    $count_grupo_radares = count($grupo_radares);
+	    $nombre_grupo_radares = implode(',', $grupo_radares);
+	    $nombre_grupo_radares_interseccion = implode('^', $grupo_radares);
+	    $grupo_radares_suma = array_values(array_diff($radares, $grupo_radares));
+	    $count_grupo_radares_suma = count($grupo_radares_suma);
+	    $nombre_grupo_radares_suma = implode('+', $grupo_radares_suma);
 
-	    logger(" V> Intersección: " . implode(',', $grupo_radares_interseccion));
-	    logger(" V> Resta: " . implode(',', $grupo_radares_resta));
-	    continue;
+	    logger( " V> =======================");
+	    logger(" V> Intersección: $nombre_grupo_radares_interseccion");
+	    logger(" V> Suma: $nombre_grupo_radares_suma");
+
 	    // bucle principal, aquí tendríamos que calcular todas las coberturas.
 
 	    // interseccionar
-	    $count_grupo_radares_interseccion = count($grupo_radares_interseccion);
-	    $nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
-	    if ( $count_grupo_radares_interseccion == 1 ) {
-		$result_inter = $mr_polygon[$grupo_radares_interseccion[0]];
-	    } else if ( $count_grupo_radares_interseccion == 2 ) { // estos nunca estarán en caché
-		// $nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
-		// print "QUERY: $nombre_grupo_interseccion" . PHP_EOL;
-		$mr_algorithm = new \MartinezRueda\Algorithm();
-		$result_inter = $mr_algorithm->getIntersection(
-		    $mr_polygon[$grupo_radares_interseccion[0]],
-		    $mr_polygon[$grupo_radares_interseccion[1]]
-		);
-		$radares_interseccion_cache[$nombre_grupo_interseccion] = $result_inter;
-		print "STORED: $nombre_grupo_interseccion" . PHP_EOL;
-	    } else { // 3 o más
-		//print "CACHESTATUS: " . implode(',' , array_keys($radares_interseccion_cache)). PHP_EOL;
-		// los anteriores ya están en la caché, sólo hay que calcular la intersección con el nuevo
-		// se cogen todos los radares menos el último y se generan dos listas, subgrupo y el resto.
-		$subgrupo = array_slice($grupo_radares_interseccion,
-		    0,
-		    $count_grupo_radares_interseccion - 1
-		);
-		// nombre del último radar, para la intersección
-		$resto = $grupo_radares_interseccion[$count_grupo_radares_interseccion - 1];
-		$nombre_subgrupo_interseccion = implode('^', $subgrupo);
-		$nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
-		print "RETRIEVED: $nombre_subgrupo_interseccion" . PHP_EOL;
-		$mr_algorithm = new \MartinezRueda\Algorithm();
-		$result_inter = $mr_algorithm->getIntersection(
-		    $radares_interseccion_cache[$nombre_subgrupo_interseccion],
-		    $mr_polygon[$resto]
-		);
-		$radares_interseccion_cache[$nombre_grupo_interseccion] = $result_inter;
-		print "STORED: $nombre_grupo_interseccion" . PHP_EOL;
+//	    $count_grupo_radares_interseccion = count($grupo_radares_interseccion);
+//	    $nombre_grupo_interseccion = implode('^', $grupo_radares_interseccion);
+	    if ( $count_grupo_radares == 1 ) {
+		$result_interseccion = $mr_polygon[$grupo_radares[0]];
+	    } else {
+		$result_interseccion = $radares_interseccion_cache[$nombre_grupo_radares_interseccion];
 	    }
-
-	    logger(" D> Polígonos en intersección: " . $result_inter->ncontours()) . PHP_EOL;
-
-	    if ( 0 == count($result_inter->contours) ) {
+	    if ( 0 == count($result_interseccion->contours) ) {
 		logger(" V> Intersección vacia, no hay resultado");
 		continue;
 	    }
 
-	    // podríamos implementar esto como una suma de grupos a restar y luego una resta
-	    // print "RESTA: " . implode(',', $grupo_radares_resta) . PHP_EOL;
 	    $result_resta = false;
-	    $count_grupo_radares_resta = count($grupo_radares_resta);
-
-	    if ( $count_grupo_radares_resta == 1 ) {
-		// print ">grr: {$grupo_radares_resta[0]}" . PHP_EOL;
-		$result_resta = $mr_polygon[$grupo_radares_resta[0]];
-	    } else if ( $count_grupo_radares_resta > 1 ) {
-
-		// calcula un id según los radares que haya en el grupo
-		$bits = getBitsRadares($radares2bits, $grupo_radares_resta);
-//		print "estos son los radares que hay que sumar:" . PHP_EOL;
-//		print_r($bits);
-		// obtiene de todas las sumas que hay que hacer, las que ya están hechas.
-		$resto = 0; $suma_bits = 0;
-		$result_suma = getSumasFromCache($radares2bits, $bits2radares, $bits, $radares_suma_cache, $suma_bits, $resto_bits);
-		// hay que averiguar qué suma está hecha y sumar lo que quede pendiente
-		$resto_radares = getRadaresBits($bits2radares, $resto_bits);
-		$is_empty = $result_suma->ncontours() > 0 ? false : true;
-		print "result_suma: " . count($result_suma->contours) . PHP_EOL;
-		print "resto radares" . PHP_EOL;
-		print_r($resto_radares);
-		print "cache suma: " . count($radares_suma_cache) . PHP_EOL;
-		
-		// ahora hay que sumar resto_radares
-		for($i = 0; $i < count($resto_radares); $i++) {
-		    print ".";
-//		    print "sumando : " . $resto_radares[$i]. PHP_EOL;
-		    $mr_algorithm = new \MartinezRueda\Algorithm();
-		    $result_suma = $mr_algorithm->getUnion(
-		        $result_suma,
-		        $mr_polygon[$resto_radares[$i]]
-		    );
-		    $suma_bits += $radares2bits[$resto_radares[$i]];
-		    // comprobamos que getSumasFromCache devolvió datos, porque entonces
-		    // la primera suma hay que guardarla en caché.
-		    if ( false == $is_empty ) {
-//			print "GUARDANDO ($suma_bits)" . PHP_EOL;
-			if ( isset($radares_suma_cache[$suma_bits]) ) {
-			    logger(" E> Guardando en caché un elemento que previamente existía: $suma_bits"); exit(-1);
-			}
-			$radares_suma_cache[$suma_bits] = $result_suma;
-		    }
-		    // a partir de la primera iteración, el resultado de la suma siempre
-		    // se deberá cachear
-		    $is_empty = false;
-		}
-		//print PHP_EOL;
-		// todos sumados en result_suma
-		$result_resta = $result_suma;
+	    logger(" D> 0 inicnado bloque resta");
+	    if ( $count_grupo_radares_suma == 0 ) {
+		logger(" D> no existe polígono que recuperar para el grupo resta");
+		$result_suma = false;
+	    } else if ( $count_grupo_radares_suma == 1 ) {
+		logger(" D> recuperando de polygon suma: {$grupo_radares_suma[0]}");
+		$result_suma = $mr_polygon[$grupo_radares_suma[0]];
+	    } else {
+		logger(" D> recuperando de cache_suma: {$nombre_grupo_radares_suma}");
+		$result_suma = $radares_suma_cache[$nombre_grupo_radares_suma];
 	    }
+	    logger(" D> Polígonos en interseccion: " . ($result_interseccion !== false ? $result_interseccion->ncontours() : 0));
+	    logger(" D> Polígonos en suma: " . ($result_suma !== false ? $result_suma->ncontours() : 0));
 
-	    logger(" D> Polígonos en resta: " . ($result_resta !== false ? $result_resta->ncontours() : 0));
 	    $timer_difference = microtime(true);
 
-	    if ( false === $result_resta ) {
-		$result = $result_inter;
+	    if ( false === $result_suma ) {
+		$result_resta = $result_interseccion;
 	    } else {
-		//imprimir result_inter
-		//imprimier result_resta
-/*
-		$result_arr2 = $result_inter->toArray();
-		$listaContornos = genera_contornos($result_arr2);
+
+		$result_suma_arr = $result_suma->toArray();
+		$listaContornos = genera_contornos($result_suma_arr);
 		creaKml2(
 		    $listaContornos,
-		    $nombre_grupo_interseccion, //$radares,
+		    $nombre_grupo_radares_suma, //$radares,
 		    $ruta,
 		    $nivelVuelo,
 		    $altMode,
-		    $appendToFilename = "ESPECIAL",
-		    $coverageLevel = $coverageName[$numero_solape]
+		    $appendToFilename = "_suma",
+		    $coverageLevel = $coverageName[1]
 		);
 
-		$result_arr2 = $result_resta->toArray();
-		$listaContornos = genera_contornos($result_arr2);
+		$result_interseccion_arr = $result_interseccion->toArray();
+		$listaContornos = genera_contornos($result_interseccion_arr);
 		creaKml2(
 		    $listaContornos,
-		    implode(',', $grupo_radares_resta), //$radares,
+		    $nombre_grupo_radares_interseccion, //$radares,
 		    $ruta,
 		    $nivelVuelo,
 		    $altMode,
-		    $appendToFilename = "ESPECIAL",
-		    $coverageLevel = $coverageName[$numero_solape]
+		    $appendToFilename = "_interseccion",
+		    $coverageLevel = $coverageName[1]
 		);
-*/
-
-
-
 
 		$mr_algorithm = new \MartinezRueda\Algorithm();
-		$result = $mr_algorithm->getDifference(
-		    $result_inter,
-		    $result_resta
+		$result_resta = $mr_algorithm->getDifference(
+		    $result_interseccion,
+		    $result_suma
 		);
 	    }
 	    logger(" D> getDifference: " . round(microtime(true) - $timer_difference,2) . " segundos");
-	    $result_arr2 = $result->toArray();
 
+	    if ( false === $result_resta || $result_resta->ncontours() == 0) {
+		logger(" V> Resta vacía, no hay resultado");
+		continue;
+	    }
 
-	$listaContornos = genera_contornos($result_arr2);
+	    $result_arr2 = $result_resta->toArray();
 
-	creaKml2(
-	    $listaContornos,
-	    $grupo_radares_interseccion, //$radares,
-	    $ruta,
-	    $nivelVuelo,
-	    $altMode,
-	    $appendToFilename = "",
-	    $coverageLevel = $coverageName[$numero_solape]
-	);
+	    $listaContornos = genera_contornos($result_arr2);
 
+	    creaKml2(
+		$listaContornos,
+		$nombre_grupo_radares, //$radares,
+		$ruta,
+		$nivelVuelo,
+		$altMode,
+		$appendToFilename = "",
+		$coverageLevel = $coverageName[$numero_solape]
+	    );
 	}
     }
 
-
-    $timer_diff = microtime(true) - $timer_multiradar; // string = date('Y/m/d H:i:s', round(microtime(true) - $timer_multiradar);
+    $timer_diff = microtime(true) - $timer; // string = date('Y/m/d H:i:s', round(microtime(true) - $timer_multiradar);
 
     $timer_unidad = "";
     if ( $timer_diff > 24*60*60 ) {
@@ -539,9 +545,9 @@ function genera_contornos($result_arr) {
 	    continue;
 	$computeArea = computeArea($polygon);
 	// print count($polygon) . "] " . computeArea($polygon) . PHP_EOL;
-	logger(" V> Polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
+	// logger(" V> Polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
 	if ( $computeArea < 0.1 ) {
-	    logger(" I> Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
+	    // logger(" I> Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
 	    continue;
 	}
 

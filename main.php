@@ -40,7 +40,7 @@ include_once('MartinezRueda/Algorithm.php');
 	'cache' => "." . DIRECTORY_SEPARATOR . "cache" . DIRECTORY_SEPARATOR,
 	'resultados_multi' => "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR . "MULTI" . DIRECTORY_SEPARATOR,
     ),
-    'mode' => array('monoradar' => true, 'multiradar' => false, 'multiradar_unica' => false), // monoradar, multiradar
+    'mode' => array('monoradar' => false, 'multiradar' => false, 'multiradar_unica' => false), // monoradar, multiradar
     'disable-kmz' => false,
 );
 
@@ -249,8 +249,8 @@ function programaPrincipal(){
         }
     }
 
-    if ( count($config['mode']) == 0 )
-	$config['mode']['monoradar'] = true;
+//    if ( count($config['mode']) == 0 )
+//	$config['mode']['monoradar'] = true;
 /*
     // default values, calculate everything
     $modo = 'monoradar';
@@ -352,7 +352,7 @@ function programaPrincipal(){
 
 	    }
 	    // si estamos en mono cobertura, generamos ya el kml
-	    if ( isset($config['mode']['monoradar']) ) {
+	    if ( isset($config['mode']['monoradar']) && $config['mode']['monoradar'] ) {
 		$rutas = array(
 		    'por_nivel' =>  $config['path']['resultados_mono'] . $nivelVuelo . DIRECTORY_SEPARATOR ,
 		    'por_sensor' => $config['path']['resultados_mono'] . $sensor . DIRECTORY_SEPARATOR ,
@@ -521,25 +521,26 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
         // if ( 'multiradar' == $modo ) { // puede ser hasta 10 segundos más lenta que sin LatLon en 170NM
         logger(" D> generacionMalladoLatLon start"); $timer0 = microtime(true);
         $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances = array());
-        logger(" D> generacionMalladoLatLon ended %3.4fs", microtime(true) - $timer0);
+        logger(" D> generacionMalladoLatLon ended " . round(microtime(true) - $timer0,3) . " segundos");
         // }
 
         // comprobación si hay cobertura en las esquinas de la malla. En ese caso,
         // determinaContornos2 podría fallar
-        print "[check coverage overflow "; $timer0 = microtime(true);
+        logger(" D> check coverage overflow start"); $timer0 = microtime(true);
         checkCoverageOverflow($mallado['malla']);
-        printf(" %3.4fs]", microtime(true) - $timer0);
+        logger(" D> check coverage overflow ended " . round(microtime(true) - $timer0,3) . " segundos");;
 
-	print "[determinaContornos2 start]"; $timer0 = microtime(true);
+	logger(" D> determinaContornos2 start"); $timer0 = microtime(true);
         $listaContornos2 = determinaContornos2($mallado['malla']);
-	printf("[determinaContornos2 ended %3.4fs]", microtime(true) - $timer0);
-	print PHP_EOL;
+	logger(" D> determinaContornos2 ended " . round(microtime(true) - $timer0,3) . " segundos");
+
 	if ( 0 == count($listaContornos2) ) {
 	    logger(" I> No se generan contornos porque no existe cobertura del sensor {$radar['radar']} a FL{$nivelVuelo}");
 	    return false;
 	}
-        logger(" D> CcalculaCoordenadasGeograficasB");
+        logger(" D> calculaCoordenadasGeograficasB"); $timer0 = microtime(true);
         $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
+	logger(" D> calculaCoordenadasGeograficasB ended " . round(microtime(true) - $timer0, 3) . " segundos");
 	// print_r($listaContornos2); exit(0);
     }
 

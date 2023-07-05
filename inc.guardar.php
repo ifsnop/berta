@@ -59,11 +59,11 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
     // vamos a transformar los polígonos que pueden venir en lat/lon, fila/col o 0/1 en 0/1/2.
     // porque sino es un lio.
     $group = array(); $vextex = array(); // estadísticas
-    foreach( $listaContornos as &$contorno ) {
+    foreach( $listaContornos as $contorno ) {
         // $vertexCount = 0; // estadísticas
         $polygon = array();
 	if ( isset($contorno['polygon']) ) {
-	    foreach ( $contorno['polygon'] as &$p ) {
+	    foreach ( $contorno['polygon'] as $p ) {
 		if ( isset($p['lat']) && isset($p['lon']) && isset($p['alt']) ) {
 		    // generado en calculaCoordenadasGeograficasA/B
 		    $polygon[] = array($p['lat'], $p['lon'], $p['alt']);
@@ -84,13 +84,14 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
 	    }
 	}
 
-        $inside = array(); $vertexCountInside = array();
+        $inside = array();
+	// $vertexCountInside = array();
 
 	if ( isset($contorno['inside']) ) {
-	    foreach ( $contorno['inside'] as &$contorno_inside ) {
+	    foreach ( $contorno['inside'] as $contorno_inside ) {
 		$polygon_inside = array();
 		// $currentCountInside = 0;
-		foreach ($contorno_inside['polygon'] as &$p_inside) {
+		foreach ($contorno_inside['polygon'] as $p_inside) {
             	    if ( isset($p_inside['lat']) && isset($p_inside['lon']) && isset($p_inside['alt']) ) {
                 	$polygon_inside[] = array($p_inside['lat'], $p_inside['lon'], $p_inside['alt']);
             	    } elseif ( isset($p_inside['fila']) && isset($p_inside['col']) ) {
@@ -113,7 +114,7 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
     }
     // $group tiene la geometría necesaria para pintar todo, en el formato
     // 0=>lat, 1=>lon, 2=>height
-    // FIN
+
     $kmlContent = fromPolygons2KML($group, $radarWithFL, $rgb, $altMode);
 
     foreach($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
@@ -506,8 +507,8 @@ function fromPolygons2KML($polygons, $radarWithFL, $rgb, $altMode) {
         //    print "DEBUG current/refined vertex count => " . count($polygon['polygon']) . "/";
         $polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
 	$new_count = count($polygon['polygon']);
-	if ( $count != $new_count )
-	    logger(" V> current/refined vertex cound => $count/$new_count");
+	//if ( $count != $new_count ) {
+	//    logger(" V> current/refined vertex cound => $count/$new_count");
         //    print count($polygon['polygon']) . PHP_EOL;
         //}
         foreach ( $polygon['polygon'] as &$p ) {
