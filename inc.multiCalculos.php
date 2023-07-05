@@ -271,7 +271,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	    $count_grupo_radares_suma = count($grupo_radares_suma);
 	    $nombre_grupo_radares_suma = implode('+', $grupo_radares_suma);
 
-	    logger( " V> =======================");
+	    logger(" V> =======================");
 	    logger(" V> Intersección: $nombre_grupo_radares_interseccion");
 	    logger(" V> Suma: $nombre_grupo_radares_suma");
 
@@ -354,7 +354,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 
 	    creaKml2(
 		$listaContornos,
-		$nombre_grupo_radares, //$radares,
+		$grupo_radares, //$radares,
 		$ruta,
 		$nivelVuelo,
 		$altMode,

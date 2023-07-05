@@ -34,6 +34,8 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
 	    $rgb = "7d00ffff"; break;
     }
 
+    logger(" D> Nivel de cobertura: $coverageLevel");
+
     if ( is_array($appendToFilename) ) {
         $appendToFilename = "-" . implode("_", $appendToFilename);
     }
