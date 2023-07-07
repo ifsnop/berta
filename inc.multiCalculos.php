@@ -143,6 +143,10 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	    logger( " N> $count/$vsr_count");
 	    $count++;
 
+	    foreach($radares_suma_cache as $r => $d) {
+		print "$r] " . md5(serialize($d)) . PHP_EOL;
+	    }
+
 	    $count_grupo_radares = count($grupo_radares);
 	    $nombre_grupo_radares_suma = implode('+', $grupo_radares);
 	    $nombre_grupo_radares_interseccion = implode('^', $grupo_radares);
@@ -217,17 +221,43 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 		$nombre_subgrupo_radares_suma = implode('+', $subgrupo_radares);
 		$nombre_subgrupo_radares_interseccion = implode('^', $subgrupo_radares);
 
+
+		foreach($radares_suma_cache as $r => $d) {
+		    print "!$r] " . md5(serialize($d)) . PHP_EOL;
+		}
+
 		logger(" V> retrieve $nombre_subgrupo_radares_suma");
+		$pp = clone $radares_suma_cache[$nombre_subgrupo_radares_suma];
+
 		$mr_algorithm = new \MartinezRueda\Algorithm();
+
+		foreach($radares_suma_cache as $r => $d) {
+		    print "!!$r] " . md5(serialize($d)) . PHP_EOL;
+		}
+
+
 		$result_suma = $mr_algorithm->getUnion(
-		    $radares_suma_cache[$nombre_subgrupo_radares_suma],
+		    $pp,
 		    $mr_polygon[$ultimo_radar]
 		);
 		if ( isset($radares_suma_cache[$nombre_grupo_radares_suma]) ) {
 		    logger( " E> Se está insertando en suma_caché un valor que ya existe (2)"); exit(-1);
 		}
+		foreach($radares_suma_cache as $r => $d) {
+		    print "!!!$r] " . md5(serialize($d)) . PHP_EOL;
+		}
+
 		$radares_suma_cache[$nombre_grupo_radares_suma] = $result_suma;
 		logger(" V> cached $nombre_grupo_radares_suma");
+
+		foreach($radares_suma_cache as $r => $d) {
+		    print "!!!!$r] " . md5(serialize($d)) . PHP_EOL;
+		}
+
+
+
+
+
 
 		logger(" V> retrieve $nombre_subgrupo_radares_interseccion");
 		$mr_algorithm = new \MartinezRueda\Algorithm();
@@ -259,6 +289,12 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	logger(" N> == Calculando cobertura $coverageName_fixed");
 
 	foreach($grupo_solape as $grupo_radares) {
+
+	    foreach($radares_suma_cache as $r => $d) {
+		print "$r] " . md5(serialize($d)) . PHP_EOL;
+	    }
+
+
 	    //logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
 	//	"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 	    logger( " N> $count/$vsr_count");
