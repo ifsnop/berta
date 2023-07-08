@@ -11,8 +11,6 @@ CONST GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 CONST GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 CONST ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
 
-
-
 // INCLUSIÓN DE FICHEROS
 include_once('inc.cargarScreening.php');
 include_once('inc.cargarCoordenadas.php');
@@ -54,8 +52,11 @@ $p2 = array(array( array(1,0), array(1.5,0), array(2,0), array(4,0), array( 4,4)
 $mr1 = new \MartinezRueda\Polygon($p1);
 $mr2 = new \MartinezRueda\Polygon($p2);
 $mr_algorithm = new \MartinezRueda\Algorithm();
-$res = $mr_algorithm->getDifference($mr1, $mr2);
+// $res = $mr_algorithm->getDifference($mr1, $mr2);
+$res = $mr_algorithm->getUnion($mr1, $mr2);
 print_r($res->toArray());
+print_r($mr1->toArray());
+
 exit();
 */
 /*
