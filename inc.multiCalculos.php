@@ -54,7 +54,7 @@ function init_polygons($coberturas) {
  * Devuelve el segmento de kmz.
  *
 */
-function create_unica($radares, $mr_polygons) {
+function create_unica($radares, $mr_polygons, $rutas, $nivelVuelo, $altMode) {
     $timer = microtime(true);
 
     $result_suma = new \MartinezRueda\Polygon(array());
@@ -62,8 +62,8 @@ function create_unica($radares, $mr_polygons) {
 	logger(" D> Añadiendo {$k} al cálculo");
 	$mr_algorithm = new \MartinezRueda\Algorithm();
 	$result_suma = $mr_algorithm->getUnion(
-	$result_suma,
-	$p
+	    $result_suma,
+	    $p
         );
     }
 
@@ -72,7 +72,7 @@ function create_unica($radares, $mr_polygons) {
     creaKml2(
 	$listaContornos,
 	$radares, //$radares,
-	$ruta,
+	$rutas,
 	$nivelVuelo,
 	$altMode,
 	$appendToFilename = "",
@@ -93,7 +93,7 @@ function create_unica($radares, $mr_polygons) {
 * @param string $altMode si lo queres absolute o relative(ENTRADA)
 */
 
-function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode) { // , $calculosMode = array('parcial' => true, 'rascal'=>true, 'unica' => true) ) {
+function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode) { // , $calculosMode = array('parcial' => true, 'rascal'=>true, 'unica' => true) ) {
 
     $debug = false;
     $timer = microtime(true);
@@ -111,6 +111,8 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
         "terciodecuplo",
     );
 
+    $coverages_per_level_KML = array();
+
     $ret = init_polygons($coberturas);
     if ( false === $ret )
 	return false;
@@ -120,7 +122,8 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 
     if ( isset($calculoMode['multiradar_unica']) && true === $calculoMode['multiradar_unica'] ) {
 	logger(" I> Creando cobertura única/suma");
-	create_unica($radares, $mr_polygons);
+	create_unica($radares, $mr_polygons, $rutas, $nivelVuelo, $altMode);
+	return true;
     }
 
     $vsr = array(); // variaciones sin repetición
@@ -153,6 +156,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	}
 	
 	logger(" N> == Calculando cobertura $coverageName_fixed");
+	$coverages_per_level_KML[$numero_solape]= array();
 
 	foreach($grupo_solape as $grupo_radares) {
 
@@ -166,7 +170,7 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 	    $count_grupo_radares_suma = count($grupo_radares_suma);
 	    $nombre_grupo_radares_suma = implode('+', $grupo_radares_suma);
 
-	    if ( true ) {// $debug ) {
+	    if ( true ) { // $debug ) 
 		logger(" V> =======================");
 		logger(" V> Intersección: $nombre_grupo_radares_interseccion");
 		logger(" V> Suma: $nombre_grupo_radares_suma");
@@ -209,17 +213,23 @@ function multicobertura($coberturas, $nivelVuelo, $ruta, $altMode, $calculoMode)
 
 	    $result_arr2 = $result_resta->toArray();
 	    $listaContornos = genera_contornos($result_arr2);
-	    creaKml2(
+	    $ret = creaKml_Folder(
 		$listaContornos,
 		$grupo_radares,
-		$ruta,
+		$rutas,
 		$nivelVuelo,
 		$altMode,
 		$appendToFilename = "",
 		$coverageLevel = $coverageName[$numero_solape]
 	    );
+
+	    if ( false !== $ret ) {
+		$coverages_per_level_KML[$numero_solape][] = $ret;
+	    }
 	}
     }
+
+    creaKml_flatten($coverages_per_level_KML, $nivelVuelo, $nivelVuelo);
 
     $timer_diff = microtime(true) - $timer; // string = date('Y/m/d H:i:s', round(microtime(true) - $timer_multiradar);
     logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .

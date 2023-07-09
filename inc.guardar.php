@@ -126,7 +126,216 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
     return true;
 }
 
-function writeKMZ($fileName, $radarWithFL, $content, $disableKmz) {
+
+/*
+ * Si necesitamos crear un KMZ de una multicobertura, crearemos carpeta a carpeta usando
+ * esta función. Luego volcaremos todo de golpe, porque la estructura es compleja.
+ *
+ */
+function creaKml_Folder($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $appendToFilename="", $coverageLevel = 'mono', $disableKmz = true) {
+
+    $fl = $nivelVuelo * 100.0 * FEET_TO_METERS;
+
+    switch ( $coverageLevel ) {
+	case "unica": $rgb = "7d00ff00"; break;         // igual que mono
+	case "mono": $rgb = "7d00ff00"; break;
+	// case "mono": $rgb = "e6ff9724"; break;          // Rascal
+	case "doble": $rgb = "7dff0000"; break;
+	// case "doble": $rgb = "e63559a5"; break;         // Rascal
+	case "triple": $rgb = "7dffff00"; break;
+	// case "triple": $rgb = "e69977de"; break;        // Rascal
+	case "cuadruple": $rgb = "7d0000ff"; break;
+	// case "cuadruple": $rgb = "e67bf600"; break;     // Rascal
+	case "quintuple": $rgb = "7dff00ff"; break;
+	case "sextuple": $rgb = "7d00ffff"; break;
+	default:
+	    $rgb = "7d00ffff"; break;
+    }
+
+    logger(" D> Nivel de cobertura: $coverageLevel");
+
+    if ( is_array($appendToFilename) ) {
+        $appendToFilename = "-" . implode("_", $appendToFilename);
+    }
+
+    if ( is_array($radarName) ) {
+        $radarWithFL = implode(",", $radarName) . "-" .
+            $coverageLevel . "-FL" .  $nivelVuelo . $appendToFilename;
+    } else {
+        $radarWithFL = $radarName . "-FL" .  $nivelVuelo . $appendToFilename;
+    }
+
+    if ( false ) {
+        print "nivelVuelo: " . $nivelVuelo . PHP_EOL;
+        print "radarWithFL: " . $radarWithFL . PHP_EOL;
+        print "ruta: " . print_r($ruta, true) . PHP_EOL;
+    }
+
+    if ( 0 == count($listaContornos) ) {
+        logger(" E> No se genera fichero kmz para FL $nivelVuelo porque no hay cobertura");
+        return false;
+    }
+
+    // vamos a transformar los polígonos que pueden venir en lat/lon, fila/col o 0/1 en 0/1/2.
+    // porque sino es un lio.
+    $group = array(); $vextex = array(); // estadísticas
+    foreach( $listaContornos as $contorno ) {
+        $polygon = array();
+	if ( isset($contorno['polygon']) ) {
+	    foreach ( $contorno['polygon'] as $p ) {
+		if ( isset($p[0]) && isset($p[1]) ) {
+		    $polygon[] = array($p[0], $p[1], $fl*100*FEET_TO_METERS); // /100.0
+		} else {
+		    logger(" E> Formato de punto incorrecto: " . print_r($p, true));
+		}
+	    } // foreach
+	}
+
+        $inside = array();
+	if ( isset($contorno['inside']) ) {
+	    foreach ( $contorno['inside'] as $contorno_inside ) {
+		$polygon_inside = array();
+		foreach ($contorno_inside['polygon'] as $p_inside) {
+		    if ( isset($p_inside[0]) && isset($p_inside[1]) ) {
+			$polygon_inside[] = array($p_inside[0], $p_inside[1], $fl*100*FEET_TO_METERS); //  /100.0
+		    } else {
+			logger(" E> Formato de punto incorrecto: " . print_r($p, true));
+		    }
+		}
+		$inside[] = array('polygon' => $polygon_inside);
+	    }
+	}
+
+	$group[] = array('polygon' => $polygon, 'inside' => $inside);
+    }
+    // $group tiene la geometría necesaria para pintar todo, en el formato
+    // 0=>lat, 1=>lon, 2=>height
+
+    $kmlContent = fromPolygons2KML_Folder_Content($group, $radarWithFL, $rgb, $altMode);
+
+    return $kmlContent;
+
+    //foreach($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
+//	crearCarpetaResultados($val);
+//	writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $kmlContent, $disableKmz);
+//    }
+
+}
+
+
+function creaKml_flatten($coverages_per_levels, $padded_FL, $file_name) {
+
+    $kml_header = '<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Folder>
+<name>FL' . $padded_FL . '</name>
+<open>0</open>';
+
+ $kml_footer = "
+</Folder>
+</kml>";
+
+    $kml_folder_footer = "
+</Folder>";
+
+
+    $kml = $kml_header;
+    foreach ( $coverages_per_levels as $level => $coverages ) {
+
+        $kml_folder_header = "
+<Folder>
+  <name>Nivel $level</name>
+  <open>0</open>";
+
+	$kml .= $kml_folder_header;
+	foreach ( $coverages as $coverage ) {
+	    $kml .= $coverage;
+	}
+
+	$kml .= $kml_folder_footer;
+
+    }
+
+    $kml .= $kml_footer;
+
+    writeKMZ("FL" . $padded_FL, $padded_FL, $kml, $disable_kmz = true);
+
+    return true;
+
+}
+
+/*
+ * Genera un KML a partir de una definición de poligonos. Cada polígono
+ * puede tener huecos, definidos en los subarrays "inside".
+ * Esta función genera el código KML para colocar los polígonos en una carpeta.
+ * No crea la carpeta
+ * @param array polygons
+ * @return string kml
+ * @return bool
+ */
+function fromPolygons2KML_Folder_Content($polygons, $radarWithFL, $rgb, $altMode) {
+/*
+//    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
+//        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+*/
+    $kmlFolder_Content = '
+  <Document>
+    <name>' . $radarWithFL . '</name>
+    <open>0</open>
+    <Style id="transGreenPoly">
+      <LineStyle><width>1.5</width></LineStyle>
+      <PolyStyle><color>' . $rgb . '</color></PolyStyle>
+    </Style>
+    <Placemark>
+      <name>' .  $radarWithFL . '</name>
+        <styleUrl>#transGreenPoly</styleUrl>
+        <MultiGeometry>';
+
+    $kmlPolygonHeader = '
+          <Polygon>
+            <extrude>1</extrude>
+            <altitudeMode>' . $altMode . '</altitudeMode>
+            <outerBoundaryIs><LinearRing><coordinates>' . PHP_EOL;
+
+    $kmlPolygonFooter_1 = '
+            </coordinates></LinearRing></outerBoundaryIs>';
+
+    $kmlPolygonFooter_2 = '
+          </Polygon>';
+
+    $kmlInnerHeader = '<innerBoundaryIs><LinearRing><coordinates>';
+    $kmlInnerFooter = '</coordinates></LinearRing></innerBoundaryIs>';
+
+    $kmlFooter_Content = '
+        </MultiGeometry>
+    </Placemark>
+  </Document>';
+
+    $kml = $kmlFolder_Content;
+    foreach( $polygons as &$polygon ) {
+        $kmlOuter = "";
+        $polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
+        foreach ( $polygon['polygon'] as &$p ) {
+            $kmlOuter .= $p[1] . "," . $p[0] . "," . $p[2] . " ";
+        }
+        $kml .= $kmlPolygonHeader . $kmlOuter . $kmlPolygonFooter_1;
+        foreach ( $polygon['inside'] as &$polygons_inside ) {
+            $kmlInner = "";
+            foreach ($polygons_inside['polygon'] as &$p_inside) {
+                $kmlInner .=  $p_inside[1] . "," . $p_inside[0] . "," . $p_inside[2] . " ";
+            }
+            if ( "" != $kmlInner ) {
+                $kml .= $kmlInnerHeader . PHP_EOL . $kmlInner . PHP_EOL . $kmlInnerFooter;
+            }
+        }
+        $kml .= $kmlPolygonFooter_2;
+    }
+    $kml .= $kmlFooter_Content;
+    return $kml;
+}
+
+
+function writeKMZ($fileName, $radarWithFL, $content, $disableKmz = false) {
 
     if ( true === $disableKmz || !class_exists('ZipArchive') ) {
 	// generar kml y volver
