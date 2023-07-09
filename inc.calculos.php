@@ -821,7 +821,7 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
 
     // CENTRAMOS LA MALLA Y CALCULAMOS EL PTO MEDIO DE CADA CELDA
     $tamMallaMitad = $tamMalla / 2.0;
-    print "[tamMallaMitadLatLon: " . $tamMallaMitad . "]";
+    logger(" D> tamMallaMitadLatLon: {$tamMallaMitad}");
 
     // CALCULAMOS LAS COORDENADAS X DE CADA CELDA (sacamos la parte común del cálculo fuera del bucle)
     $x_fixed = -( $tamMallaMitad * TAM_CELDA ); // + ( TAM_CELDA_MITAD ); // ($i * TAM_CELDA)
@@ -833,7 +833,7 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
     // microptimización
     $listaAzimuts = $radar['screening']['listaAzimuths']; // para acelerar
 
-    print "[Tamaño mallaLatLon: " . $tamMalla . "]";
+    logger(" D> Tamaño mallaLatLon: {$tamMalla}");
     print "[00%]";
     $countPct_old = 0;
     $latitudComplementaria = deg2rad(FRONTERA_LATITUD - $radar['lat']);
@@ -918,10 +918,10 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
 	// print PHP_EOL . PHP_EOL;
 	//printf("[timer1: %3.6f]", microtime(true) - $timer1);
     }
-    print "[100%]";
+    print "[100%]" . PHP_EOL;
     //printf("[timer0: %3.3f]", microtime(true) - $timer0);
 
-    print "[sortingMallaLatLon]";
+    logger(" D> sortingMallaLatLon");
     ksort($mallaLatLon);
     foreach($mallaLatLon as $lat => &$lons) {
         ksort($lons);

@@ -1,36 +1,4 @@
 <?php
-/**
- * Muestra el menu por pantalla al usuario
- * 
- * @return number
- */
- function menu(){
- 	
- 	$op = 0;
-	
-	do {
-		echo "Bienvenido al programa de calculo de coberturas por linea vista". PHP_EOL;
-		echo "1. CALCULAR" . PHP_EOL;
-		echo "0. SALIR" . PHP_EOL;
-		fscanf (STDIN, "%d\n", $op);
-		
-	}while ($op < 0 || $op > 1);
-	
-	return $op;
-}
- 
-
-/**
- * Muestra por pantalla al usuario, las posibles opciones para el modo de altitud
- */
-function mostrarAltitudMode(){
-	
-	echo "0. Subject to the ground" . PHP_EOL;
-	echo "1. Subject to seabed" . PHP_EOL;
-	echo "2. Relative to soil". PHP_EOL;
-	echo "3. Relative to the seabed" . PHP_EOL;
-	echo "4. Absolute" .PHP_EOL;
-}
 
 /**
  * Convierte altitudMode en un string
@@ -49,67 +17,6 @@ function altitudeModetoString ($altitudeMode){
 	case 4: $modo = "absolute"; break;
     }
     return $modo;
-}
-
-/**
- * Funcion para pedir al usuario los valores con los que se quiere realizar el calculo
- * 
- * @param int $flMin : nivel de vuelo minimo introducido por el usuario (ENTRADA/SALIDA)
- * @param int $flMax : nivel de vuelo maximo introducido por el usuario (ENTRADA/SALIDA)
- * @param float $paso  : forma en la que va creciendo el nivel de vuelo   (ENTRADA/SALIDA)
- * @param int $altitudeMode : modo de altitud seleccionada (ENTRADA/SALIDA)
- * @param boolean $poligono (ENTRADA/SALIDA)
- * @param array $lugares : array con los nombres de todos los radares para los que se quiere calcular la cobertura (ENTRADA/SALIDA)
- * @param boolean $ordenarPorRadar (true = ordenar los ficheros por radar, false ordenar por FL)
- */
-function pedirDatosUsuario(&$flMin, &$flMax, &$paso, &$altitudeMode, &$poligono, &$lugares, &$ordenarPorRadar){
-
-    do {
-	echo "Indica el nivel de vuelo minimo (FL): ";
-	fscanf (STDIN, "%d\n", $flMin);
-	echo "Indica el nivel de vuelo maximo (FL): ";
-	fscanf (STDIN, "%d\n", $flMax);
-
-    } while ($flMin > $flMax);
-
-    if ( $flMin == $flMax ) {
-        $paso = 100;
-    } else {
-        echo "Indica el paso (pies*100): ";
-        fscanf (STDIN, "%d\n", $paso); 
-    }
-
-    do { 
-	mostrarAltitudMode();
-	echo "Indica el modo de altitud: ";
-	fscanf (STDIN, "%d\n", $altitudeMode);
-    } while ($altitudeMode < 0 || $altitudeMode > 4);
-	
-    $poligono = FALSE;
-/*
-    echo "Indica si quieres la opcion poligono: (s/n) " .PHP_EOL;
-    $line = trim(fgets(STDIN));
-    $line = strtolower($line);
-    if ($line == "n") {
-        $poligono = FALSE;
-    } else {
-	$poligono = TRUE;
-    }
-*/
-    echo "Los ficheros de salida irán ordenados por radar(r) o por nivel de vuelo(f) (R/f): ";
-    $line = trim(fgets(STDIN));
-    $line = strtolower($line);
-    if ("f" == $line ) {
-	$ordenarPorRadar = false;
-	echo "Ordenando por nivel de vuelo" . PHP_EOL;
-    } else {
-        $ordenarPorRadar = true;
-        echo "Ordenando por radar" . PHP_EOL;
-    }
-
-    echo "Indica con que radares quieres trabajar (separados por espacios): ";
-    $linea = strtolower(trim(fgets(STDIN)));
-    $lugares = explode(" ", $linea);
 }
 
 function printMalla($malla, $relleno = " ") {
@@ -321,4 +228,89 @@ class Combinations
 	    array_pop($elements);
 	}
     }
+}
+
+/*
+ * Convierte un número de segundos en una cadena legible para humanos con unidades
+ *
+ */
+function timer_unidades( $t ) {
+
+    $t = floor($t);
+    $unidad = "";
+    if ( $t > 24*60*60 ) {
+	$format = "d H:i:s";
+    } else if ( $t > 60*60 ) {
+	$format = "H:i:s";
+    } else if ( $t > 120 ) {
+	$format = "i:s";
+    } else {
+	$format = "U";
+	if ( $t > 1 ) {
+	    $unidad = "segundos";
+	} else {
+	    $unidad = "segundo";
+	}
+    }
+
+    $timer_string = date($format, $t);
+
+    return $timer_string . " " . $unidad;
+}
+
+/**
+ * Returns the area of a closed path on Earth.
+ * @param path A closed path.
+ * @return The path's area in square kilometers.
+ */
+function computeArea($path) {
+    return abs(computeSignedArea($path)/1000000.0);
+}
+
+/**
+ * Returns the signed area of a closed path on Earth. The sign of the area may be used to
+ * determine the orientation of the path.
+ * "inside" is the surface that does not contain the South Pole.
+ * @param path A closed path.
+ * @return The loop's area in square meters.
+ */
+function computeSignedArea($path) {
+    return computeSignedAreaP($path, RADIO_TERRESTRE);
+}
+
+/**
+ * Returns the signed area of a closed path on a sphere of given radius.
+ * The computed area uses the same units as the radius squared.
+ * Used by SphericalUtilTest.
+ */
+function computeSignedAreaP($path,  $radius) {
+        $size = count($path);
+        if ($size < 3) { return 0; }
+        $total = 0;
+        $prev = $path[$size - 1];
+        $prevTanLat = tan((M_PI / 2 - deg2rad($prev[0])) / 2); // lat
+        $prevLng = deg2rad($prev[1]); //lon
+        // For each edge, accumulate the signed area of the triangle formed by the North Pole
+        // and that edge ("polar triangle").
+        foreach($path as $point) {
+            $tanLat = tan((M_PI / 2 - deg2rad($point[0])) / 2); // lat
+            $lng = deg2rad($point[1]); // lon
+            $total += polarTriangleArea($tanLat, $lng, $prevTanLat, $prevLng);
+            $prevTanLat = $tanLat;
+            $prevLng = $lng;
+        }
+        return $total * ($radius * $radius);
+    }
+
+/**
+ * Returns the signed area of a triangle which has North Pole as a vertex.
+ * Formula derived from "Area of a spherical triangle given two edges and the included angle"
+ * as per "Spherical Trigonometry" by Todhunter, page 71, section 103, point 2.
+ * See http://books.google.com/books?id=3uBHAAAAIAAJ&pg=PA71
+ * The arguments named "tan" are tan((pi/2 - latitude)/2).
+ */
+function polarTriangleArea($tan1,  $lng1, $tan2, $lng2) {
+        $deltaLng = $lng1 - $lng2;
+        $t = $tan1 * $tan2;
+        return 2 * atan2($t * sin($deltaLng), 1 + $t * cos($deltaLng));
 }
