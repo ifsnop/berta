@@ -157,6 +157,7 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	
 	logger(" N> == Calculando cobertura $coverageName_fixed");
 	$coverages_per_level_KML[$numero_solape]= array();
+	$mr_polygons[$numero_solape] = array();
 
 	foreach($grupo_solape as $grupo_radares) {
 
@@ -170,7 +171,7 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	    $count_grupo_radares_suma = count($grupo_radares_suma);
 	    $nombre_grupo_radares_suma = implode('+', $grupo_radares_suma);
 
-	    if ( true ) { // $debug ) 
+	    if ( true ) { // $debug )
 		logger(" V> =======================");
 		logger(" V> Intersección: $nombre_grupo_radares_interseccion");
 		logger(" V> Suma: $nombre_grupo_radares_suma");
@@ -211,9 +212,14 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 		continue;
 	    }
 
+	    // en mr_polygons guardamos para cada nivel de cobertura (mono, doble, triple) todos los polígonos que forman
+	    // ese nivel
+	    logger(" D> POLYCUENTA0:". $result_resta->ncontours() ." NIVEL{$numero_solape}");
+	    $mr_polygons[$numero_solape][$nombre_grupo_radares_interseccion . "-" . $nombre_grupo_radares_suma] = clone $result_resta;
+
 	    $result_arr2 = $result_resta->toArray();
 	    $listaContornos = genera_contornos($result_arr2);
-	    $ret = creaKml_Folder(
+	    $placemarks = KML_get_placemarks(
 		$listaContornos,
 		$grupo_radares,
 		$rutas,
@@ -223,13 +229,113 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 		$coverageLevel = $coverageName[$numero_solape]
 	    );
 
-	    if ( false !== $ret ) {
-		$coverages_per_level_KML[$numero_solape][] = $ret;
+	    // guardamos el kml para luego juntarlo en uno global, que contenga todos los niveles de cobertura
+	    // y todos los radares
+	    if ( false !== $placemarks ) {
+		$coverages_per_level_KML[$numero_solape][$nombre_grupo_radares] = $placemarks;
 	    }
 	}
+
+	// generar aquí la cobertura suma usando todo lo contenido en $mr_polygons[$numero_solape];
+	// no acaba de funcionar bien, hay coberturas que no se suman
+
+	logger(" V> =====CALCULO COBERTURA UNICA====");
+
+	$timer_unica = microtime(true);
+
+	$result_unica = new \MartinezRueda\Polygon(array());
+	$i=0;
+	$j = 0;
+	foreach($mr_polygons[$numero_solape] as $n => $polygon) {
+	    $result_arr2 = $polygon->toArray();
+	    $listaContornos = genera_contornos($result_arr2);
+	    creaKml2(
+		$listaContornos,
+		"N{$numero_solape}_{$n}", //$radares,
+		$rutas,
+		$nivelVuelo,
+		$altMode,
+		$appendToFilename = "",
+		$coverageLevel = "unica_SUMANDO"
+	    );
+	    $j += $polygon->ncontours();
+	    logger(" D> POLYCUENTA SUMANDO:". $polygon->ncontours() ." j:{$j} NIVEL{$numero_solape}");
+
+	    //unset($polygon->contours[0]);
+	    //$polygon->contours = array_values($polygon->contours);
+
+	    if ( $i >= 2) { logger(" D> AQUI VA A FALLAR");
+//		print $n . PHP_EOL;
+//		$i++;
+//		continue;
+//		\MartinezRueda\Debug::$debug_on = true;
+		print_r($polygon);
+	    }
+
+	    $mr_algorithm = new \MartinezRueda\Algorithm();
+	    $result_unica = $mr_algorithm->getUnion( $result_unica, $polygon );
+
+	    //if ( $i > 10)
+	    // break;
+
+
+	    $result_arr2 = $result_unica->toArray();
+	    $listaContornos = genera_contornos($result_arr2);
+	    creaKml2(
+		$listaContornos,
+		"N{$numero_solape}_PASO $i", //$radares,
+		$rutas,
+		$nivelVuelo,
+		$altMode,
+		$appendToFilename = "",
+		$coverageLevel = "unica_SUMANDO_PARCIAL"
+	    );
+	    $i++;
+	}
+
+	logger(" D> 00 POLYCUENTA TOTAL:". $result_unica->ncontours() ." NIVEL{$numero_solape}");
+
+	    $polygon = $mr_polygons[$numero_solape]['monflorite-alcolea+paracuellos1+paracuellos2'];
+	    $mr_algorithm = new \MartinezRueda\Algorithm();
+	    $result_unica = $mr_algorithm->getUnion( $result_unica, $polygon );
+	    $result_arr2 = $result_unica->toArray();
+	    $listaContornos = genera_contornos($result_arr2);
+	    creaKml2(
+		$listaContornos,
+		"N{$numero_solape}_PASO UNICO", //$radares,
+		$rutas,
+		$nivelVuelo,
+		$altMode,
+		$appendToFilename = "",
+		$coverageLevel = "unica_SUMANDO_PARCIAL"
+	    );
+
+	logger(" D> 01 POLYCUENTA TOTAL:". $result_unica->ncontours() ." NIVEL{$numero_solape}");
+
+
+	logger(" D> POLYCUENTA TOTAL:". $result_unica->ncontours() ." NIVEL{$numero_solape}");
+
+	$result_arr2 = $result_unica->toArray();
+	$listaContornos = genera_contornos($result_arr2);
+	$placemarks = KML_get_placemarks(
+	    $listaContornos,
+	    "unica nivel " . $coverageName[$numero_solape],
+	    $rutas,
+	    $nivelVuelo,
+	    $altMode,
+	    $appendToFilename = "",
+	    $coverageLevel = $coverageName[$numero_solape]
+	);
+	if ( false !== $ret ) {
+	    $coverages_per_level_KML[$numero_solape]["unica nivel " . $coverageName[$numero_solape]] = $placemarks;
+	}
+	logger(" D> Tiempo de unica: " . round(microtime(true) - $timer_unica,2) . " segundos");
+	KML_create_from_placemarks($coverages_per_level_KML, $nivelVuelo, $nivelVuelo);
+	exit(0);
     }
 
-    creaKml_flatten($coverages_per_level_KML, $nivelVuelo, $nivelVuelo);
+    // genera el kml suma de todos los kml guardados
+    KML_create_from_placemarks($coverages_per_level_KML, $nivelVuelo, $nivelVuelo);
 
     $timer_diff = microtime(true) - $timer; // string = date('Y/m/d H:i:s', round(microtime(true) - $timer_multiradar);
     logger (" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .

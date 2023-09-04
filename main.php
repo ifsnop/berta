@@ -46,19 +46,36 @@ if ( file_exists('inc.config.php') ) {
     include_once('inc.config.php');
 }
 
+
 /*
-$p1 = array(array( array(0,0), array(3,0), array( 3,3), array(0,3), array(0,0) ));
-$p2 = array(array( array(1,0), array(1.5,0), array(2,0), array(4,0), array( 4,4), array(1,4), array(1,0) ));
-$mr1 = new \MartinezRueda\Polygon($p1);
-$mr2 = new \MartinezRueda\Polygon($p2);
+include('grande2.php');
+include('peque2.php');
+$p1 = array(array( array(0,0), array(1,1), array(0,2), array(0,0) ));
+$p2 = array(array( array(1,1), array(2,0), array(2,2), array(1,1) ));
+$mr1 = new \MartinezRueda\Polygon($grande);
+$mr2 = new \MartinezRueda\Polygon($peque);
 $mr_algorithm = new \MartinezRueda\Algorithm();
-// $res = $mr_algorithm->getDifference($mr1, $mr2);
+//$res = $mr_algorithm->getDifference($mr1, $mr2);
 $res = $mr_algorithm->getUnion($mr1, $mr2);
-print_r($res->toArray());
-print_r($mr1->toArray());
+//print_r($res->toArray());
+//print_r($mr1->toArray());
+
+$listaContornos = genera_contornos($res->toArray());
+creaKml2(
+$listaContornos,
+"PASO X", //$radares,
+array("./"),
+"220",
+0,
+$appendToFilename = "",
+$coverageLevel = "unica_SUMANDO_PARCIAL"
+);
+
+
 
 exit();
 */
+
 /*
 $path = array( array(41,-10), array(42,-10), array(42,-9), array(41,-9), array(41,-10));
 print computeArea($path) . PHP_EOL;

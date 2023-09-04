@@ -132,12 +132,12 @@ class Algorithm
         $box2 = $clipping->getBoundingBox();
         $minclip = $box2['min'];
         $maxclip = $box2['max'];
-/*
+
 	print "MIN subj x: " . $minsubj->x . " y: " . $minsubj->y . PHP_EOL;
 	print "MAX subj x: " . $maxsubj->x . " y: " . $maxsubj->y . PHP_EOL;
 	print "MIN clip x: " . $minclip->x . " y: " . $minclip->y . PHP_EOL;
 	print "MAX clip x: " . $maxclip->x . " y: " . $maxclip->y . PHP_EOL;
-*/
+
         if ($minsubj->x > $maxclip->x || $minclip->x > $maxsubj->x
             || $minsubj->y > $maxclip->y || $minclip->y > $maxsubj->y) {
             // the bounding boxes do not overlap
@@ -151,10 +151,9 @@ class Algorithm
                 for ($i = 0; $i < $clipping->ncontours(); $i++) {
                     // $result[] = $clipping->contour($i);
                     // https://github.com/kudm761/martinez-rueda-php/pull/1/commits/8e971cbdfe6e52ac048dd91982d98f9f8d0fa79e
-                     $result->push_back($clipping->contour($i));
+                    $result->push_back($clipping->contour($i));
                 }
             }
-
             return $result;
         }
 
@@ -378,8 +377,8 @@ class Algorithm
         $p1 = $segment1->begin();
         $d1 = new Point($segment1->end()->x - $p1->x, $segment1->end()->y - $p1->y);
 
-        $sqr_epsilon = 1e-11; // it was 1e-3 before
-	$near_zero = 1e-8; // epison for zero comparison
+        $sqr_epsilon = 1e-11; // 1e-11; // it was 1e-3 before
+	$near_zero = 1e-8; // epsilon for zero comparison was 1e-8
 
         $E = new Point($p1->x - $p0->x, $p1->y - $p0->y);
         $kross = $d0->x * $d1->y - $d0->y * $d1->x;
@@ -442,19 +441,19 @@ class Algorithm
         if ($imax > 0) {
             $pi0 = new Point($p0->x + $w[0] * $d0->x, $p0->y + $w[0] * $d0->y);
 
-            if ($pi0->distanceTo($segment0->begin()) < 1e-8) {
+            if ($pi0->distanceTo($segment0->begin()) < $near_zero) {
                 $pi0 = $segment0->begin();
             }
 
-            if ($pi0->distanceTo($segment0->end()) < 1e-8) {
+            if ($pi0->distanceTo($segment0->end()) < $near_zero) {
                 $pi0 = $segment0->end();
             }
 
-            if ($pi0->distanceTo($segment1->begin()) < 1e-8) {
+            if ($pi0->distanceTo($segment1->begin()) < $near_zero) {
                 $pi0 = $segment1->begin();
             }
 
-            if ($pi0->distanceTo($segment1->end()) < 1e-8) {
+            if ($pi0->distanceTo($segment1->end()) < $near_zero) {
                 $pi0 = $segment1->end();
             }
 
