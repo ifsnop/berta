@@ -193,7 +193,7 @@ function programaPrincipal(){
             case 'r':
                 // var_dump($value);
                 if ( "" != $value ) {
-                    $config['sensores'] = explode( " ", $value );
+		    $config['sensores'] = explode( " ", trim($value) );
 		    foreach($config['sensores'] as $index => $sensor)
 			$config['sensores'][$index] = strtolower($sensor);
                 } // else coje la lista completa por defecto
