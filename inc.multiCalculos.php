@@ -33,9 +33,9 @@ function init_polygons($coberturas) {
 	    //$polygons[] = ramer_douglas_peucker($polygon, 0.001);
 	    if ( !isset($contorno['inside']) )
 		continue;
-	    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
-		$polygons[] = get_vertex($contorno_inside['polygon']);
-	    }
+	//    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
+	//	$polygons[] = get_vertex($contorno_inside['polygon']);
+	//    }
 	}
 	$mr_polygons[$radar] = new \MartinezRueda\Polygon($polygons);
     }
@@ -136,11 +136,10 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
     logger(" D> " . $vsr_count . " estructuras generadas en " . round(microtime(true) - $timer, 3) . " segundos");
 
     $radares_interseccion_cache = array();
+    $radares_suma_cache = array();
     //$radares_resta_cache = array();
-    //$radares_suma_cache = array();
 
     // cacheo de intersecciones y sumas
-
     $ret = populate_cache($vsr, $vsr_count, $coverageName, $mr_polygons, $radares_interseccion_cache, $radares_suma_cache);
 
     // logger(" D> count radares_suma_cache: " . implode(',', array_keys($radares_suma_cache)));
@@ -219,6 +218,15 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 
 	    $result_arr2 = $result_resta->toArray();
 	    $listaContornos = genera_contornos($result_arr2);
+	    foreach( $listaContornos as $contorno ) {
+		$last = count($contorno['polygon']) - 1;
+		if ( (abs($contorno['polygon'][0][0] - $contorno['polygon'][$last][0]) > 0.000001) ||
+		     (abs($contorno['polygon'][0][1] - $contorno['polygon'][$last][1]) > 0.000001) ) {
+		    logger(" E> Polygon not closed");
+		    print_r($listaContornos);
+		    exit(1);
+		}
+	    }
 	    $placemarks = KML_get_placemarks(
 		$listaContornos,
 		$grupo_radares,
@@ -244,7 +252,7 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	$timer_unica = microtime(true);
 
 	$result_unica = new \MartinezRueda\Polygon(array());
-	$i=0;
+	$i = 0;
 	$j = 0;
 	foreach($mr_polygons[$numero_solape] as $n => $polygon) {
 	    $result_arr2 = $polygon->toArray();
@@ -292,7 +300,7 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	    );
 	    $i++;
 	}
-
+/*
 	logger(" D> 00 POLYCUENTA TOTAL:". $result_unica->ncontours() ." NIVEL{$numero_solape}");
 
 	    $polygon = $mr_polygons[$numero_solape]['monflorite-alcolea+paracuellos1+paracuellos2'];
@@ -311,7 +319,7 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	    );
 
 	logger(" D> 01 POLYCUENTA TOTAL:". $result_unica->ncontours() ." NIVEL{$numero_solape}");
-
+*/
 
 	logger(" D> POLYCUENTA TOTAL:". $result_unica->ncontours() ." NIVEL{$numero_solape}");
 

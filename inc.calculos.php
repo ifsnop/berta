@@ -1603,7 +1603,8 @@ function determinaContornos2($malla) {
 
     print "[assert listaContornos: " . $listaContornosCount . "=?" . $assertListaContornosCount . "]";
     if ( $listaContornosCount != $assertListaContornosCount ) {
-        die("ERROR al reindexar los contornos" . PHP_EOL);
+	logger(" E> Error al reindexar los contornos");
+	exit(-1);
     }
 
     return $listaContornos;

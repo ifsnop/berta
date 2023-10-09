@@ -251,10 +251,10 @@ function KML_format_placemarks($name, $polygon, $inside, $rgb) {
 	$outer_coordinates .= "{$points[1]},{$points[0]},{$points[2]} ";
     }
 
-    $inner = "";
+    $inner = $inner_coordinates = "";
     foreach($inside as $poly) {
 	foreach($poly as $points) {
-	    $inner_coordinates = "{$points[1]},{$points[0]},{$points[2]} ";
+	    $inner_coordinates .= "{$points[1]},{$points[0]},{$points[2]} ";
 	}
 	$inner .= "
 				<innerBoundaryIs>

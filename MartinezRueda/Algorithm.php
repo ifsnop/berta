@@ -503,9 +503,9 @@ class Algorithm
     protected function possibleIntersection(SweepEvent $event1, SweepEvent $event2)
     {
         // uncomment these two lines if self-intersecting polygons are not allowed
-        // if ($event1->polygon_type == $event2->polygon_type) {
-        //    return false;
-        // }
+        //if ($event1->polygon_type == $event2->polygon_type) {
+	//    return false;
+        //}
 
         $ip1 = new Point();
         $ip2 = new Point();

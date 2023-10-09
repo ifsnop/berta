@@ -46,6 +46,158 @@ if ( file_exists('inc.config.php') ) {
     include_once('inc.config.php');
 }
 
+$p1 =[
+	[[-2, 2], [2, 2], [2, -2], [-2, -2], [-2, 2]],
+	[[-1, 1], [1, 1], [1, -1], [-1, -1], [-1, 1]]
+    ];
+
+$p2 =  [[[-1, 1], [1, 1], [1, -1], [-1, -1], [-1, 1]]];
+$p3 =  [[[-2, -2], [2, -2], [2, 2], [-2, 2], [-2, -2]]];
+
+
+//$p1 = [[[0, 0], [0, 1], [1, 0], [1, 1], [0, 0]]];
+//$p2 = [[[0, 0.5], [0, 1.5], [1, 0.5], [1, 1.5], [0, 0.5]]];
+
+// $data = [[[-1, 4], [-3, 4], [-3, 0], [-3, -1], [-1, -1], [-1, -2], [2, -2], [2, 1], [-1, 1], [-1, 4]]];
+    $subject = new \MartinezRueda\Polygon($p1);
+    
+//    $data = [[[-2, 5], [-2, 0], [3, 0], [3, 3], [2, 3], [2, 2], [0, 2], [0, 5], [-2, 5]]];
+    $clipping = new \MartinezRueda\Polygon($p2);
+    
+    $result = (new \MartinezRueda\Algorithm())->getUnion($subject, $clipping);
+    
+    echo json_encode($result->toArray()), PHP_EOL;
+//    echo json_encode($p3) . PHP_EOL;
+
+
+$listaContornos = genera_contornos($subject->toArray());
+$placemarks = KML_get_placemarks(
+    $listaContornos,
+    "subject 0",
+    array("./"),
+    "999",
+    0,
+    $appendToFilename = "",
+    "primera"
+);
+$coverages_per_level_KML['cov']["unica nivel subj"] = $placemarks;
+
+$listaContornos = genera_contornos($clipping->toArray());
+$placemarks = KML_get_placemarks(
+    $listaContornos,
+    "clip 1",
+    array("./"),
+    "999",
+    0,
+    $appendToFilename = "",
+    "segunda"
+);
+$coverages_per_level_KML['cov']["unica nivel clip"] = $placemarks;
+
+$listaContornos = genera_contornos($result->toArray());
+$placemarks = KML_get_placemarks(
+    $listaContornos,
+    "res 2",
+    array("./"),
+    "999",
+    0,
+    $appendToFilename = "",
+    "tercera"
+);
+$coverages_per_level_KML['cov']["unica nivel res"] = $placemarks;
+
+KML_create_from_placemarks($coverages_per_level_KML, 0, 0);
+
+//exit(0);
+
+
+
+
+
+
+
+
+/*
+
+
+
+$listaContornos = genera_contornos($subject->toArray());
+print_r($listaContornos);
+creaKml2(
+$listaContornos,
+"PASO X_sub", //$radares,
+array("./"),
+"999",
+0,
+$appendToFilename = "",
+$coverageLevel = "unica_SUMANDO_PARCIAL"
+);
+
+$listaContornos = genera_contornos($clipping->toArray());
+creaKml2(
+$listaContornos,
+"PASO X_clip", //$radares,
+array("./"),
+"999",
+0,
+$appendToFilename = "",
+$coverageLevel = "unica_SUMANDO_PARCIAL"
+);
+
+$listaContornos = genera_contornos($result->toArray());
+creaKml2(
+$listaContornos,
+"PASO X", //$radares,
+array("./"),
+"999",
+0,
+$appendToFilename = "",
+$coverageLevel = "unica_SUMANDO_PARCIAL"
+);
+
+
+exit(0);    
+*/
+
+
+function parse($str) {
+    $r = array();
+    $str2coords = explode(' ', $str);
+    foreach($str2coords as $coords) {
+	$triple = explode(',', $coords);
+	$r[] = array($triple[1], $triple[0]);
+    }
+    return array($r);
+}
+
+$polygons = array(
+);
+
+$mrs = array();
+foreach($polygons as $polygon) {
+    $p = parse($polygon);
+    $mrs[] = new \MartinezRueda\Polygon($p);
+}
+$mr_algorithm = new \MartinezRueda\Algorithm();
+$res = new \MartinezRueda\Polygon(array());
+foreach($mrs as $mr) {
+    $res = $mr_algorithm->getUnion($res, $mr);
+}
+
+print_r($res->toArray());
+
+$listaContornos = genera_contornos($res->toArray());
+creaKml2(
+$listaContornos,
+"PASO X", //$radares,
+array("./"),
+"999",
+0,
+$appendToFilename = "",
+$coverageLevel = "unica_SUMANDO_PARCIAL"
+);
+// exit(0);
+
 
 /*
 include('grande2.php');
