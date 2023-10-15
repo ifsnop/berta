@@ -1450,6 +1450,8 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
         return array();
     }
 
+    $nuevaListaContornos = array();
+
     // calculamos la jerarquía de los polígonos y los rotamos según su profundidad
     $salir = false;
     while ( !$salir ) {
@@ -1462,10 +1464,12 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
         }
         print "============================================" . PHP_EOL;
 */
-        // print count($listaContornos) . " ";
+        print "listaContornos#     :" . count($listaContornos) . PHP_EOL;
+        print "nuevaListaContornos#:" . count($nuevaListaContornos) . PHP_EOL;
+
         // print_r(array_keys($listaContornos));
-        // print PHP_EOL;
         $c = array_shift( $listaContornos );
+	// comprobación innecesaria
         if ( -1 != $c['level'] ) {
             // nunca deberíamos comprobar dos veces si un polígono tiene elementos dentro
 	    logger(" E> Error al analizar la jerarquía de contornos, " .
@@ -1474,73 +1478,94 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 	    exit(-1);
         }
 
-
         $is_in_polygon = false;
-/*
-        print "C:" . PHP_EOL;
-        print_r($c);
-        print PHP_EOL;
-*/
-        foreach( $listaContornos as $k => $l ) {
-            // comprobamos si el contorno tiene algún contorno dentro
-/*
-	    // print "==================" . PHP_EOL;
-	    // print "probando con poly " . count($l) . PHP_EOL;
-            print "L:" . PHP_EOL;
-            print_r($l['polygon']);
-            print PHP_EOL;
-*/
-            // $is_in_polygon = is_in_polygon2( $c['polygon'], $l['polygon'][0] );
-            $is_in_polygon = $is_in_polygon_function( $c['polygon'], $l['polygon'][0] );
-/*
-            if ( true === $is_in_polygon ) {
-                print "DENTRO" . PHP_EOL;
-            }
-*/
-            // si lo tiene, archivamos el interno y el externo, guardando su relación
-            if ( true === $is_in_polygon ) {
-//                print "polygono interior" . PHP_EOL;
-                // actualizamos el nivel (quizás no nos haga falta nunca)
-                $l['level'] = 1;
-                $c['level'] = 0;
-                // comprobamos la orientación
-                $orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
+	foreach( $listaContornos as $k => $l ) {
+	    $is_in_polygon = false;
+	    /*foreach( $l['polygon'] as $vertex ) {
+		if ( true === ( $is_in_polygon = $is_in_polygon_function( $c['polygon'], $vertex )) ) {
+		    print "ACABAMOS de encontrar a alguien dentro" . PHP_EOL;
+		    break;
+		}
+	    }*/
+	    print "procesando $k de listaContornos:" . count($l['polygon']) . PHP_EOL;
+	    $is_in_polygon = $is_in_polygon_function( $c['polygon'], $l['polygon'][0]);
+
+	    // hay un polígono (l) que está dentro del contorno (c)
+	    if ( $is_in_polygon ) {
+		// actualizamos el nivel
+		$l['level'] = 1;
+		$c['level'] = 0;
+		// comprobamos la orientación del interno.
+		// https://developers.google.com/kml/documentation/kmlreference?hl=en
+		// The <coordinates> for polygons must be specified in counterclockwise order.
+		// Polygons follow the "right-hand rule," which states that if you place the
+		// fingers of your right hand in the direction in which the coordinates are
+		// specified, your thumb points in the general direction of the geometric
+		// normal for the polygon.
+		$orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
 		// print "IN] " . count($l['polygon']) . " => " . ($orientacion ? "CCW" : "CW") . PHP_EOL;
-                // exterior rings: counter-clockwise
-                // interior rings (holes): clockwise direction.
-                // @url https://gis.stackexchange.com/questions/119150/order-of-polygon-vertices-in-general-gis-clockwise-or-counterclockwise
-                // al ser interior, debería ser CW
-                if ( true === $orientacion ) { // orientación es CCW, lo rotamos para dejarlo CW
+		// exterior rings: counter-clockwise directorion.
+		// interior rings (holes): clockwise direction.
+		// @url https://gis.stackexchange.com/questions/119150/order-of-polygon-vertices-in-general-gis-clockwise-or-counterclockwise
+		// al ser interior, debería ser CW
+		if ( true === $orientacion ) { // orientación es CCW, lo rotamos para dejarlo CW
 		    // print "ROTando de CCW a CW" . PHP_EOL;
-                    $l['polygon'] = array_reverse( $l['polygon'] );
-                }
-                // no lo vamos a necesitar mas, así que lo podemos borrar
-                 unset($l['leftCorner']);
-                // metemos el que estaba dentro en su sitio
-                $c['inside'][] = $l;
-                // borramos $l de lista contornos (referenciado por $k)
+		    $l['polygon'] = array_reverse( $l['polygon'] );
+		}
+		// no lo vamos a necesitar mas, así que lo podemos borrar
+		unset($l['leftCorner']);
+		// metemos el que estaba dentro en su sitio
+		$c['inside'][] = $l;
+		// borramos $l de lista contornos (referenciado por $k)
 //                print "inside count:" . count($c['inside']) . PHP_EOL;
 //                print "deleted $k" . PHP_EOL;
-                unset($listaContornos[$k]);
-                //break;
-            }
-        }
-/*
-        print "=======" . PHP_EOL;
-*/
-        // el contorno no tiene a nadie dentro, es un level 0
-        if ( false === $is_in_polygon ) { // $c no tiene a nadie dentro
-            // print "ponemos el que tiene count de: " . count($c['polygon']) . " como level 0" . PHP_EOL;
-            $orientacion = comprobarOrientacion( $c['polygon'], $c['leftCorner'] );
-	    // print "OUT] " . count($c['polygon']) . " => " . ($orientacion ? "CCW" : "CW") . PHP_EOL;
-            if ( false === $orientacion ) { // orientación es CW, lo rotamos para dejarlo CCW
-                $c['polygon'] = array_reverse( $c['polygon'] );
-		// print "ROTando de CW A CCW" . PHP_EOL;
-            }
+		unset($listaContornos[$k]);
+		print "SI tiene a alguien dentro" . PHP_EOL;
+		echo json_encode($l['polygon']);
+	    }
+	}
 
-            $c['level'] = 0;
-        }
-        $listaContornos[] = $c;
+	foreach( $nuevaListaContornos as $k => $l ) {
+	    if ( $l['level'] != -1 )
+		continue;
+	    $is_in_polygon = false;
+	    /*
+	    foreach( $l['polygon'] as $vertex ) {
+		if ( true === ( $is_in_polygon = $is_in_polygon_function( $c['polygon'], $vertex )) ) {
+		    print "ACABAMOS de encontrar a alguien dentro EN LA NUEVA LISTA" . PHP_EOL;
+		    break;
+		}
+	    }*/
+
+	    print "procesando $k de nuevaListaContornos:" . count($l['polygon']) . PHP_EOL;
+	    $is_in_polygon = $is_in_polygon_function( $c['polygon'], array($l['leftCorner']['yMin'], $l['leftCorner']['xMin']));
+
+	    if ( $is_in_polygon ) {
+		$l['level'] = 1;
+		$c['level'] = 0;
+		$orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
+		if ( true === $orientacion ) { // orientación es CCW, lo rotamos para dejarlo CW
+		    $l['polygon'] = array_reverse( $l['polygon'] );
+		}
+		unset($l['leftCorner']);
+		$c['inside'][] = $l;
+		unset($nuevaListaContornos[$k]);
+		print "SI tiene a alguien dentro EN LA NUEVA LISTA" . PHP_EOL;
+		echo json_encode($l['polygon']);
+	    }
+	}
+
+	if ( 0 == $c['level'] ) { // el contorno contiene polígonos
+	    print "COMO DECIAMOS ANTES, HAY ALGUIEN DENTRO!" . PHP_EOL;
+	    $orientacion = comprobarOrientacion( $c['polygon'], $c['leftCorner'] );
+	    if ( false === $orientacion ) {
+		$c['polygon'] = array_reverse( $c['polygon'] );
+	    }
+	}
+
+	// sea como sea, insertamos el contorno en la lista de nuevos contornos
+	$nuevaListaContornos[] = $c;
+
 
         // si no existe ningún polígono de nivel -1, es que los hemos comprobado todos
         // en ese caso, salir.
@@ -1551,28 +1576,37 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
                 break;
             }
         }
+    }
 
-    }
-/*
-        print"STATUS FINAL" . PHP_EOL;
-        foreach( $listaContornos as $k => $l ) {
-            print $k . "] " . count($l['polygon']) . PHP_EOL;
-            print "\t level:" . $l['level'] . PHP_EOL;
-            print "\t inside:" . count($l['inside']) . PHP_EOL;
-        }
-        print "============================================" . PHP_EOL;
-*/
-    // antes de salir del todo, hay que comprobar las orientaciones de todos los niveles 0
-    // para ajustarlas por si no se hubiesen ajustado en el bucle anterior
-    foreach($listaContornos as $k => $l) {
-        $orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
-        // print "OUT] " . count($l['polygon']) . " => " . ($orientacion ? "CCW" : "CW") . PHP_EOL;
-	if ( false === $orientacion ) { // orientación es CW, lo rotamos para dejarlo CCW
-	    $listaContornos[$k]['polygon'] = array_reverse( $l['polygon'] );
-	    // print "Rotando de CW a CCW" . PHP_EOL;
+    // hemos acabado con listaContornos, todos los que queden en nuevaListaContornos
+    // o bien tienen a alguien dentro y están procesados o bien no tienen a nadie
+    // así que serán nivel 0
+    foreach( $nuevaListaContornos as $k => $l ) {
+	$nuevaListaContornos[$k]['level'] = 0;
+	$orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
+	if ( false === $orientacion ) { // debería ser CCW
+	    $nuevaListaContornos[$k]['polygon'] = array_reverse ($l['polygon'] );
 	}
+
+	unset($nuevaListaContornos[$k]['leftCorner']);
     }
-    return $listaContornos;
+
+    print"STATUS FINAL LISTACONTORNOS" . PHP_EOL;
+    foreach( $listaContornos as $k => $l ) {
+	print $k . "] " . count($l['polygon']) . PHP_EOL;
+	print "\t level:" . $l['level'] . PHP_EOL;
+	print "\t inside:" . count($l['inside']) . PHP_EOL;
+    }
+
+    print"STATUS FINAL NUEVALISTACONTORNOS" . PHP_EOL;
+    foreach( $nuevaListaContornos as $k => $l ) {
+	print $k . "] " . count($l['polygon']) . PHP_EOL;
+	print "\t level:" . $l['level'] . PHP_EOL;
+	print "\t inside:" . count($l['inside']) . PHP_EOL;
+    }
+    print "============================================" . PHP_EOL;
+
+    return $nuevaListaContornos;
 }
 
 /**

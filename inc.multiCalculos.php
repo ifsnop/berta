@@ -29,13 +29,13 @@ function init_polygons($coberturas) {
 	$polygons = array();
 
 	foreach($contornos_por_radar['contornos'] as $indice => $contorno) {
-	    $polygons[] = get_vertex($contorno['polygon']);
-	    //$polygons[] = ramer_douglas_peucker($polygon, 0.001);
+	    // $polygons[] = get_vertex($contorno['polygon']);
+	    $polygons[] = ramer_douglas_peucker( get_vertex($contorno['polygon']), 0.000001);
 	    if ( !isset($contorno['inside']) )
 		continue;
-	//    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
-	//	$polygons[] = get_vertex($contorno_inside['polygon']);
-	//    }
+	    foreach($contorno['inside'] as $indice_inside => $contorno_inside) {
+		$polygons[] = get_vertex($contorno_inside['polygon']);
+	    }
 	}
 	$mr_polygons[$radar] = new \MartinezRueda\Polygon($polygons);
     }
@@ -215,9 +215,10 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	    // ese nivel
 	    logger(" D> POLYCUENTA0:". $result_resta->ncontours() ." NIVEL{$numero_solape}");
 	    $mr_polygons[$numero_solape][$nombre_grupo_radares_interseccion . "-" . $nombre_grupo_radares_suma] = clone $result_resta;
-
+	    // echo json_encode($result_resta->toArray());exit(0);
 	    $result_arr2 = $result_resta->toArray();
 	    $listaContornos = genera_contornos($result_arr2);
+	    // comprobación innecesaria
 	    foreach( $listaContornos as $contorno ) {
 		$last = count($contorno['polygon']) - 1;
 		if ( (abs($contorno['polygon'][0][0] - $contorno['polygon'][$last][0]) > 0.000001) ||
@@ -259,7 +260,7 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	    $listaContornos = genera_contornos($result_arr2);
 	    creaKml2(
 		$listaContornos,
-		"N{$numero_solape}_{$n}", //$radares,
+		"N{$numero_solape}_PASO {$i}.0={$n}", //$radares,
 		$rutas,
 		$nivelVuelo,
 		$altMode,
@@ -289,9 +290,10 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 
 	    $result_arr2 = $result_unica->toArray();
 	    $listaContornos = genera_contornos($result_arr2);
+	    print_r($listaContornos);
 	    creaKml2(
 		$listaContornos,
-		"N{$numero_solape}_PASO $i", //$radares,
+		"N{$numero_solape}_PASO {$i}.1={$n}", //$radares,
 		$rutas,
 		$nivelVuelo,
 		$altMode,
@@ -441,7 +443,6 @@ function populate_cache($vsr, $vsr_count, $coverageName, $mr_polygons, &$radares
 /*
  * Convierte una lista de coordenadas en polígonos ordenados (dentro/fuera),
  * eliminando los que sean muy pequeños y usando las funciones de conrec.
- *
  */
 function genera_contornos($result_arr) {
 
@@ -453,7 +454,7 @@ function genera_contornos($result_arr) {
 	// print count($polygon) . "] " . computeArea($polygon) . PHP_EOL;
 	// logger(" V> Polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
 	if ( $computeArea < 0.1 ) {
-	    // logger(" I> Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
+	    logger(" I> Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
 	    continue;
 	}
 
@@ -465,6 +466,7 @@ function genera_contornos($result_arr) {
 	    'level' => -1,
 	    'polygon' => $polygon,
 	    'inside' => array(),
+	    'area' => $computeArea,
 	    'leftCorner' => $leftCorner,
 	);
     }

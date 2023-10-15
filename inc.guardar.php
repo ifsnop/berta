@@ -209,23 +209,30 @@ function KML_get_placemarks($listaContornos, $radarName, $rutas, $nivelVuelo, $a
 
     $placemarks = array();
     $i = 0;
-    foreach( $listaContornos as $contorno ) {
-        $polygon = array();
-	if ( isset($contorno['polygon']) ) {
-	    $polygon = extrae_puntos_contorno($contorno['polygon'], $altitude_meters);
+    foreach( $listaContornos as $contorno1 ) {
+	$num_puntos = 0;
+	$polygon = array();
+	if ( isset($contorno1['polygon']) ) {
+	    $polygon = extrae_puntos_contorno($contorno1['polygon'], $altitude_meters);
+	    $num_puntos += count($contorno1['polygon']);
 	}
 
 	// un polígono puede tener n poligonos dentro que representen n agujeros.
         $inside = array();
-	if ( isset($contorno['inside']) ) {
-	    foreach ( $contorno['inside'] as $contorno ) {
-		$inside[] = extrae_puntos_contorno($contorno['polygon'], $altitude_meters);
+	if ( isset($contorno1['inside']) ) {
+	    foreach ( $contorno1['inside'] as $contorno2 ) {
+		$inside[] = extrae_puntos_contorno($contorno2['polygon'], $altitude_meters);
+		$num_puntos += count($contorno2['polygon']);
 	    }
 	}
 
 	// $polygon tiene una lista de puntos, mientras que inside tiene
 	// una lista de polígonos, cada uno con una lista de puntos.
-	$placemarks[] = KML_format_placemarks($radarWithFL . "_{$i}", $polygon, $inside, $rgb);
+	$placemarks[] = KML_format_placemarks(
+	    $radarWithFL . "_{$i}" . " (" . round($contorno1['area'],2) . "km^2, " . $num_puntos . "ptos)",
+	    $polygon,
+	    $inside,
+	    $rgb);
 	$i++;
     }
     // $group tiene la geometría necesaria para pintar todo, en el formato:
@@ -251,20 +258,20 @@ function KML_format_placemarks($name, $polygon, $inside, $rgb) {
 	$outer_coordinates .= "{$points[1]},{$points[0]},{$points[2]} ";
     }
 
-    $inner = $inner_coordinates = "";
+    $inner = ""; 
     foreach($inside as $poly) {
+	$inner_coordinates = "";
 	foreach($poly as $points) {
 	    $inner_coordinates .= "{$points[1]},{$points[0]},{$points[2]} ";
 	}
 	$inner .= "
-				<innerBoundaryIs>
-				    <LinearRing>
-					<coordinates>
+			<innerBoundaryIs>
+			    <LinearRing>
+				<coordinates>
 $inner_coordinates
-					</coordinates>
-				    </LinearRing>
-				</innerBoundaryIs>
-";
+				</coordinates>
+			    </LinearRing>
+			</innerBoundaryIs>";
     }
 
     $placemark = "" .
@@ -315,8 +322,8 @@ function KML_create_from_placemarks($coverages_per_levels, $padded_FL, $file_nam
     </Document>
 </kml>";
 
-    $kml_folder_footer = "
-</Folder>";
+    $kml_folder_footer = "" .
+"	</Folder>";
 
 
     $kml = $kml_header;
@@ -435,6 +442,8 @@ function KML_placemarks_in_Folders($radarWithFL, $polygons, $rgb, $altMode) {
  * @return bool
  */
 function fromPolygons2KML_One_Folder_Per_Content($polygons, $radarWithFL, $rgb, $altMode) {
+
+die("CODIGO EN SUPERVISION FUNCION NO SOPORTADA UNSUPPORTED");
 /*
 //    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
 //        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
