@@ -256,6 +256,7 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	$i = 0;
 	$j = 0;
 	foreach($mr_polygons[$numero_solape] as $n => $polygon) {
+	    logger(" D> Uniendo {$n}");
 	    $result_arr2 = $polygon->toArray();
 	    $listaContornos = genera_contornos($result_arr2);
 	    creaKml2(
@@ -273,16 +274,28 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 	    //unset($polygon->contours[0]);
 	    //$polygon->contours = array_values($polygon->contours);
 
-	    if ( $i >= 2) { logger(" D> AQUI VA A FALLAR");
+//	    if ( $i >= 2) { logger(" D> AQUI VA A FALLAR");
 //		print $n . PHP_EOL;
 //		$i++;
 //		continue;
 //		\MartinezRueda\Debug::$debug_on = true;
-		print_r($polygon);
-	    }
+//		print_r($polygon);
+//	    }
+	    print "QQ!!" . PHP_EOL;
+	    //print_r($qq);
 
+	    print "IFSNOP" . PHP_EOL;
+	    var_dump($result_unica);
+
+	    file_put_contents("N{$numero_solape}_PASO {$i}.0={$n}.json", json_encode($result_unica->toArray()));
+	    file_put_contents("N{$numero_solape}_PASO {$i}.1={$n}.json", json_encode($polygon->toArray()));
+	    foreach($result_unica->toArray() as $idx => $poly) print $idx . " " . count($poly) . PHP_EOL;
 	    $mr_algorithm = new \MartinezRueda\Algorithm();
 	    $result_unica = $mr_algorithm->getUnion( $result_unica, $polygon );
+	    $qq = $result_unica->toArray();
+	    print "WW!!" . PHP_EOL;
+	    foreach($result_unica->toArray() as $idx => $poly) print $idx . " " . count($poly) . PHP_EOL;
+	    file_put_contents("N{$numero_solape}_PASO {$i}.2={$n}.json", json_encode($result_unica->toArray()));
 
 	    //if ( $i > 10)
 	    // break;
@@ -290,7 +303,7 @@ function multicobertura($coberturas, $nivelVuelo, $rutas, $altMode, $calculoMode
 
 	    $result_arr2 = $result_unica->toArray();
 	    $listaContornos = genera_contornos($result_arr2);
-	    print_r($listaContornos);
+	    // print_r($listaContornos);
 	    creaKml2(
 		$listaContornos,
 		"N{$numero_solape}_PASO {$i}.1={$n}", //$radares,
@@ -453,9 +466,11 @@ function genera_contornos($result_arr) {
 	$computeArea = computeArea($polygon);
 	// print count($polygon) . "] " . computeArea($polygon) . PHP_EOL;
 	// logger(" V> Polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
+	// si eliminamos las áreas pequeñas, puede ser que al crear la cobertura única, esas áreas pequeñas pasen a ser
+	// más grandes, y ya no se eliminen.
 	if ( $computeArea < 0.1 ) {
 	    logger(" I> Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
-	    continue;
+	    // continue;
 	}
 
 	$leftCorner = array();

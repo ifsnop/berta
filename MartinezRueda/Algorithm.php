@@ -505,6 +505,7 @@ class Algorithm
         // uncomment these two lines if self-intersecting polygons are not allowed
         //if ($event1->polygon_type == $event2->polygon_type) {
 	//    return false;
+	//    print "self-intersect abort" . PHP_EOL; exit(1);
         //}
 
         $ip1 = new Point();
