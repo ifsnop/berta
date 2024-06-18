@@ -45,7 +45,7 @@ include_once('MartinezRueda/Algorithm.php');
 if ( file_exists('inc.config.php') ) {
     include_once('inc.config.php');
 }
-
+/*
 $p1 =[
 	[[-2, 2], [2, 2], [2, -2], [-2, -2], [-2, 2]],
 	[[-1, 1], [1, 1], [1, -1], [-1, -1], [-1, 1]]
@@ -72,6 +72,7 @@ print json_encode($p2) . PHP_EOL;
     echo json_encode($result->toArray()), PHP_EOL;
 //    echo json_encode($p3) . PHP_EOL;
 //exit(0);
+*/
 /*
 $listaContornos = genera_contornos($subject->toArray());
 $placemarks = KML_get_placemarks(
@@ -161,7 +162,7 @@ $coverageLevel = "unica_SUMANDO_PARCIAL"
 
 exit(0);    
 */
-
+/*
 
 function parse($str) {
     $r = array();
@@ -232,7 +233,7 @@ $placemarks = KML_get_placemarks(
 $coverages_per_level_KML['cov']["union"] = $placemarks;
 KML_create_from_placemarks($coverages_per_level_KML, 0, 0);
 exit(0);
-
+*/
 /*
 
 $listaContornos = genera_contornos($res->toArray());
