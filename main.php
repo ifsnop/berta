@@ -335,21 +335,21 @@ logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . 
 exit(0);
 
 function printHelp() {
-    print "-r radar_list     | --radar-list radar_list (lista entre comillas, si lista vacía coje todos los disponibles)" . PHP_EOL;
-    print "-m max_range      | --max-range (alcance máximo en NM)" . PHP_EOL;
-    print "-1 (default)      | --monoradar (default)" . PHP_EOL;
-    print "-2                | --multiradar" . PHP_EOL;
-    print "   -u             | --unica (multicobertura como una sola suma de todas)" . PHP_EOL;
-    print "   -r (default)   | --rascal (multicobertura estilo rascal)" . PHP_EOL;
-    print "                  | --no-rascal" . PHP_EOL;
-    print "   -p             | --parcial (multicobertura por radar y tipo->mono,doble,triple...)" . PHP_EOL;
-    print "-f                | --force (ignora cache)" . PHP_EOL;
-    print "-l                | --list (lista radares disponibles)" . PHP_EOL;
-    print "-d                | --radar-data (path of radar_data.rbk, default ./spain.tsk)" . PHP_EOL;
-    print "-s min,max,step   | --steps min,max,step (in FL) default (1,400,1)" . PHP_EOL;
-    print "-c                | --cone (activa cálculo del cono de silencio)" . PHP_EOL;
-    print "-z                | --disable-kmz (desactiva kmz y genera kml)" . PHP_EOL;
-    print "-h                | --help" . PHP_EOL;
+    print "-r radar_list            | --radar-list radar_list (lista entre comillas, si lista vacía coje todos los disponibles)" . PHP_EOL;
+    print "-m max_range             | --max-range (alcance máximo en NM)" . PHP_EOL;
+    print "-1 (default)             | --monoradar (default)" . PHP_EOL;
+    print "-2                       | --multiradar" . PHP_EOL;
+    print "   -u                    | --unica (multicobertura como una sola suma de todas)" . PHP_EOL;
+    print "   -r (default)          | --rascal (multicobertura estilo rascal)" . PHP_EOL;
+    print "                         | --no-rascal" . PHP_EOL;
+    print "   -p                    | --parcial (multicobertura por radar y tipo->mono,doble,triple...)" . PHP_EOL;
+    print "-f                       | --force (ignora cache)" . PHP_EOL;
+    print "-l                       | --list (lista radares disponibles)" . PHP_EOL;
+    print "-d                       | --radar-data (path of radar_data.rbk, default ./spain.tsk)" . PHP_EOL;
+    print "-s single|min,max,step   | --steps min,max,step (in FL) default (1,400,1) or calculate only single FL" . PHP_EOL;
+    print "-c                       | --cone (activa cálculo del cono de silencio)" . PHP_EOL;
+    print "-z                       | --disable-kmz (desactiva kmz y genera kml)" . PHP_EOL;
+    print "-h                       | --help" . PHP_EOL;
     return;
 }
 
@@ -416,12 +416,24 @@ function programaPrincipal(){
             case 'steps':
             case 's':
                 $steps = explode( ",", $value );
-                // print_r($steps); var_dump($steps);
-                if (!is_numeric($steps[0]) || !is_numeric($steps[1]) || !is_numeric($steps[2]) ) {
-                    printHelp();
-                    exit(0);
-                }
-                $config['fl'] = array('min' => $steps[0], 'max' => $steps[1], 'step' => $steps[2]);
+		if ( 1 == count($steps) ) {
+		    if (!is_numeric($steps[0]) ) {
+                	printHelp();
+                	exit(0);
+            	    } else {
+			$config['fl'] = array('min' => $steps[0], 'max' => $steps[0], 'step' => 1);
+		    }
+		} elseif ( 3 == count($steps) ) {
+		    if ( !is_numeric($steps[1]) || !is_numeric($steps[2]) ) {
+                	printHelp();
+                	exit(0);
+		    } else {
+			$config['fl'] = array('min' => $steps[0], 'max' => $steps[1], 'step' => $steps[2]);
+		    }
+		} else {
+		    printHelp();
+		    exit(0);
+		}
                 break;
             case '1':
             case 'monoradar':
@@ -625,7 +637,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
 	    $radioConom = ($flm-$hA)*tan(deg2rad(ANGULO_CONO));
 	    $radioCono = $radioConom / MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
 	    $distanciasConos = array_fill(0, count($distanciasAlcances), $radioCono);
-	    printf("[radioCono %3.2fNM / %3.2fm]", $radioCono, $radioConom);
+	    logger(" N> Radio del Cono: " . round($radioCono, 2) . "NM / " . round($radioConom, 2 ) . "m");
 	}
         $newRange = obtieneMaxAnguloConCoberturaA($distanciasAlcances);
         $radar['screening']['range'] = round($newRange);

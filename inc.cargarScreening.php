@@ -16,6 +16,9 @@ CONST DISTANCIA_A_TERRAIN_HEIGHT = 14;
  */
 function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 
+    $first_warning_wallnode = true; // para imprimir el aviso de terreno corrupto una sola vez
+    $first_warning_distance = true; // para imprimir el aviso de distancia duplicada
+
     // esta funcion guarda el contenido del fichero en un array 
     if ( false === ($contenidoFichero = @file($radar['screening'], FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
         logger(" E> No ha sido posible leer el fichero: >" . $radar['screening'] . "<"); exit(-1);
@@ -71,17 +74,39 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
         );
 
         // recorre el numero de obstaculos para cada azimut
-	for ($j = 0; $j < $contadorObstaculos; $j++) { 
+	$oldAngulo = false;
+	for ($j = 0; $j < $contadorObstaculos; $j++) {
 	    $pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';
 	    if ( false === ($cuenta = preg_match($pattern, $contenidoFichero[$lineaActual], $salida)) && (3 == $cuenta) ) {
-	        // $salida tiene 3 posiciones, las dos ultimas contienen los strings que necesitamos
+		// $salida tiene 3 posiciones, las dos ultimas contienen los strings que necesitamos
 		logger(" E> Error durante la comparacion linea($lineaActual) contenido(" . $contenidoFichero[$lineaActual] . ")");
 		exit(-1);
 	    }
 	    // convierte el string a numero y los almacena en el array
+	    $angulo = floatval( $salida[1] );
+	    $altura = floatval( $salida[2] );
+
+	    if ( $oldAngulo == $angulo ) { // si hay un ángulo con dos altitudes, quitar el último insertado
+		if ( $first_warning_distance ) {
+		    logger(" V> Distancia al radar duplicada, eliminando");
+		    $first_warning_distance = false;
+		}
+		array_pop($listaObstaculos);
+	    }
+	    $oldAngulo = $angulo;
+
+	    if ( $altura >= 32627 ) { // && $j >= ($contadorObstaculos - 2) ) {
+		if ( $first_warning_wallnode ) {
+		    logger(" !> Ignorando los dos últimos obstáculos, desde PredictV23.10 están corruptos! j:{$j} contadorObstaculos:{$contadorObstaculos}");
+		    $first_warning_wallnode = false;
+		}
+		break;
+	    }
+
+
 	    $listaObstaculos[] = array(
-	        'angulo' => floatval ($salida[1]), 
-		'altura' => floatval ($salida[2]), 
+		'angulo' => $angulo,
+		'altura' => $altura,
 		'estePtoTieneCobertura' => false);
 		$lineaActual++;
 	}
@@ -92,6 +117,8 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 	$acimutOld = $acimutActual;
 
     } // end for exterior
+
+
     logger(" I> Cargado contenido de >" . $radar['screening'] . "< en " . round(microtime(true)-$timer,3) . "s");
     // Camprobacion extra para algunos valores
     if ($screening['k-factor'] <= 0) {
