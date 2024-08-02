@@ -20,6 +20,7 @@ CONST TAM_ANGULO_MAXIMO = TAM_CELDA*2.0; //20; // 1; // NM (lo situamos al doble
  */
 function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob, &$anguloPrimerPtoSinCob, &$alturaUltimoPtoCob, &$anguloUltimoPtoCob, $alturaCentroFasesAntena){
 
+    $debug = false;
     $i = 0;
     $enc = false;
     
@@ -27,7 +28,7 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
         if ( $flm < $listaObstaculos[$i]['altura'] ) { // la primera vez que se cumple esto tenemos el primer punto sin cobertura
             // siempre se va a dar el caso en el que el nivel de vuelo va a ser menor que la altura del obstáculo
             // porque llamamos a la función desde calculosFLencimaRadar
-	    if ( $i == 0 ) {
+	    if ( 0 == $i ) {
         	$alturaPrimerPtoSinCob = $listaObstaculos[$i]['altura']; //+25000;
         	// garantizar que este angulo es siempre mayor que el anguloUltimoPtoCob (y en lugar de restar en el otro una
         	// cantidad fija, sumamos aquí para que siempre sea mayor que cero)
@@ -46,12 +47,13 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
                 $alturaUltimoPtoCob    = $listaObstaculos[$i-1]['altura'];
 	        $anguloUltimoPtoCob    = $listaObstaculos[$i-1]['angulo'];
 	    }
-	    if ( false ) {
-	        print "alturaPrimerPtoSinCob:" . $alturaPrimerPtoSinCob . PHP_EOL;
-	        print "alturaUltimoPtoConCob:" . $alturaUltimoPtoCob . PHP_EOL;
-	        print "anguloPrimerPtoSinCob:" . $anguloPrimerPtoSinCob . PHP_EOL;
-	        print "anguloUltimoPtoConCob:" . $anguloUltimoPtoCob . PHP_EOL;
-	        print "flm:" . $flm . PHP_EOL;
+	    if ( $debug ) {
+		print "buscarPuntosLimitantes] i:" . $i . PHP_EOL;
+	        print "buscarPuntosLimitantes] alturaPrimerPtoSinCob:" . $alturaPrimerPtoSinCob . PHP_EOL;
+	        print "buscarPuntosLimitantes] alturaUltimoPtoConCob:" . $alturaUltimoPtoCob . PHP_EOL;
+	        print "buscarPuntosLimitantes] anguloPrimerPtoSinCob:" . $anguloPrimerPtoSinCob . PHP_EOL;
+	        print "buscarPuntosLimitantes] anguloUltimoPtoConCob:" . $anguloUltimoPtoCob . PHP_EOL;
+	        print "buscarPuntosLimitantes] flm:" . $flm . PHP_EOL;
             }
 	    $enc = true;
 	} else {
@@ -70,6 +72,7 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
  */
 function calculaAnguloMaximaCobertura($radar, $flm){
 
+    $debug = false;
     $earthToRadar = $radar['screening']['towerHeight'] +
         $radar['screening']['terrainHeight'] +
         $radar['screening']['radioTerrestreAumentado'];
@@ -79,7 +82,7 @@ function calculaAnguloMaximaCobertura($radar, $flm){
         (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range'],2))
         / (2 * $earthToRadar * $earthToFl)
     );
-    if (false) {
+    if ( $debug ) {
         print "radioTerrestreAumentado: " . $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
         print "flm: " . $flm . PHP_EOL;
         print "earthToRadar: " . $earthToRadar . PHP_EOL;
@@ -101,16 +104,16 @@ function calculaAnguloMaximaCobertura($radar, $flm){
  */
 function calculosFLencimaRadar($radar, $flm ){
 
+    $debug = false;
     $distanciasAlcances = array();
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm); // AlphaRange en Matlab
     $earthToFl = $radioTerrestreAumentado + $flm;
     $earthToRadar = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'] + $radioTerrestreAumentado;
-    $earthToRadarPow = pow($earthToRadar,2);
+    $earthToRadarPow = pow($earthToRadar, 2);
 
     // recorremos los azimuths
     for ( $i=0; $i < $radar['screening']['totalAzimuths']; $i++ ) {
-
         // obtenemos la última linea del array para cada azimut.
 	if ( !isset($radar['screening']['listaAzimuths'][$i]) ) {
 	    print_r($radar);
@@ -148,7 +151,7 @@ function calculosFLencimaRadar($radar, $flm ){
 	        $earthToEvalPointPow) /
 	        (2 * $earthToRadar * $distancia)
 	    );
-	    
+
 	    $theta = asin($earthToRadar * sin($gammaMax) / $earthToFl);
 	    // ángulo formado entre la vertical del radar y el punto de
 	    // corte de la recta que psa por el obstáculo más alto y el nivel
@@ -164,51 +167,70 @@ function calculosFLencimaRadar($radar, $flm ){
                 $distanciasAlcances[$i] = $radioTerrestreAumentado * $epsilon / MILLA_NAUTICA_EN_METROS;
             }
 
-            if (false) {
-                print "radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
-                print "count: " . $count . PHP_EOL;
-                print "obstaculoLimitante: " . $obstaculoLimitante . PHP_EOL;
-                print "earthToEvalPoint: " . $earthToEvalPoint . PHP_EOL;
-                print "angulo:" . $angulo . PHP_EOL;
-                print "distancia: " . $distancia . PHP_EOL;
-                print "gammaMax: " . $gammaMax . PHP_EOL;
-	        print "theta: " . $theta . PHP_EOL;
-	        print "epsilon: " . $epsilon . PHP_EOL;
-                print "anguloMaxCob (AlphaRange): " . $anguloMaxCob . PHP_EOL;
-	        print "distanciasAlcances[" . $i . "]: " . $distanciasAlcances[$i] . PHP_EOL;
-            }
+	    if ( $debug ) {
+		print "flm >= obstaculoLimitante " . PHP_EOL;
+		print "  radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
+		print "  count: " . $count . PHP_EOL;
+		print "  obstaculoLimitante: " . $obstaculoLimitante . PHP_EOL;
+		print "  earthToEvalPoint: " . $earthToEvalPoint . PHP_EOL;
+		print "  angulo:" . $angulo . PHP_EOL;
+		print "  distancia: " . $distancia . PHP_EOL;
+		print "  gammaMax: " . $gammaMax . PHP_EOL;
+		print "  theta: " . $theta . PHP_EOL;
+		print "  epsilon: " . $epsilon . PHP_EOL;
+		print "  anguloMaxCob (AlphaRange): " . $anguloMaxCob . PHP_EOL;
+		print "  distanciasAlcances[" . $i . "]: " . $distanciasAlcances[$i] . PHP_EOL;
+	    }
 	 } else { // $fl < $obstaculoLimitante
             // caso en el que el nivel de vuelo está por debajo del obstáculo
             // que limita. es necesario calcular dónde está el obstáculo que
             // limita, porque no está al final de la lista de obstáculos, sino
             // que depende del nivel de vuelo. (en la documentación de Matlab
             // esto no está explicado).
-            $anguloLimitante = 0;
+	    $anguloLimitante = 0;
 	    $alturaPrimerPtoSinCob = 0;
 	    $anguloPrimerPtoSinCob = 0;
 	    $alturaUltimoPtoCob = 0;
-            $anguloUltimoPtoCob = 0;
-            $ret = buscarPuntosLimitantes(
-                $radar['screening']['listaAzimuths'][$i],
-                $flm,
-                $alturaPrimerPtoSinCob,
-                $anguloPrimerPtoSinCob,
-                $alturaUltimoPtoCob,
-                $anguloUltimoPtoCob,
-                $alturaCentroFasesAntena = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight']
-            );
-            if ( !$ret ) {
+	    $anguloUltimoPtoCob = 0;
+	    $ret = buscarPuntosLimitantes(
+		$radar['screening']['listaAzimuths'][$i],
+		$flm,
+		$alturaPrimerPtoSinCob,
+		$anguloPrimerPtoSinCob,
+		$alturaUltimoPtoCob,
+		$anguloUltimoPtoCob,
+		$alturaCentroFasesAntena = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight']
+	    );
+	    if ( false === $ret ) {
 	        die("ERROR MALIGNO !! No deberias haber entrado aqui" . PHP_EOL);
-            }
+	    }
 	    $anguloLimitante = (($flm-$alturaUltimoPtoCob) * (($anguloPrimerPtoSinCob - $anguloUltimoPtoCob) / ($alturaPrimerPtoSinCob - $alturaUltimoPtoCob))) + $anguloUltimoPtoCob;
 
-            if ($anguloLimitante > $anguloMaxCob) {
+	    if ($anguloLimitante > $anguloMaxCob) {
 	        $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
 	    } else {
                 $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloLimitante / MILLA_NAUTICA_EN_METROS;
 	    }
+
+	    if ( $debug ) {
+		print "flm >= obstaculoLimitante " . PHP_EOL;
+		print "  radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
+		print "  count: " . $count . PHP_EOL;
+		print "  obstaculoLimitante: " . $obstaculoLimitante . PHP_EOL;
+		print "  anguloMaxCob (AlphaRange): " . $anguloMaxCob . PHP_EOL;
+		print "  distanciasAlcances[" . $i . "]: " . $distanciasAlcances[$i] . PHP_EOL;
+		print "  alturaPrimerPtoSinCob: " . $alturaPrimerPtoSinCob . PHP_EOL;
+		print "  anguloPrimerPtoSinCob: " . $anguloPrimerPtoSinCob . PHP_EOL;
+		print "  alturaUltimoPtoCob: " . $alturaUltimoPtoCob . PHP_EOL;
+		print "  anguloUltimoPtoCob: " . $anguloUltimoPtoCob . PHP_EOL;
+		print "  anguloLimitante: " . $anguloLimitante . PHP_EOL;
+	    }
 	 }// else
     }// fin for para recorrer los azimuths
+
+    if ( $debug )
+	foreach($distanciasAlcances as $i => $nm)
+	    print "acimut: " . ($i/2) . "\t distancia: " . round($nm,2) . PHP_EOL;
 
     return $distanciasAlcances;
 
@@ -239,7 +261,7 @@ function calculaCoordenadasGeograficasA( $radar, $flm, $distanciasAlcances ){
         'sin' => sin($latitudComplementaria),
     );
 
-    // Recorrido de los acimuts 
+    // Recorrido de los acimuts
     for ($i = 0; $i < $radar['screening']['totalAzimuths']; $i++) {
 
         $res = transformaFromPolarToLatLon($radar, $rho = $distanciasAlcances[$i], $theta = $i * $paso, $latComp);
@@ -1451,23 +1473,30 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
     }
 
     $nuevaListaContornos = array();
+    $cuentaContornosOriginal = count($listaContornos);
 
     // calculamos la jerarquía de los polígonos y los rotamos según su profundidad
     $salir = false;
     while ( !$salir ) {
-/*
-        print"STATUS" . PHP_EOL;
+
+        print PHP_EOL . "STATUS" . PHP_EOL;
+        print "listaContornos:      #" . count($listaContornos) . PHP_EOL;
+        print "nuevaListaContornos: #" . count($nuevaListaContornos) . PHP_EOL;
+
         foreach( $listaContornos as $k => $l ) {
-            print $k . "] " . count($l['polygon']) . PHP_EOL;
+            print $k . "/" . count($listaContornos) . " con #" . count($l['polygon']) . " vértices" . PHP_EOL;
             print "\t level:" . $l['level'] . PHP_EOL;
             print "\t inside:" . count($l['inside']) . PHP_EOL;
         }
         print "============================================" . PHP_EOL;
-*/
-        print "listaContornos#     :" . count($listaContornos) . PHP_EOL;
-        print "nuevaListaContornos#:" . count($nuevaListaContornos) . PHP_EOL;
+
+
+
+	// print_r($listaContornos);
 
         // print_r(array_keys($listaContornos));
+
+	// extraemos el primer contorno e iremos viendo si dentro tiene a alguien.
         $c = array_shift( $listaContornos );
 	// comprobación innecesaria
         if ( -1 != $c['level'] ) {
@@ -1478,6 +1507,9 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 	    exit(-1);
         }
 
+	// Comparamos el primer contorno con el resto, para ver si una de las esquinas está dentro de alguno.
+	// Si está dentro, indicamos en el primer contorno que tiene uno dentro.
+
         $is_in_polygon = false;
 	foreach( $listaContornos as $k => $l ) {
 	    $is_in_polygon = false;
@@ -1487,11 +1519,14 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 		    break;
 		}
 	    }*/
-	    print "procesando $k de listaContornos:" . count($l['polygon']) . PHP_EOL;
+	    print "procesando $k/" . count($listaContornos) . " de listaContornos con #" . count($l['polygon']) . " vértices" . PHP_EOL;
+	    // print_r($l['polygon'][0]);
+	    // print_r($c['polygon']);
 	    $is_in_polygon = $is_in_polygon_function( $c['polygon'], $l['polygon'][0]);
-
+	    // exit(0);
 	    // hay un polígono (l) que está dentro del contorno (c)
 	    if ( $is_in_polygon ) {
+		print "uno dentro ($k)" . PHP_EOL;
 		// actualizamos el nivel
 		$l['level'] = 1;
 		$c['level'] = 0;
@@ -1521,10 +1556,16 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 //                print "deleted $k" . PHP_EOL;
 		unset($listaContornos[$k]);
 		print "SI tiene a alguien dentro" . PHP_EOL;
-		echo json_encode($l['polygon']);
+		// echo json_encode($l['polygon']) . PHP_EOL;
 	    }
 	}
 
+	// hemos encontrado todos los contornos de listaContornos que están dentro de $c,
+	// y los hemos dejado colgando de él, borrándolos de listaContornos.
+
+	// nuevaListaContornos en una primera pasada está vacía.
+	// en siguientes pasadas puede contener a alguien, puede no contener a nadie o puede ser contenido (sin saberlo)
+	// solo nos fijamos si contiene contornos que no contengan a nadie
 	foreach( $nuevaListaContornos as $k => $l ) {
 	    if ( $l['level'] != -1 )
 		continue;
@@ -1537,8 +1578,13 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 		}
 	    }*/
 
-	    print "procesando $k de nuevaListaContornos:" . count($l['polygon']) . PHP_EOL;
-	    $is_in_polygon = $is_in_polygon_function( $c['polygon'], array($l['leftCorner']['yMin'], $l['leftCorner']['xMin']));
+	    print "procesando $k/" . count($nuevaListaContornos) . " de nuevaListaContornos con #" . count($l['polygon']) . " vertices" . PHP_EOL;
+	    // print "_M_>" . PHP_EOL;
+	    // print $is_in_polygon_function . PHP_EOL;
+	    // print_r($c['polygon']);
+	    $is_in_polygon = $is_in_polygon_function( $c['polygon'], $l['polygon'][0]); // array('col' => $l['leftCorner']['yMin'], 'fila' => $l['leftCorner']['xMin']));
+	    // $is_in_polygon = $is_in_polygon_function( $c['polygon'], $l['polygon'][0]);
+	    // print "<_M_" . PHP_EOL;
 
 	    if ( $is_in_polygon ) {
 		$l['level'] = 1;
@@ -1551,21 +1597,25 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 		$c['inside'][] = $l;
 		unset($nuevaListaContornos[$k]);
 		print "SI tiene a alguien dentro EN LA NUEVA LISTA" . PHP_EOL;
-		echo json_encode($l['polygon']);
+		// echo json_encode($l['polygon']);
 	    }
 	}
 
+	// si contiene a alguien, ya sabemos su orientación, porque es contenedor.
 	if ( 0 == $c['level'] ) { // el contorno contiene polígonos
-	    print "COMO DECIAMOS ANTES, HAY ALGUIEN DENTRO!" . PHP_EOL;
+	    print "El polígono ráiz tiene dentro otros polígonos, así que comprobaremos su orientación: ";
 	    $orientacion = comprobarOrientacion( $c['polygon'], $c['leftCorner'] );
 	    if ( false === $orientacion ) {
 		$c['polygon'] = array_reverse( $c['polygon'] );
+		print "rotando polígono raiz ";
 	    }
+	    print "ok" . PHP_EOL;
+	    unset($c['leftCorner']);
 	}
 
 	// sea como sea, insertamos el contorno en la lista de nuevos contornos
+	// puede contener a alguien, puede no contener a nadie o puede ser contenido.
 	$nuevaListaContornos[] = $c;
-
 
         // si no existe ningún polígono de nivel -1, es que los hemos comprobado todos
         // en ese caso, salir.
@@ -1582,13 +1632,14 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
     // o bien tienen a alguien dentro y están procesados o bien no tienen a nadie
     // así que serán nivel 0
     foreach( $nuevaListaContornos as $k => $l ) {
-	$nuevaListaContornos[$k]['level'] = 0;
-	$orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
-	if ( false === $orientacion ) { // debería ser CCW
-	    $nuevaListaContornos[$k]['polygon'] = array_reverse ($l['polygon'] );
+	if ( -1 == $l['level'] ) {
+	    $nuevaListaContornos[$k]['level'] = 0;
+	    $orientacion = comprobarOrientacion( $l['polygon'], $l['leftCorner'] );
+	    if ( false === $orientacion ) { // debería ser CCW
+		$nuevaListaContornos[$k]['polygon'] = array_reverse ($l['polygon'] );
+	    }
+	    unset($nuevaListaContornos[$k]['leftCorner']);
 	}
-
-	unset($nuevaListaContornos[$k]['leftCorner']);
     }
 
     print"STATUS FINAL LISTACONTORNOS" . PHP_EOL;
@@ -1598,15 +1649,31 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 	print "\t inside:" . count($l['inside']) . PHP_EOL;
     }
 
+    if ( count($listaContornos) > 0 ) {
+	logger("E> listaContornos deberia estar vacia!!!!, abortando");
+	exit(-1);
+    }
+
+    $cuentaContornosNueva = 0;
     print"STATUS FINAL NUEVALISTACONTORNOS" . PHP_EOL;
     foreach( $nuevaListaContornos as $k => $l ) {
+	$cuentaContornosNueva++;
 	print $k . "] " . count($l['polygon']) . PHP_EOL;
 	print "\t level:" . $l['level'] . PHP_EOL;
 	print "\t inside:" . count($l['inside']) . PHP_EOL;
+	$cuentaContornosNueva += count($l['inside']);
+	if ( isset($l['leftCorner']) ) {
+	    print "algo salio mal" . PHP_EOL;
+	    print_r($nuevaListaContornos[$k]); exit(-1);
+	}
     }
     print "============================================" . PHP_EOL;
 
+    print "cuentaContornosOriginal: $cuentaContornosOriginal" . PHP_EOL;
+    print "cuentaContornosNueva: $cuentaContornosNueva" . PHP_EOL;
+
     return $nuevaListaContornos;
+
 }
 
 /**
@@ -1625,8 +1692,16 @@ function determinaContornos2($malla) {
     //}
 
     $listaContornosCount = count($listaContornos);
-    $listaContornos = determinaContornos2_sortContornos($listaContornos);
 
+/*
+    for($j=0;$j<1000;$j++) {
+	shuffle($listaContornos);
+	$listaContornosRes = determinaContornos2_sortContornos($listaContornos, 'is_in_polygon2');
+    }
+    $listaContornos = $listaContornosRes;
+*/
+
+    $listaContornos = determinaContornos2_sortContornos($listaContornos, 'is_in_polygon2');
     $assertListaContornosCount = count($listaContornos);
     foreach( $listaContornos as $k => $l ) {
         // print $k . "] " . count($l['polygon']) . PHP_EOL;
@@ -1666,6 +1741,7 @@ function is_in_polygon($v, $p) {
 function is_in_polygon2($v, $p) {
     $inside = false;
     for ($i = 0, $j = count($v) - 1; $i < count($v); $j = $i++) {
+	// print_r($v[$i]); print_r($p);
         if ( (($v[$i]['col'] > $p['col'] != ($v[$j]['col'] > $p['col'])) &&
             ($p['fila'] < ($v[$j]['fila'] - $v[$i]['fila']) * ($p['col'] - $v[$i]['col']) / ($v[$j]['col'] - $v[$i]['col']) + $v[$i]['fila']) ) ) {
             $inside = !$inside;
@@ -1725,7 +1801,7 @@ function findLeftCorner( $x, $y, $leftCorner, $arr, $k = false ) {
  * @return bool true = CCW, false = CW
  */
 function comprobarOrientacion($contornoFixed, $leftCorner) {
-/* 
+/*
  One does not need to construct the convex hull of a polygon to find
  a suitable vertex. A common choice is the vertex of the polygon with
  the smallest X-coordinate. If there are several of them, the one with
@@ -1743,7 +1819,7 @@ function comprobarOrientacion($contornoFixed, $leftCorner) {
  determinant is commonly used:
 
     det ( O ) = ( x B − x A ) ( y C − y A ) − ( x C − x A ) ( y B − y A )
-    
+
  If the determinant is negative, then the polygon is oriented clockwise.
  If the determinant is positive, the polygon is oriented counterclockwise.
  The determinant is non-zero if points A, B, and C are non-collinear.
@@ -1772,6 +1848,7 @@ function comprobarOrientacion($contornoFixed, $leftCorner) {
 //    $xA = $contornoFixed[(($k-1) + $n) % $n]['fila']; $yA = $contornoFixed[(($k-1) + $n) % $n]['col'];
 //    $xB = $contornoFixed[$k]['fila']; $yB = $contornoFixed[$k]['col'];
 //    $xC = $contornoFixed[($k+1) % $n]['fila']; $yC = $contornoFixed[($k+1) % $n]['col'];
+
     $xA = $contornoFixed[(($k-1) + $n) % $n][$fila]; $yA = $contornoFixed[(($k-1) + $n) % $n][$col];
     $xB = $contornoFixed[$k][$fila]; $yB = $contornoFixed[$k][$col];
     $xC = $contornoFixed[($k+1) % $n][$fila]; $yC = $contornoFixed[($k+1) % $n][$col];
