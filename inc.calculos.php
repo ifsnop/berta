@@ -104,13 +104,14 @@ function calculaAnguloMaximaCobertura($radar, $flm){
  */
 function calculosFLencimaRadar($radar, $flm ){
 
-    $debug = false;
+    $debug = true; // false;
     $distanciasAlcances = array();
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm); // AlphaRange en Matlab
     $earthToFl = $radioTerrestreAumentado + $flm;
     $earthToRadar = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'] + $radioTerrestreAumentado;
     $earthToRadarPow = pow($earthToRadar, 2);
+    $distanciaMaxCobertura = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
 
     // recorremos los azimuths
     for ( $i=0; $i < $radar['screening']['totalAzimuths']; $i++ ) {
@@ -132,6 +133,7 @@ function calculosFLencimaRadar($radar, $flm ){
 	$obstaculoLimitante = $radar['screening']['listaAzimuths'][$i][$ultimoPunto]['altura'];
         if ( $flm >= $obstaculoLimitante ) {
             // caso en el que el nivel de vuelo está por encima del obstáculo que limita
+
 	    $earthToEvalPoint = $radioTerrestreAumentado + $obstaculoLimitante;
 	    $earthToEvalPointPow = pow($earthToEvalPoint, 2);
 	    // ángulo del ultimo obstaculo de cada azimuth
@@ -154,7 +156,7 @@ function calculosFLencimaRadar($radar, $flm ){
 
 	    $theta = asin($earthToRadar * sin($gammaMax) / $earthToFl);
 	    // ángulo formado entre la vertical del radar y el punto de
-	    // corte de la recta que psa por el obstáculo más alto y el nivel
+	    // corte de la recta que pasa por el obstáculo más alto y el nivel
 	    // de vuelo.
 	    $epsilon = M_PI - $theta - $gammaMax;
             // escogemos el ángulo menor entre el ángulo para la máxima
@@ -162,12 +164,13 @@ function calculosFLencimaRadar($radar, $flm ){
             // epsilon. (puede ser que por nivel de vuelo no lleguemos al obstáculo,
             // entonces la cobertura es menor)
             if ($epsilon >  $anguloMaxCob) {
-                $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
+		$distanciasAlcances[$i] = $distanciaMaxCobertura;
+		// $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
 	    } else {
                 $distanciasAlcances[$i] = $radioTerrestreAumentado * $epsilon / MILLA_NAUTICA_EN_METROS;
             }
-
-	    if ( $debug ) {
+	    // print ($i/2) . "\tA1 distancia: " . $distanciasAlcances[$i] . "NM" . PHP_EOL;
+	    if ( $debug /* && $i == 180 */ ) {
 		print "flm >= obstaculoLimitante " . PHP_EOL;
 		print "  radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
 		print "  count: " . $count . PHP_EOL;
@@ -204,16 +207,24 @@ function calculosFLencimaRadar($radar, $flm ){
 	    if ( false === $ret ) {
 	        die("ERROR MALIGNO !! No deberias haber entrado aqui" . PHP_EOL);
 	    }
+	    // A2.3 (con objeto de paliar una posible excesiva separación entre puntos consecutivos,
+	    // se procede a calcular la intersección entre el nivel de vuelo y la recta que une los dos
+	    // puntos consecutivos límite, es decir el último punto con cobertura y el primero sin ella.
+	    // ¿es una interpolación? ¿por qué?
 	    $anguloLimitante = (($flm-$alturaUltimoPtoCob) * (($anguloPrimerPtoSinCob - $anguloUltimoPtoCob) / ($alturaPrimerPtoSinCob - $alturaUltimoPtoCob))) + $anguloUltimoPtoCob;
 
 	    if ($anguloLimitante > $anguloMaxCob) {
-	        $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
+		// este valor se puede precalcular siempre será el mismo
+		$distanciasAlcances[$i] = $distanciaMaxCobertura;
+		// $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloMaxCob / MILLA_NAUTICA_EN_METROS;
 	    } else {
                 $distanciasAlcances[$i] = $radioTerrestreAumentado * $anguloLimitante / MILLA_NAUTICA_EN_METROS;
 	    }
 
-	    if ( $debug ) {
-		print "flm >= obstaculoLimitante " . PHP_EOL;
+	    // print ($i) . "\tA2 distancia: " . $distanciasAlcances[$i] . "NM" . PHP_EOL;
+
+	    if ( $debug /* && $i == 180 */ ) {
+		print "flm < obstaculoLimitante " . PHP_EOL;
 		print "  radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
 		print "  count: " . $count . PHP_EOL;
 		print "  obstaculoLimitante: " . $obstaculoLimitante . PHP_EOL;
@@ -230,7 +241,7 @@ function calculosFLencimaRadar($radar, $flm ){
 
     if ( $debug )
 	foreach($distanciasAlcances as $i => $nm)
-	    print "acimut: " . ($i/2) . "\t distancia: " . round($nm,2) . PHP_EOL;
+	    print "acimut: " . ($i) . "\t distancia: " . round($nm,2) . PHP_EOL;
 
     return $distanciasAlcances;
 

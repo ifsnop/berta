@@ -103,7 +103,6 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 		break;
 	    }
 
-
 	    $listaObstaculos[] = array(
 		'angulo' => $angulo,
 		'altura' => $altura,
