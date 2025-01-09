@@ -38,7 +38,7 @@ include_once('MartinezRueda/Algorithm.php');
 	'cache' => "." . DIRECTORY_SEPARATOR . "cache" . DIRECTORY_SEPARATOR,
 	'resultados_multi' => "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR . "MULTI" . DIRECTORY_SEPARATOR,
     ),
-    'mode' => array('monoradar' => false, 'multiradar' => false, 'multiradar_unica' => false), // monoradar, multiradar
+    'mode' => array('monoradar' => false, 'multiradar' => false, 'multiradar_unica' => false, 'list' => false), // monoradar, multiradar
     'disable-kmz' => false,
 );
 
@@ -384,8 +384,9 @@ function programaPrincipal(){
                 break;
             case 'list':
             case 'l':
-                print_r( $config['sensores'] );
-                exit(0);
+		$config['mode']['list'] = true;
+                // print_r( $config['sensores'] );
+                // exit(0);
                 break;
             case 'radar-data':
             case 'd':
@@ -499,8 +500,18 @@ function programaPrincipal(){
     logger(" D> Leyendo información de radares de >" . $config['radar-data'] . "<");
     $infoCoral = getRadars($config['radar-data'], $parse_all = true);
     logger(" V> Información de radares procesada (" . round(microtime(true) - $timer,2) . "s)");
+    if ( $config['mode']['list'] ) {
+	logger(" V> Listado de radares configurados:");
+	print implode(array_keys($infoCoral), " ") . PHP_EOL;
+	exit(0);
+    }
+
+
     logger(" I> Pasos configurados (min,max,paso): ({$config['fl']['min']},{$config['fl']['max']},{$config['fl']['step']})");
     // comprobamos que todos los sensores solicitados existen
+    if ( 0 == count($config['sensores']) ) {
+	logger(" E> No se han solicitado sensores para el estudio"); exit(-1);
+    }
     foreach($config['sensores'] as $sensor) {
         if ( !isset($infoCoral[$sensor]) ) {
 	    logger(" E> El sensor $sensor no está configurado en la bbdd del SASS-C"); exit(-1);
