@@ -585,13 +585,13 @@ function storeMallaAsImage($malla, $nombre) {
     }
 
     if ( false === imagepng( $im, $nombre . ".png" ) ) {
-        die("ERROR imagepng ${nombre}.png" . PHP_EOL);
+        die("ERROR imagepng {$nombre}.png" . PHP_EOL);
     }
 
     if ( false === imagedestroy( $im ) ) {
         die("ERROR imagedestroy" . PHP_EOL);
     }
-    print "INFO guardando fichero: ${nombre}.png" . PHP_EOL;
+    print "INFO guardando fichero: {$nombre}.png" . PHP_EOL;
 
     return true;
 }
@@ -759,13 +759,13 @@ function storeMallaAsImage3($malla, $nombre, $bounding, $debug = false) {
     }
     */
     if ( false === imagepng( $im, $nombre . ".png" ) ) {
-        print "ERROR imagepng ${nombre}.png" . PHP_EOL; exit(-1);
+        print "ERROR imagepng {$nombre}.png" . PHP_EOL; exit(-1);
     }
     if ( false === imagedestroy( $im ) ) {
         print "ERROR imagedestroy" . PHP_EOL; exit(-1);
     }
 
-    print "INFO nombre fichero: ${nombre}.png" . PHP_EOL;
+    print "INFO nombre fichero: {$nombre}.png" . PHP_EOL;
     return true;
 }
 
@@ -829,13 +829,13 @@ function storeContornosAsImage3($contornos, $nombre, $debug = false) {
     }
 
     if ( false === imagepng( $im, $nombre . ".png" ) ) {
-        print "ERROR imagepng ${nombre}.png" . PHP_EOL; exit(-1);
+        print "ERROR imagepng {$nombre}.png" . PHP_EOL; exit(-1);
     }
     if ( false === imagedestroy( $im ) ) {
         print "ERROR imagedestroy" . PHP_EOL; exit(-1);
     }
 
-    print "INFO nombre fichero: ${nombre}.png" . PHP_EOL;
+    print "INFO nombre fichero: {$nombre}.png" . PHP_EOL;
     return true;
 }
 

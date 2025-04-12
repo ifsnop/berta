@@ -502,7 +502,7 @@ function programaPrincipal(){
     logger(" V> Información de radares procesada (" . round(microtime(true) - $timer,2) . "s)");
     if ( $config['mode']['list'] ) {
 	logger(" V> Listado de radares configurados:");
-	print implode(array_keys($infoCoral), " ") . PHP_EOL;
+	print implode(" ", array_keys($infoCoral)) . PHP_EOL;
 	exit(0);
     }
 
