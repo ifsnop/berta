@@ -23,7 +23,7 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
     $debug = false;
     $i = 0;
     $enc = false;
-    
+
     while ( $i < (count($listaObstaculos)) && !$enc ) {
         if ( $flm < $listaObstaculos[$i]['altura'] ) { // la primera vez que se cumple esto tenemos el primer punto sin cobertura
             // siempre se va a dar el caso en el que el nivel de vuelo va a ser menor que la altura del obstáculo
@@ -104,7 +104,7 @@ function calculaAnguloMaximaCobertura($radar, $flm){
  */
 function calculosFLencimaRadar($radar, $flm ){
 
-    $debug = true; // false;
+    $debug = false;
     $distanciasAlcances = array();
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm); // AlphaRange en Matlab
@@ -1479,6 +1479,8 @@ function determinaContornos2_joinContornos($c) {
  */
 function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_function = 'is_in_polygon2') {
 
+    $debug = false;
+
     if ( !isset($listaContornos) || 0 == count($listaContornos) ) {
         return array();
     }
@@ -1490,16 +1492,17 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
     $salir = false;
     while ( !$salir ) {
 
-        print PHP_EOL . "STATUS" . PHP_EOL;
-        print "listaContornos:      #" . count($listaContornos) . PHP_EOL;
-        print "nuevaListaContornos: #" . count($nuevaListaContornos) . PHP_EOL;
-
-        foreach( $listaContornos as $k => $l ) {
-            print $k . "/" . count($listaContornos) . " con #" . count($l['polygon']) . " vértices" . PHP_EOL;
-            print "\t level:" . $l['level'] . PHP_EOL;
-            print "\t inside:" . count($l['inside']) . PHP_EOL;
-        }
-        print "============================================" . PHP_EOL;
+	if ( $debug ) {
+	    print PHP_EOL . "STATUS" . PHP_EOL;
+	    print "listaContornos:      #" . count($listaContornos) . PHP_EOL;
+	    print "nuevaListaContornos: #" . count($nuevaListaContornos) . PHP_EOL;
+	    foreach( $listaContornos as $k => $l ) {
+		print $k . "/" . count($listaContornos) . " con #" . count($l['polygon']) . " vértices" . PHP_EOL;
+		print "\t level:" . $l['level'] . PHP_EOL;
+		print "\t inside:" . count($l['inside']) . PHP_EOL;
+	    }
+	    print "============================================" . PHP_EOL;
+	}
 
 
 
@@ -1530,14 +1533,14 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 		    break;
 		}
 	    }*/
-	    print "procesando $k/" . count($listaContornos) . " de listaContornos con #" . count($l['polygon']) . " vértices" . PHP_EOL;
+	    // print "procesando $k/" . count($listaContornos) . " de listaContornos con #" . count($l['polygon']) . " vértices" . PHP_EOL;
 	    // print_r($l['polygon'][0]);
 	    // print_r($c['polygon']);
 	    $is_in_polygon = $is_in_polygon_function( $c['polygon'], $l['polygon'][0]);
 	    // exit(0);
 	    // hay un polígono (l) que está dentro del contorno (c)
 	    if ( $is_in_polygon ) {
-		print "uno dentro ($k)" . PHP_EOL;
+		// print "uno dentro ($k)" . PHP_EOL;
 		// actualizamos el nivel
 		$l['level'] = 1;
 		$c['level'] = 0;
@@ -1566,7 +1569,7 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 //                print "inside count:" . count($c['inside']) . PHP_EOL;
 //                print "deleted $k" . PHP_EOL;
 		unset($listaContornos[$k]);
-		print "SI tiene a alguien dentro" . PHP_EOL;
+		// print "SI tiene a alguien dentro" . PHP_EOL;
 		// echo json_encode($l['polygon']) . PHP_EOL;
 	    }
 	}
@@ -1589,7 +1592,8 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 		}
 	    }*/
 
-	    print "procesando $k/" . count($nuevaListaContornos) . " de nuevaListaContornos con #" . count($l['polygon']) . " vertices" . PHP_EOL;
+	    if ( $debug )
+		print "procesando $k/" . count($nuevaListaContornos) . " de nuevaListaContornos con #" . count($l['polygon']) . " vertices" . PHP_EOL;
 	    // print "_M_>" . PHP_EOL;
 	    // print $is_in_polygon_function . PHP_EOL;
 	    // print_r($c['polygon']);
@@ -1614,13 +1618,13 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 
 	// si contiene a alguien, ya sabemos su orientación, porque es contenedor.
 	if ( 0 == $c['level'] ) { // el contorno contiene polígonos
-	    print "El polígono ráiz tiene dentro otros polígonos, así que comprobaremos su orientación: ";
+	    // print "El polígono ráiz tiene dentro otros polígonos, así que comprobaremos su orientación: ";
 	    $orientacion = comprobarOrientacion( $c['polygon'], $c['leftCorner'] );
 	    if ( false === $orientacion ) {
 		$c['polygon'] = array_reverse( $c['polygon'] );
-		print "rotando polígono raiz ";
+		// print "rotando polígono raiz ";
 	    }
-	    print "ok" . PHP_EOL;
+	    // print "ok" . PHP_EOL;
 	    unset($c['leftCorner']);
 	}
 
@@ -1652,36 +1656,40 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 	    unset($nuevaListaContornos[$k]['leftCorner']);
 	}
     }
-
+/*
     print"STATUS FINAL LISTACONTORNOS" . PHP_EOL;
     foreach( $listaContornos as $k => $l ) {
 	print $k . "] " . count($l['polygon']) . PHP_EOL;
 	print "\t level:" . $l['level'] . PHP_EOL;
 	print "\t inside:" . count($l['inside']) . PHP_EOL;
     }
-
+*/
     if ( count($listaContornos) > 0 ) {
 	logger("E> listaContornos deberia estar vacia!!!!, abortando");
 	exit(-1);
     }
 
     $cuentaContornosNueva = 0;
-    print"STATUS FINAL NUEVALISTACONTORNOS" . PHP_EOL;
+    // print"STATUS FINAL NUEVALISTACONTORNOS" . PHP_EOL;
     foreach( $nuevaListaContornos as $k => $l ) {
 	$cuentaContornosNueva++;
-	print $k . "] " . count($l['polygon']) . PHP_EOL;
-	print "\t level:" . $l['level'] . PHP_EOL;
-	print "\t inside:" . count($l['inside']) . PHP_EOL;
+	// print $k . "] " . count($l['polygon']) . PHP_EOL;
+	// print "\t level:" . $l['level'] . PHP_EOL;
+	// print "\t inside:" . count($l['inside']) . PHP_EOL;
 	$cuentaContornosNueva += count($l['inside']);
 	if ( isset($l['leftCorner']) ) {
 	    print "algo salio mal" . PHP_EOL;
 	    print_r($nuevaListaContornos[$k]); exit(-1);
 	}
     }
-    print "============================================" . PHP_EOL;
+    // print "============================================" . PHP_EOL;
 
-    print "cuentaContornosOriginal: $cuentaContornosOriginal" . PHP_EOL;
-    print "cuentaContornosNueva: $cuentaContornosNueva" . PHP_EOL;
+    if ( $cuentaContornosOriginal != $cuentaContornosNueva ) {
+	print "ERROR> Algo salió mal" . PHP_EOL;
+	print "cuentaContornosOriginal: $cuentaContornosOriginal" . PHP_EOL;
+	print "cuentaContornosNueva: $cuentaContornosNueva" . PHP_EOL;
+	exit(-1);
+    }
 
     return $nuevaListaContornos;
 
@@ -1721,7 +1729,7 @@ function determinaContornos2($malla) {
         $assertListaContornosCount += count($l['inside']);
     }
 
-    print "[assert listaContornos: " . $listaContornosCount . "=?" . $assertListaContornosCount . "]";
+    print "[assert listaContornos: " . $listaContornosCount . "=?" . $assertListaContornosCount . "]" . PHP_EOL;
     if ( $listaContornosCount != $assertListaContornosCount ) {
 	logger(" E> Error al reindexar los contornos");
 	exit(-1);
@@ -1900,7 +1908,7 @@ function obtieneMaxAnguloConCoberturaB($radar) {
     // sus esquinas
     // no debería hacer falta hacer un round
     $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
-    logger(" V> distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m");
+    logger(" V> distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / {$newRange}m");
 
     return $newRange;
 }
@@ -1924,7 +1932,7 @@ function obtieneMaxAnguloConCoberturaA($distanciasAlcances) {
     // sus esquinas
     $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
     // no debería hacer falta hacer un round
-    logger(" V> distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / ${newRange}m");
+    logger(" V> distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / {$newRange}m");
 
     return $newRange;
 }

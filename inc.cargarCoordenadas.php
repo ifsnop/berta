@@ -38,9 +38,9 @@ function getRadars($eval_dir, $parse_all = false) {
 	    if ( (($count1 = preg_match("/^RADAR_DATAFILE_NAME(\d+)\s+(\w+)/", $recording_details_line, $m1, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count1>0) ) {
 	        $name = $m1[2][0];
 	        $sassc_id = $m1[1][0];
-	        exec("/usr/bin/find -L $eval_dir -name \"${name}.rdb\" 2> /dev/null", $radar_rbk_file);
+	        exec("/usr/bin/find -L $eval_dir -name \"{$name}.rdb\" 2> /dev/null", $radar_rbk_file);
 	        if ( 0 == count($radar_rbk_file) ) {
-	            die("ERROR couldn't find ${name}.rdb inside $eval_dir" . PHP_EOL);
+	            die("ERROR couldn't find {$name}.rdb inside $eval_dir" . PHP_EOL);
                 }
 	        $radar_rbk_file = $radar_rbk_file[0];
 	        $eval_dir . "/radar_data.rbk/" . $name . ".rdb";
@@ -50,7 +50,7 @@ function getRadars($eval_dir, $parse_all = false) {
     } else {
         exec("/usr/bin/find -L $eval_dir  -maxdepth 2 -name \"*.rdb\" 2> /dev/null", $radar_rbk_files);
 	if ( 0 == count($radar_rbk_files) ) {
-            die("ERROR couldn't find ${name}.rdb inside $eval_dir" . PHP_EOL);
+            die("ERROR couldn't find {$name}.rdb inside $eval_dir" . PHP_EOL);
         }
 	foreach($radar_rbk_files as $radar_rbk_file) {
             $pathinfo = pathinfo($radar_rbk_file);
@@ -91,7 +91,7 @@ function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
 
     $lat = $lon = ""; $radarGroundAltitude = 0; $values = array(); $radar = array();
     // quita las terminaciones de línea msdos/unix y separa por líneas en un array
-    $radar_rbk_contents = preg_split("/[\r\n|\n\r|\n]/", $radar_rbk_contents, NULL, PREG_SPLIT_NO_EMPTY);
+    $radar_rbk_contents = preg_split("/[\r\n|\n\r|\n]/", $radar_rbk_contents, 0, PREG_SPLIT_NO_EMPTY);
 
     foreach($radar_rbk_contents as $line) {
         //print $line . PHP_EOL;
