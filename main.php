@@ -19,7 +19,25 @@ include_once('inc.conrec.php');
 include_once('inc.calculos.php');
 include_once('inc.multiCalculos.php');
 include_once('inc.guardar.php');
-include_once('MartinezRueda/Algorithm.php');
+// include_once('MartinezRueda/Algorithm.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Algorithm.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/CombinedPolySegments.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Fill.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Intersecter.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/IntersectionPoint.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/LinkedList.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Matcher.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Node.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Point.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/PolyBoolException.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Polygon.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/PolySegments.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/RegionIntersecter.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentChainerMatcher.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentIntersecter.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Segment.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Transition.php');
+
 
     $config = array(
 	'sensores' => array(),
@@ -45,6 +63,7 @@ include_once('MartinezRueda/Algorithm.php');
 if ( file_exists('inc.config.php') ) {
     include_once('inc.config.php');
 }
+
 /*
 $p1 =[
 	[[-2, 2], [2, 2], [2, -2], [-2, -2], [-2, 2]],
@@ -586,10 +605,11 @@ function programaPrincipal(){
 		    crearCarpetaResultados($config['path']['cache'] . $sensor);
 		    file_put_contents($cache_file, json_encode($coberturas[$sensor]['contornos']));
 		}
+		// contornos es false cuando no existe contorno. Eso sucede cuando hemos pedido un
+		// nivel de vuelo que está muy bajo.
 		if ( false === $coberturas[$sensor]['contornos']) {
 		    continue;
 		}
-
 		// guardar el cálculo en la cache, siempre que no hayamos forzado el alcance
 		// si se ha forzado el alcance, la caché está invalidada automáticamente.
 
@@ -802,3 +822,4 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
 */
     return $listaContornos2;
 }
+

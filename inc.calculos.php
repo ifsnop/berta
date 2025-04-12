@@ -1611,7 +1611,7 @@ function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_funct
 		unset($l['leftCorner']);
 		$c['inside'][] = $l;
 		unset($nuevaListaContornos[$k]);
-		print "SI tiene a alguien dentro EN LA NUEVA LISTA" . PHP_EOL;
+		// print "SI tiene a alguien dentro EN LA NUEVA LISTA" . PHP_EOL;
 		// echo json_encode($l['polygon']);
 	    }
 	}

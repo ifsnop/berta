@@ -1,4 +1,7 @@
 <?php
+
+use Ifsnop\MartinezRueda as MR;
+
 /**
  * Helper para convertir los contornos que generamos (lat,lon) en una lista
  * de vértices (0=>lat, 1=>lon) que espera MartinezRueda.
@@ -37,7 +40,8 @@ function init_polygons($coberturas) {
 		$polygons[] = get_vertex($contorno_inside['polygon']);
 	    }
 	}
-	$mr_polygons[$radar] = new \MartinezRueda\Polygon($polygons);
+	$mr_polygons[$radar] = MR\Polygon::create()->fillFromArray($polygons);
+	//$mr_polygons[$radar] = new \MartinezRueda\Polygon($polygons);
     }
     sort($radares);
 
@@ -45,7 +49,6 @@ function init_polygons($coberturas) {
 	logger(" E> No existen coberturas suficientes para seguir calculando (init_polygons)");
 	return false;
     }
-
     return array('radares' => $radares, 'mr_polygons' => $mr_polygons);
 }
 
@@ -57,17 +60,24 @@ function init_polygons($coberturas) {
 function create_unica($radares, $mr_polygons, $rutas, $nivelVuelo, $altMode) {
     $timer = microtime(true);
 
-    $result_suma = new \MartinezRueda\Polygon(array());
+    // $result_arr = MR\Algorithm::union($mr_polygons)->getArray();
+
+    // $result_suma = new \MartinezRueda\Polygon(array());
+
+    $next = MR\Polygon::create()->fillFromArray([]);
     foreach($mr_polygons as $k => $p) {
 	logger(" D> Añadiendo {$k} al cálculo");
-	$mr_algorithm = new \MartinezRueda\Algorithm();
-	$result_suma = $mr_algorithm->getUnion(
-	    $result_suma,
-	    $p
-        );
+	$next =  MR\Algorithm::union($next, $p);
+	//$mr_algorithm = new \MartinezRueda\Algorithm();
+	//$result_suma = $mr_algorithm->getUnion(
+	//    $result_suma,
+	//    $p
+        //);
     }
 
-    $result_arr = $result_suma->toArray();
+//    $result_arr = $result_suma->toArray();
+
+    $result_arr = $next->getArrayClosed();
     $listaContornos = genera_contornos($result_arr);
     creaKml2(
 	$listaContornos,
@@ -79,6 +89,7 @@ function create_unica($radares, $mr_polygons, $rutas, $nivelVuelo, $altMode) {
 	$coverageLevel = "unica"
     );
     logger(" V> Finalizada cobertura única en " . round(microtime(true) - $timer,3) . " segundos");
+    exit(-1);
     return true;
 }
 
@@ -469,8 +480,8 @@ function genera_contornos($result_arr) {
 	// si eliminamos las áreas pequeñas, puede ser que al crear la cobertura única, esas áreas pequeñas pasen a ser
 	// más grandes, y ya no se eliminen.
 	if ( $computeArea < 0.1 ) {
-	    logger(" I> Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
-	    // continue;
+	    logger(" I> NO Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
+	    //continue;
 	}
 
 	$leftCorner = array();
