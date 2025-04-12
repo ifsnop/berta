@@ -64,20 +64,31 @@ function create_unica($radares, $mr_polygons, $rutas, $nivelVuelo, $altMode) {
 
     // $result_suma = new \MartinezRueda\Polygon(array());
 
+    logger(" D> Generando cobertura única");
+
+/*
     $next = MR\Polygon::create()->fillFromArray([]);
     foreach($mr_polygons as $k => $p) {
-	logger(" D> Añadiendo {$k} al cálculo");
+	logger(" V> Añadiendo {$k} al cálculo");
 	$next =  MR\Algorithm::union($next, $p);
-	//$mr_algorithm = new \MartinezRueda\Algorithm();
-	//$result_suma = $mr_algorithm->getUnion(
-	//    $result_suma,
-	//    $p
-        //);
     }
-
-//    $result_arr = $result_suma->toArray();
-
     $result_arr = $next->getArrayClosed();
+*/
+
+
+    //print (array_keys($mr_polygons)[0]) . PHP_EOL;exit(-1);
+    $polygons = $mr_polygons[array_keys($mr_polygons)[0]];
+    $firstSegments = MR\Algorithm::segments($polygons);
+    foreach(array_slice($mr_polygons, 1) as $i => $polygons) {
+	logger(" V> Añadiendo {$i} al cálculo");
+	$secondSegments = MR\Algorithm::segments($polygons);
+	$combined = MR\Algorithm::combine($firstSegments, $secondSegments);
+	$firstSegments = MR\Algorithm::selectUnion($combined);
+    }
+    $result_arr = MR\Algorithm::polygon($firstSegments)->getArrayClosed();
+
+    logger(" D> Cobertura única generada");
+
     $listaContornos = genera_contornos($result_arr);
     creaKml2(
 	$listaContornos,
