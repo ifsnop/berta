@@ -104,7 +104,7 @@ function calculaAnguloMaximaCobertura($radar, $flm){
  */
 function calculosFLencimaRadar($radar, $flm ){
 
-    $debug = true; // false;
+    $debug = false;
     $distanciasAlcances = array();
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm); // AlphaRange en Matlab
