@@ -17,9 +17,11 @@ include_once('inc.cargarCoordenadas.php');
 include_once('inc.auxiliares.php');
 include_once('inc.conrec.php');
 include_once('inc.calculos.php');
-include_once('inc.multiCalculos.php');
+// include_once('inc.multiCalculos.php');
 include_once('inc.guardar.php');
 // include_once('MartinezRueda/Algorithm.php');
+// incluido en multiCalculos
+/*
 include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Algorithm.php');
 include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/CombinedPolySegments.php');
 include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Fill.php');
@@ -37,7 +39,7 @@ include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentChainerMatcher.
 include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentIntersecter.php');
 include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Segment.php');
 include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Transition.php');
-
+*/
 
     $config = array(
 	'sensores' => array(),
@@ -639,6 +641,10 @@ function programaPrincipal(){
 	}
 	if ( (isset($config['mode']['multiradar']) && $config['mode']['multiradar'] === true ) ||
 	    (isset($config['mode']['multiradar_unica']) && $config['mode']['multiradar_unica'] === true) ) {
+
+
+	    // incluido aquí porque MartinezRueda utiliza funciones de php>=8
+	    include_once('inc.multiCalculos.php');
 
 	    crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
 	    multicobertura(

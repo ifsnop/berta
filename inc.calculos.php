@@ -143,7 +143,10 @@ function calculosFLencimaRadar($radar, $flm ){
 	    if ( 0  == $distancia ) {
 		// si el ángulo es 0, la distancia es 0, y el ángulo entre la vertical del radar y el obstáculo
 		// más alto dará una visión por cero. No hay solución posible, daremos error.
-		logger(" E> La distancia $distancia para obstaculoLimitante $obstaculoLimitante con angulo $angulo impide continuar. No debería suceder.");
+		logger(" E> Para el azimut ($i) hay dos puntos con distancia angular muy pequeña ($distancia) con ángulo ($angulo). Se fuerza a 1m.");
+		//$distancia = 0.00000000000001;
+		// $distanciasAlcances[$i] = 0;
+		//continue;
 		exit(-1);
 	    }
             // ángulo formado entre la vertical del radar (hacia el centro de la tierra) y el obstáculo más alto
@@ -440,6 +443,7 @@ function miraSiHayCobertura($listaObstaculosAmpliada, $flm) {
 /**
  * Funcion auxiliar que calcula una serie de parametros necesarios en otras funciones
  * 
+ * @param int   $azimut (ENTRADA) Solo se usa a efecto de imprimir en el debug el ángulo que se está procesando
  * @param array $radar (ENTRADA)
  * @param array $listaObstaculos (ENTRADA)
  * @param int   $flm (ENTRADA)
@@ -453,7 +457,8 @@ function miraSiHayCobertura($listaObstaculosAmpliada, $flm) {
  * @param float $earthToFl Distancia desde el centro de la tierra al nivel de vuelo (SALIDA)
  * @param float $radarSupTierra Distancia del radar a la superficie terrestre (SALIDA)
  */
-function calculador($radar, $listaObstaculos, $flm, $obstaculoLimitante, &$gammaMax, &$theta0, &$earthToRadar, &$earthToEvalPoint, &$earthToFl, &$radarSupTierra){
+function calculador($azimut, $radar, $listaObstaculos, $flm, $obstaculoLimitante, &$gammaMax, &$theta0, &$earthToRadar, &$earthToEvalPoint, &$earthToFl, &$radarSupTierra){
+    $debug = false;
 
     // Distancia del radar a la superficie terrestre
     $radarSupTierra = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
@@ -469,15 +474,28 @@ function calculador($radar, $listaObstaculos, $flm, $obstaculoLimitante, &$gamma
 
     // Distancia desde el último punto al radar
     $n = count($listaObstaculos);
+    if ( $n < 2 ) {
+	logger("E > No puede haber menos de dos puntos por obstáculo (el radar en origen y un límite). Abortando");
+	exit(-1);
+    }
+
     $distanciaUltimoPto = $radar['screening']['radioTerrestreAumentado'] * $listaObstaculos[$n-1]['angulo'];
 
-    // Línea de vista del últmio punto del terreno
+    // Línea de vista del último punto del terreno
     $distanciaCobertura = sqrt(
         pow($earthToRadar,2) +
         pow($earthToEvalPoint,2) -
         2 * $earthToRadar * $earthToEvalPoint * cos($listaObstaculos[$n-1]['angulo'])
     );
-	
+
+    // NO ESTA BIEN:  Si solo hay dos puntos, el primero es el radar, así que la distancia va a ser 0.
+    // Forzamos a coger el segundo
+    if ( $distanciaCobertura ==  0) {
+	logger(" E> Para el azimut ($azimut) hay dos puntos con distancia angular muy pequeña ($distanciaCobertura) para obstaculoLimitante ($obstaculoLimitante) con ángulo ({$listaObstaculos[$n-1]['angulo']}). Se fuerza a 1m.");
+	// $distanciaCobertura = 0.0000001;
+	exit(-1);
+    }
+
     // Angulo en radianes que forma el radar con el último punto del terreno
     $gammaMax = acos((pow($distanciaCobertura,2) +  pow($earthToRadar,2) - pow($earthToEvalPoint,2)) / (2 * $earthToRadar * $distanciaCobertura));
 
@@ -486,7 +504,9 @@ function calculador($radar, $listaObstaculos, $flm, $obstaculoLimitante, &$gamma
     // de corte con el nivel de vuelo(el más alejado)
     $theta0 = $earthToRadar * sin($gammaMax) / $earthToFl;
 
-    if (false) {
+    if ( $debug ) {
+	print "Ángulo" . ":" . $azimut . PHP_EOL;
+	print "Cuenta de obstáculos: $n" . PHP_EOL;
         print "Radio terrestre aumentado" . ":" . $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
         print "FL" . ":" . $flm . PHP_EOL;
         print "Obstaculo limitante" . ":" . $obstaculoLimitante . PHP_EOL;
@@ -497,7 +517,10 @@ function calculador($radar, $listaObstaculos, $flm, $obstaculoLimitante, &$gamma
     	print "Angulo pto limitante" . ":" . $listaObstaculos[$n-1]['angulo'] . PHP_EOL;
 	print "Distancia Cobertura" . ":" . $distanciaCobertura . PHP_EOL;
         print "Gamnamax" . ":" . $gammaMax .  PHP_EOL;
+	print "Theta0" . ":" . $theta0 . PHP_EOL;
 	print "Theta1" . ":" . asin($theta0) . PHP_EOL;
+	// print_r($listaObstaculos);
+	// exit(1);
     }
     return;
 }
@@ -526,7 +549,7 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
         $theta1 = 0;
     else 
 	$theta1 = asin ($numerador / $denominador);
-	
+
     // Ángulo central del punto de corte más alejado de la línea de vista(del último punto de cada azimuth) con el nivel de vuelo
     $epsilon1 = M_PI - $theta1 - $gammaMax;
 
@@ -586,7 +609,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
  	    'estePtoTieneCobertura' => true
  	);
 
- 	calculador( $radar, $listaObstaculosAmpliada, $flm, $obstaculoLimitante, $gammaMax, $theta0, $earthToRadar, $earthToEvalPoint, $earthToFl, $radarSupTierra );
+ 	calculador( $i, $radar, $listaObstaculosAmpliada, $flm, $obstaculoLimitante, $gammaMax, $theta0, $earthToRadar, $earthToEvalPoint, $earthToFl, $radarSupTierra );
 
  	// CASO A: Último punto del acimut por debajo del nivel de vuelo y por debajo del radar
         $timerStart0 = microtime(true);
@@ -755,6 +778,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
                 $radar['listaAzimuths'][$i][$jj]['altura'] . PHP_EOL;
         }
         */
+	if ( $debug) print PHP_EOL;
     } // for
     logger("[100%]" . PHP_EOL, false);
     return;

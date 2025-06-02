@@ -1,5 +1,23 @@
 <?php
 
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Algorithm.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/CombinedPolySegments.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Fill.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Intersecter.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/IntersectionPoint.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/LinkedList.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Matcher.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Node.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Point.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/PolyBoolException.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Polygon.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/PolySegments.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/RegionIntersecter.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentChainerMatcher.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentIntersecter.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Segment.php');
+include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Transition.php');
+
 use Ifsnop\MartinezRueda as MR;
 
 /**

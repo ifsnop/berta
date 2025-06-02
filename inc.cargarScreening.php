@@ -16,6 +16,8 @@ CONST DISTANCIA_A_TERRAIN_HEIGHT = 14;
  */
 function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 
+    $debug = false;
+
     $first_warning_wallnode = true; // para imprimir el aviso de terreno corrupto una sola vez
     $first_warning_distance = true; // para imprimir el aviso de distancia duplicada
 
@@ -72,7 +74,7 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
             'altura' => $screening['towerHeight'] + $screening['terrainHeight'],
             'estePtoTieneCobertura' => false
         );
-
+	if ( $debug ) print "Azimut: $i" . PHP_EOL;
         // recorre el numero de obstaculos para cada azimut
 	$oldAngulo = false;
 	for ($j = 0; $j < $contadorObstaculos; $j++) {
@@ -85,29 +87,47 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 	    // convierte el string a numero y los almacena en el array
 	    $angulo = floatval( $salida[1] );
 	    $altura = floatval( $salida[2] );
+	    if ( $debug ) print "Ángulo: $angulo" . PHP_EOL . "Altura: $altura" . PHP_EOL;
+	    if ( $i==40 && $debug ) print_r($listaObstaculos);
 
-	    if ( $oldAngulo == $angulo ) { // si hay un ángulo con dos altitudes, quitar el último insertado
-		if ( $first_warning_distance ) {
-		    logger(" V> Distancia al radar duplicada, eliminando");
-		    $first_warning_distance = false;
-		}
-		array_pop($listaObstaculos);
-	    }
-	    $oldAngulo = $angulo;
-
-	    if ( $altura >= 32627 ) { // && $j >= ($contadorObstaculos - 2) ) {
+	    // Si es un wallnode, no lo insertamos y abortamos
+	    if ( $altura >= 32627 ) { // && $j >= ($contadorObstaculos - 2) ) { // no hay montaña mas alta de 9km en la tierra
 		if ( $first_warning_wallnode ) {
-		    logger(" !> Ignorando los dos últimos obstáculos, desde PredictV23.10 están corruptos! j:{$j} contadorObstaculos:{$contadorObstaculos}");
+		    logger(" !> Ignorando los últimos obstáculos, desde PredictV23.10 están corruptos! j:{$j} contadorObstaculos:{$contadorObstaculos}");
 		    $first_warning_wallnode = false;
 		}
 		break;
 	    }
 
+	    // si hay un ángulo con dos altitudes, nos quedamos con el último, que estará mas alto
+	    if ( $oldAngulo == $angulo ) { 
+		if ( $first_warning_distance ) {
+		    logger(" V> Distancia al radar duplicada, omitiendo");
+		    $first_warning_distance = false;
+		}
+		array_pop($listaObstaculos);
+	    }
+	    if ( $i==367 && $debug ) print_r($listaObstaculos);
+	    $oldAngulo = $angulo;
+
+/*
+	    if ( $altura >= 32627 ) { // && $j >= ($contadorObstaculos - 2) ) { // no hay montaña mas alta de 9km en la tierra
+		if ( $first_warning_wallnode ) {
+		    logger(" !> Ignorando los últimos obstáculos, desde PredictV23.10 están corruptos! j:{$j} contadorObstaculos:{$contadorObstaculos}");
+		    $first_warning_wallnode = false;
+		}
+		break;
+	    }
+*/
 	    $listaObstaculos[] = array(
 		'angulo' => $angulo,
 		'altura' => $altura,
 		'estePtoTieneCobertura' => false);
 		$lineaActual++;
+
+	    if ( $i==367 && $debug ) { print_r($listaObstaculos); print PHP_EOL; }
+
+
 	}
 	// anadimos un obstaculo mas por que hemos insertado el radar como primer obstaculo
 	$screening['listaAzimuths'][$acimutActual] = $listaObstaculos;
