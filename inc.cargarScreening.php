@@ -7,6 +7,8 @@ CONST DISTANCIA_A_METHOD = 7;
 CONST DISTANCIA_A_TOWER_HEIGHT = 12;
 CONST DISTANCIA_A_RANGE = 6;
 CONST DISTANCIA_A_TERRAIN_HEIGHT = 14;
+CONST DISTANCIA_A_LATITUDE = 9;
+CONST DISTANCIA_A_LONGITUDE = 10;
 
 /**
  * Esta funcion se encarga de abrir el fichero de terrenos y leer la informacion para almacenarla en memoria.
@@ -25,20 +27,64 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
     if ( false === ($contenidoFichero = @file($radar['screening'], FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
         logger(" E> No ha sido posible leer el fichero: >" . $radar['screening'] . "<"); exit(-1);
     }
+
+    /* screening version 1
+    *    0 Site LE_VALDESPINA
+    *    1 k_factor 1.33
+    *    2 Method 136
+    *    3 TowerHeight 26.22
+    *    4 Range 250.0
+    *    5 TerrainHeight 882.0
+    *    6 720
+    *    7 AZIMUTH 0
+    *
+    * screening version 2
+    *    0 Site EXP_LE_SESOLLES
+    *    1 Version 2
+    *    2 Longitude 2.437613888888889
+    *    3 Latitude 41.77376388888889
+    *    4 CentralAngle k_factor
+    *    5 HeightReference EGM96
+    *    6 k_factor 1.333333
+    *    7 TowerHeight 35.0
+    *    8 Range 250.0
+    *    9 TerrainHeight 1661.6656666667195
+    *    10 360
+    *    11 AZIMUTH 0
+    */
+
     // TRATAMIENTO DE LA INFORMACION CAPTURADA (Primera parte del fichero)
-    $screening = array(
-	'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
-	'k-factor' 	=> doubleval(substr(trim($contenidoFichero[1]), DISTANCIA_A_K_FACTOR)),
-	'method'   	=> doubleval(substr(trim($contenidoFichero[2]), DISTANCIA_A_METHOD)),
-	'towerHeight' 	=> doubleval(substr(trim($contenidoFichero[3]), DISTANCIA_A_TOWER_HEIGHT)),
-	'range' 	=> doubleval(substr(trim($contenidoFichero[4]), DISTANCIA_A_RANGE)),
-	'terrainHeight' => doubleval(substr(trim($contenidoFichero[5]), DISTANCIA_A_TERRAIN_HEIGHT)),
-	'totalAzimuths' => (integer) trim($contenidoFichero[6]),
-	'listaAzimuths' => array(),
-    );
-	
-    //TRATAMIENTO DE LOS DATOS DE LOS AZIMUTHS (Segunda parte del fichero)
-    $lineaActual = 7; // primera línea donde comienzan los AZIMUT
+
+    if ( $contenidoFichero[1] == "Version 2" ) {
+	$screening = array(
+	    'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
+	    'latitude'	=> doubleval(substr(trim($contenidoFichero[3]), DISTANCIA_A_LATITUDE)),
+	    'longitude'	=> doubleval(substr(trim($contenidoFichero[2]), DISTANCIA_A_LONGITUDE)),
+	    'k-factor' 	=> doubleval(substr(trim($contenidoFichero[6]), DISTANCIA_A_K_FACTOR)),
+	    'method'   	=> false, // doubleval(substr(trim($contenidoFichero[2]), DISTANCIA_A_METHOD)),
+	    'towerHeight' 	=> doubleval(substr(trim($contenidoFichero[7]), DISTANCIA_A_TOWER_HEIGHT)),
+	    'range' 	=> doubleval(substr(trim($contenidoFichero[8]), DISTANCIA_A_RANGE)),
+	    'terrainHeight' => doubleval(substr(trim($contenidoFichero[9]), DISTANCIA_A_TERRAIN_HEIGHT)),
+	    'totalAzimuths' => (integer) trim($contenidoFichero[10]),
+	    'listaAzimuths' => array(),
+	);
+	$lineaActual = 11; // primera línea donde comienzan los AZIMUT
+    } else { // version 1
+	$screening = array(
+	    'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
+	    'latitude'	=> false,
+	    'longitude'	=> false,
+	    'k-factor' 	=> doubleval(substr(trim($contenidoFichero[1]), DISTANCIA_A_K_FACTOR)),
+	    'method'   	=> doubleval(substr(trim($contenidoFichero[2]), DISTANCIA_A_METHOD)),
+	    'towerHeight' 	=> doubleval(substr(trim($contenidoFichero[3]), DISTANCIA_A_TOWER_HEIGHT)),
+	    'range' 	=> doubleval(substr(trim($contenidoFichero[4]), DISTANCIA_A_RANGE)),
+	    'terrainHeight' => doubleval(substr(trim($contenidoFichero[5]), DISTANCIA_A_TERRAIN_HEIGHT)),
+	    'totalAzimuths' => (integer) trim($contenidoFichero[6]),
+	    'listaAzimuths' => array(),
+	);
+	//TRATAMIENTO DE LOS DATOS DE LOS AZIMUTHS (Segunda parte del fichero)
+	$lineaActual = 7; // primera línea donde comienzan los AZIMUT
+    }
 
     // recorremos los azimuths
     logger(" V> Cargando contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")");
@@ -77,6 +123,7 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 	if ( $debug ) print "Azimut: $i" . PHP_EOL;
         // recorre el numero de obstaculos para cada azimut
 	$oldAngulo = false;
+	//print $i . PHP_EOL;
 	for ($j = 0; $j < $contadorObstaculos; $j++) {
 	    $pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';
 	    if ( false === ($cuenta = preg_match($pattern, $contenidoFichero[$lineaActual], $salida)) && (3 == $cuenta) ) {
@@ -87,27 +134,42 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 	    // convierte el string a numero y los almacena en el array
 	    $angulo = floatval( $salida[1] );
 	    $altura = floatval( $salida[2] );
-	    if ( $debug ) print "Ángulo: $angulo" . PHP_EOL . "Altura: $altura" . PHP_EOL;
-	    if ( $i==40 && $debug ) print_r($listaObstaculos);
+	    
+	    //if ( $i==40 ) { 
+	//	print "Ángulo: $angulo" . PHP_EOL . "Altura: $altura" . PHP_EOL;
+	//	print_r($listaObstaculos);
+	//    }
 
 	    // Si es un wallnode, no lo insertamos y abortamos
-	    if ( $altura >= 32627 ) { // && $j >= ($contadorObstaculos - 2) ) { // no hay montaña mas alta de 9km en la tierra
+	    if ( $altura > 32627 ) { // && $j >= ($contadorObstaculos - 2) ) { // no hay montaña mas alta de 9km en la tierra
 		if ( $first_warning_wallnode ) {
-		    logger(" !> Ignorando los últimos obstáculos, desde PredictV23.10 están corruptos! j:{$j} contadorObstaculos:{$contadorObstaculos}");
+		    logger(" W> Ignorando obstáculo mayor de 32km, desde PredictV23.10. j:{$j} contadorObstaculos:{$contadorObstaculos} Azimut:{$i}.");
 		    $first_warning_wallnode = false;
+		}
+		// si además el anterior estaba en el mismo ángulo, y hay más de un obstáculo lo quitamos también.
+		if ( $oldAngulo == $angulo && count($listaObstaculos)>2) {
+		    //if ( $i == 40 ) {
+			//print "M1" . PHP_EOL;
+			//print_r($listaObstaculos);
+		    //}
+		    if ( $first_warning_distance ) {
+			logger(" V> Eliminando también el obstáculo anterior porque está en la misma ubicación. Azimut:{$i}.");
+			$first_warning_distance = false;
+		    }
+		    array_pop($listaObstaculos);
 		}
 		break;
 	    }
-
-	    // si hay un ángulo con dos altitudes, nos quedamos con el último, que estará mas alto
-	    if ( $oldAngulo == $angulo ) { 
+	    // si hay un ángulo repetido y tiene dos altitudes, nos quedamos con el último, que estará mas alto
+	    if ( $oldAngulo == $angulo ) {
+		//print "M2". PHP_EOL;
 		if ( $first_warning_distance ) {
 		    logger(" V> Distancia al radar duplicada, omitiendo");
 		    $first_warning_distance = false;
 		}
 		array_pop($listaObstaculos);
 	    }
-	    if ( $i==367 && $debug ) print_r($listaObstaculos);
+	    // if ( $i==40 ) print_r($listaObstaculos);
 	    $oldAngulo = $angulo;
 
 /*
@@ -125,10 +187,11 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 		'estePtoTieneCobertura' => false);
 		$lineaActual++;
 
-	    if ( $i==367 && $debug ) { print_r($listaObstaculos); print PHP_EOL; }
-
-
+	    //if ( $i==40 ) { print_r($listaObstaculos); print PHP_EOL; }
 	}
+//	if ( $i==40 ) {
+//	print_r($listaObstaculos);  }
+
 	// anadimos un obstaculo mas por que hemos insertado el radar como primer obstaculo
 	$screening['listaAzimuths'][$acimutActual] = $listaObstaculos;
 
