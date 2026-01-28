@@ -118,7 +118,8 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
         $listaObstaculos[] = array(
             'angulo' => 0,
             'altura' => $screening['towerHeight'] + $screening['terrainHeight'],
-            'estePtoTieneCobertura' => false
+            'estePtoTieneCobertura' => false,
+	    'interpolado' => true,
         );
 	if ( $debug ) print "Azimut: $i" . PHP_EOL;
         // recorre el numero de obstaculos para cada azimut
@@ -184,8 +185,10 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 	    $listaObstaculos[] = array(
 		'angulo' => $angulo,
 		'altura' => $altura,
-		'estePtoTieneCobertura' => false);
-		$lineaActual++;
+		'estePtoTieneCobertura' => false,
+		'interpolado' => false,
+	    );
+	    $lineaActual++;
 
 	    //if ( $i==40 ) { print_r($listaObstaculos); print PHP_EOL; }
 	}
