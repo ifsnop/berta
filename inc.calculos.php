@@ -68,7 +68,7 @@ function buscarPuntosLimitantes($listaObstaculos, $flm, &$alturaPrimerPtoSinCob,
  * 
  * @param array $radar (ENTRADA)
  * @param int $flm (ENTRADA)
- * @return number (SALIDA)
+ * @return float (SALIDA)
  */
 function calculaAnguloMaximaCobertura($radar, $flm){
 
@@ -538,6 +538,73 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
     return;
 }
 
+
+/**
+ * CASO B
+ * Funcion que calcula las coberturas cuando el nivel de vuelo FL, esta por debajo del radar
+ * 
+ * @param array $radar (ENTRADA / SALIDA)
+ * @param int $flm nivel de vuelo en metros (ENTRADA)
+ * @return void
+ */
+function calculosFLdebajoRadar2(&$radar, $flm){
+
+    // $radar['screening']['totalAzimuths'];
+    // $numPtosAzimut = count( $radar['screening']['listaAzimuths'][$i] );
+    $AnglHeight = $radar['screening']['listaAzimuths'];
+    $range = $radar['screening']['range'];
+    // print $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
+    $towerHeight = $radar['screening']['towerHeight'];
+    $terrainHeight = $radar['screening']['terrainHeight'];
+    $AzimIni = 0;
+    $AzimFin = 360;
+    $AziPaso = 360.0 / $radar['screening']['totalAzimuths'];
+    // print $AziPaso . PHP_EOL;
+        
+    // Ángulo central máximo según rango en millas
+    $alpha_max = ($range * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
+    print "angulo central maximo segun rango en millas nauicas: " . $alpha_max . PHP_EOL;
+    // Si los datos se corresponden con la circunferencia completa (360º), el primer punto (0º) se coloca al final
+    // $col = ($AzimFin - $AzimIni == 360) ? 0 : 1;
+
+    // $row = 1;
+
+    for ($i = 0; $i < $radar['screening']['totalAzimuths']; $i++) {
+        $valores = count($AnglHeight[$i]);
+        $numPtosAzimut = count($radar['screening']['listaAzimuths'][$i]); // valores
+        print $valores . " " . $numPtosAzimut . PHP_EOL;
+        $listaObstaculosAmpliada = array();
+        // El primer punto de la lista de obstaculos es el radar
+        // Añadimos a todas las alturas el radio de la tierra una vez aplicado el factor de corrección k
+        $listaObstaculosAmpliada[0] = array(
+            'angulo' => 0,
+            'altura' => $radar['screening']['towerHeight'] +
+                $radar['screening']['terrainHeight'] +
+                $radar['screening']['radioTerrestreAumentado'],
+            'estePtoTieneCobertura' => false
+        );
+
+        
+        print_r($listaObstaculosAmpliada);
+        foreach ($radar['screening']['listaAzimuths'][$i] as $obstaculoIdx => $obstaculo) {
+
+            print_r($obstaculo);
+
+        }
+        print_r($radar['screening']['listaAzimuths'][$i][0]);
+
+        
+        exit(0);
+
+        // $radar['screening']['listaAzimuths'][$i]['angulo']
+        // $radar['screening']['listaAzimuths'][$i]['altura']
+
+    }
+
+    return;
+}
+
+
 /**
  * CASO B
  * Funcion que calcula las coberturas cuando el nivel de vuelo FL, esta por debajo del radar
@@ -742,7 +809,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
 
         // safety check
         if ( !isset($listaObstaculosAmpliada) || !is_array($listaObstaculosAmpliada) ) {
-            logger(" E> buscaDistanciaMenor: $$listaObstaculos debería ser un array"); exit(-1);
+            logger(" E> buscaDistanciaMenor: \$listaObstaculosAmpliada debería ser un array"); exit(-1);
         }
         // metemos la lista de obstaculos nueva en la estructura
         $radar['screening']['listaAzimuths'][$i] = $listaObstaculosAmpliada;
@@ -1016,52 +1083,52 @@ $listaC = array(
     return $listaContornos;
 }
 
-/**
- * Funcion que calcula las coordenadas geograficas para el caso C (malla global en lat/lon)
- *
- * @param int $flm (ENTRADA)
- * @param array $listaC (ENTRADA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
- * @return array filas asociadas con la longitud y columnas con latitud 
- */
-function calculaCoordenadasGeograficasC( $flm, $listaContornos ) {
-/*
-$listaC = array(
-    array(
-        'level' => 0,
-        'polygon' => array(
-            0 => array('fila' => 444, 'col' => 333),
-            1 =>  array('fila' => 444, 'col' => 333)),
-        'inside' => array(
-            'level' => 1,
-            'polygon' => array(
-                0 => array('fila' => 444, 'col' => 333),
-                1 =>  array('fila' => 444, 'col' => 333)),
-            )
-        ),
-    );
-*/
-    foreach( $listaContornos as &$contorno ) {
-        foreach ( $contorno['polygon'] as &$p ) {
-            // transforma las coordenadas del level 0
-            $p['alt'] = $flm;
-            $p['lat'] = $p['fila'] / REDONDEO_LATLON;
-            $p['lon'] = $p['col'] / REDONDEO_LATLON;
-            unset($p['fila']); unset($p['col']);
-            //$p = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp);
-        }
-        foreach ( $contorno['inside'] as $k1 => &$contorno_inside ) {
-            foreach ($contorno_inside['polygon'] as $k2 => &$p_inside) {
-                // transforma las coordenadas del level 1
-                $p_inside['alt'] = $flm;
-                $p_inside['lat'] = $p_inside['fila'] / REDONDEO_LATLON;
-                $p_inside['lon'] = $p_inside['col'] / REDONDEO_LATLON;
-                unset($p_inside['fila']); unset($p_inside['col']);
-            }
-        }
-    }
+// /**
+//  * Funcion que calcula las coordenadas geograficas para el caso C (malla global en lat/lon)
+//  *
+//  * @param int $flm (ENTRADA)
+//  * @param array $listaC (ENTRADA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
+//  * @return array filas asociadas con la longitud y columnas con latitud 
+//  */
+// function calculaCoordenadasGeograficasC( $flm, $listaContornos ) {
+// /*
+// $listaC = array(
+//     array(
+//         'level' => 0,
+//         'polygon' => array(
+//             0 => array('fila' => 444, 'col' => 333),
+//             1 =>  array('fila' => 444, 'col' => 333)),
+//         'inside' => array(
+//             'level' => 1,
+//             'polygon' => array(
+//                 0 => array('fila' => 444, 'col' => 333),
+//                 1 =>  array('fila' => 444, 'col' => 333)),
+//             )
+//         ),
+//     );
+// */
+//     foreach( $listaContornos as &$contorno ) {
+//         foreach ( $contorno['polygon'] as &$p ) {
+//             // transforma las coordenadas del level 0
+//             $p['alt'] = $flm;
+//             $p['lat'] = $p['fila'] / REDONDEO_LATLON;
+//             $p['lon'] = $p['col'] / REDONDEO_LATLON;
+//             unset($p['fila']); unset($p['col']);
+//             //$p = transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp);
+//         }
+//         foreach ( $contorno['inside'] as $k1 => &$contorno_inside ) {
+//             foreach ($contorno_inside['polygon'] as $k2 => &$p_inside) {
+//                 // transforma las coordenadas del level 1
+//                 $p_inside['alt'] = $flm;
+//                 $p_inside['lat'] = $p_inside['fila'] / REDONDEO_LATLON;
+//                 $p_inside['lon'] = $p_inside['col'] / REDONDEO_LATLON;
+//                 unset($p_inside['fila']); unset($p_inside['col']);
+//             }
+//         }
+//     }
 
-    return $listaContornos;
-}
+//     return $listaContornos;
+// }
 
 /**
  * Transforma coordenadas X/Y (col/fila) en latitud/longitud (en grados)

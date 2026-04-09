@@ -5,8 +5,8 @@ ini_set('display_errors', 1);
 ini_set('memory_limit', '16G');
 
 // DEFINICIÓN DE CONSTANTES
-CONST RADIO_TERRESTRE = 6371000;
-CONST MILLA_NAUTICA_EN_METROS = 1852; // metros equivalentes a 1 milla nautica
+CONST RADIO_TERRESTRE = 6371000.0;
+CONST MILLA_NAUTICA_EN_METROS = 1852.0; // metros equivalentes a 1 milla nautica
 CONST GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 CONST GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 CONST ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
@@ -776,7 +776,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
 	    logger(" I> No se calcula cono para niveles de vuelo por debajo de la ubicación del radar");
 	}
         logger(" D> calculosFLdebajoRadar");;
-	calculosFLdebajoRadar($radar, $flm);
+	    calculosFLdebajoRadar2($radar, $flm);
         $newRange = obtieneMaxAnguloConCoberturaB($radar);
         $radar['screening']['range'] = round($newRange);
         $radar['range'] = round($newRange);
