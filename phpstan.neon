@@ -1,0 +1,15 @@
+includes:
+    - vendor/shipmonk/dead-code-detector/rules.neon
+parameters:
+    level: 5
+    paths:
+        - ./main.php
+        - ./inc.calculos.php
+        - ./inc.cargarScreening.php
+        - ./inc.auxiliares.php
+        - ./inc.cargarCoordenadas.php
+        - ./inc.guardar.php
+    excludePaths:
+        - 'cache/*'
+        - 'martinez-rueda-php/*'
+        - 'MartinezRueda/*'

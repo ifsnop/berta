@@ -170,7 +170,6 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
  * ]
  * @param array|string $radarName Radares que se han utilizado para esta cobertura (ENTRADA)
  * @param array string $ruta Paths donde guardar el fichero generado (ENTRADA)
- * @param int $fl Nivel de vuelo (ENTRADA)
  * @param string $altMode Si el KML está pegado al suelo "clampToGround|clampToSeaFloor" o la altura es relativa "RelativeToGround" o absoluta "absolute" (ENTRADA)
  * @param string|array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
  * @param bool $kmz true or false for kml
@@ -178,7 +177,8 @@ function creaKml2($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
  */
 function creaKml3($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $appendToFilename = "", $coverageLevel = 'mono', $disableKmz = true)
 {
-    $fl = round($nivelVuelo * 100.0 * FEET_TO_METERS, 2);
+    $flm = round($nivelVuelo * 100.0 * FEET_TO_METERS, 2);
+    $nivelVuelo = str_pad($nivelVuelo, 3, "0", STR_PAD_LEFT);
 
     switch ($coverageLevel) {
         case "unica":
@@ -219,9 +219,9 @@ function creaKml3($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
 
     if (is_array($radarName)) {
         $radarWithFL = implode(",", $radarName) . "-" .
-            $coverageLevel . "-FL" .  $nivelVuelo . $appendToFilename;
+        $coverageLevel . "-FL" . $nivelVuelo . $appendToFilename;
     } else {
-        $radarWithFL = $radarName . "-FL" .  $nivelVuelo . $appendToFilename;
+        $radarWithFL = $radarName . "-FL" . $nivelVuelo . $appendToFilename;
     }
 
     if (false) {
@@ -235,7 +235,7 @@ function creaKml3($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $a
         return false;
     }
 
-    $kmlContent = fromPolygons2KML3($listaContornos, $radarWithFL, $rgb, $altMode, $fl);
+    $kmlContent = fromPolygons2KML3($listaContornos, $radarWithFL, $rgb, $altMode, $flm);
 
     foreach ($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
         crearCarpetaResultados($val);
@@ -329,7 +329,7 @@ function KML_get_placemarks($listaContornos, $radarName, $rutas, $nivelVuelo, $a
     if (false) {
         print "nivelVuelo: " . $nivelVuelo . PHP_EOL;
         print "radarWithFL: " . $radarWithFL . PHP_EOL;
-        print "ruta: " . print_r($ruta, true) . PHP_EOL;
+        print "rutas: " . print_r($rutas, true) . PHP_EOL;
     }
 
     if (0 == count($listaContornos)) {

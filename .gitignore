@@ -3,3 +3,7 @@ inc.config.php
 resultados/*
 RESULTADOS/*
 cache/*
+spain.tsk/*
+vendor/*
+*.kmz
+.vscode/*
