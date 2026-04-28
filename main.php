@@ -2,7 +2,7 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-ini_set('memory_limit', '16G');
+ini_set('memory_limit', '3G');
 
 // DEFINICIÓN DE CONSTANTES
 CONST RADIO_TERRESTRE = 6371000.0;
@@ -10,6 +10,7 @@ CONST MILLA_NAUTICA_EN_METROS = 1852.0; // metros equivalentes a 1 milla nautica
 CONST GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 CONST GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 CONST ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
+CONST BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
 
 // INCLUSIÓN DE FICHEROS
 include_once('inc.cargarScreening.php');
@@ -19,6 +20,8 @@ include_once('inc.conrec.php');
 include_once('inc.calculos.php');
 include_once('inc.multiCalculos.php');
 include_once('inc.guardar.php');
+// include_once('inc.MooreContourTracerv2.php');
+
 // include_once('MartinezRueda/Algorithm.php');
 include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Algorithm.php');
 include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/CombinedPolySegments.php');
@@ -525,7 +528,6 @@ function programaPrincipal(){
 	exit(0);
     }
 
-
     logger(" I> Pasos configurados (min,max,paso): ({$config['fl']['min']},{$config['fl']['max']},{$config['fl']['step']})");
     // comprobamos que todos los sensores solicitados existen
     if ( 0 == count($config['sensores']) ) {
@@ -608,6 +610,7 @@ function programaPrincipal(){
 		// contornos es false cuando no existe contorno. Eso sucede cuando hemos pedido un
 		// nivel de vuelo que está muy bajo.
 		if ( false === $coberturas[$sensor]['contornos']) {
+            logger(" N> No se han generado contornos para el sensor >{$sensor}<");
 		    continue;
 		}
 		// guardar el cálculo en la cache, siempre que no hayamos forzado el alcance
@@ -772,11 +775,40 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
 
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
-	if ( $calculoCono ) {
-	    logger(" I> No se calcula cono para niveles de vuelo por debajo de la ubicación del radar");
-	}
-        logger(" D> calculosFLdebajoRadar");;
-	    calculosFLdebajoRadar2($radar, $flm);
+	    if ( $calculoCono ) {
+	        logger(" I> No se calcula cono para niveles de vuelo por debajo de la ubicación del radar");
+	    }
+
+        logger(" D> calculosFLdebajoRadar");
+	    // $malla_lat_lon = json_decode(file_get_contents("cache.json"), true);
+        $malla_lat_lon = calculosFLdebajoRadar2($radar, $flm);
+        //file_put_contents("cache.json", json_encode($malla_lat_lon));
+        //exit(0);
+        
+
+        logger (" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(true)) . ") " .
+            "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(true)) . ")");
+
+        //$tracer   = new MooreContourTracer($malla_lat_lon);
+        //$polygons = $tracer->trace();
+        $segments = marchingSquares($malla_lat_lon);
+        $polygons = buildPolygonsFromSegments($segments);
+        $result = normalizePolygonsForKML($polygons);
+
+        creaKml3(
+        $result,
+        $radar['screening']['site'],
+        array("./"),
+        $fl,
+        $altMode = "RelativeToGround",
+        $appendToFilename = '',
+        $coverageLevel = 'mono'
+    );
+        
+        exit(0);
+
+        /*
+        $malla = calculosFLdebajoRadar2($radar, $flm);
         $newRange = obtieneMaxAnguloConCoberturaB($radar);
         $radar['screening']['range'] = round($newRange);
         $radar['range'] = round($newRange);
@@ -789,6 +821,7 @@ function calculosFL($radar, $fl, $nivelVuelo, $calculoCono = false) { //, $modo 
 
         // comprobación si hay cobertura en las esquinas de la malla. En ese caso,
         // determinaContornos2 podría fallar
+        */
         logger(" D> check coverage overflow start"); $timer0 = microtime(true);
         checkCoverageOverflow($mallado['malla']);
         logger(" D> check coverage overflow ended " . round(microtime(true) - $timer0,3) . " segundos");;

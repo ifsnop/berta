@@ -67,11 +67,12 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
         // insertamos el radar como primer obstaculo, para resolver el caso de que
         // el primer obstaculo este muy alejado. En matlab no se pinta nada hasta que no
         // llega al primer obstaculo.
-        $listaObstaculos[] = array(
-            'angulo' => 0,
-            'altura' => $screening['towerHeight'] + $screening['terrainHeight'],
-            'estePtoTieneCobertura' => false
-        );
+		// COMENTAMOS MIENTRAS PROBAMOS IMPLEMENTACION DE JORGE
+        // $listaObstaculos[] = array(
+        //     'angulo' => 0,
+        //    'altura' => $screening['towerHeight'] + $screening['terrainHeight'],
+        //    'estePtoTieneCobertura' => false
+        // );
 
         // recorre el numero de obstaculos para cada azimut
 	$oldAngulo = false;
@@ -86,22 +87,23 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 	    $angulo = floatval( $salida[1] );
 	    $altura = floatval( $salida[2] );
 
+		/*
 	    if ( $oldAngulo == $angulo ) { // si hay un ángulo con dos altitudes, quitar el último insertado
-		if ( $first_warning_distance ) {
-		    logger(" V> Distancia al radar duplicada, eliminando");
-		    $first_warning_distance = false;
-		}
-		array_pop($listaObstaculos);
+			if ( $first_warning_distance ) {
+		    	logger(" V> Distancia al radar duplicada, eliminando");
+		    	$first_warning_distance = false;
+			}
+			array_pop($listaObstaculos);
 	    }
 	    $oldAngulo = $angulo;
-
 	    if ( $altura >= 32627 ) { // && $j >= ($contadorObstaculos - 2) ) {
-		if ( $first_warning_wallnode ) {
-		    logger(" !> Ignorando los dos últimos obstáculos, desde PredictV23.10 están corruptos! j:{$j} contadorObstaculos:{$contadorObstaculos}");
-		    $first_warning_wallnode = false;
-		}
-		break;
+			if ( $first_warning_wallnode ) {
+		    	logger(" !> Ignorando los dos últimos obstáculos, desde PredictV23.10 están corruptos! j:{$j} contadorObstaculos:{$contadorObstaculos}");
+		    	$first_warning_wallnode = false;
+			}
+			break;
 	    }
+		*/
 
 	    $listaObstaculos[] = array(
 		'angulo' => $angulo,

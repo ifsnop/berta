@@ -21,46 +21,46 @@ function getRadars($eval_dir, $parse_all = false) {
         logger(" E> El path >$eval_dir< no existe"); exit(-1);
     }
 
-    if ( false === $parse_all) {
-	// obtenemos el nombre del fichero que contiene todos los radares activos en la evaluación
-	exec("/usr/bin/find $eval_dir -name  \"recording_details.par\" | grep -v \"\\.eva\" | grep -v \"\\.cfg\" 2> /dev/null", $recording_details_file);
-	if ( 0 == count($recording_details_file) ) {
+    if ( false === $parse_all) { // código muerto, lo normal es recorrer todos los radares definidos y no sólo los de la grabación
+		// obtenemos el nombre del fichero que contiene todos los radares activos en la evaluación
+		exec("/usr/bin/find $eval_dir -name  \"recording_details.par\" | grep -v \"\\.eva\" | grep -v \"\\.cfg\" 2> /dev/null", $recording_details_file);
+		if ( 0 == count($recording_details_file) ) {
             die("ERROR couldn't find recording_details.par inside $eval_dir" . PHP_EOL);
-	}
-	$recording_details_file = $recording_details_file[0]; // $eval_dir . "/recording_details.par";
-	if ( false === ( $recording_details_content = file_get_contents($recording_details_file)) ) {
-	    die("ERROR couldn't open $recording_details_file" . PHP_EOL);
-	}
-	// quita las terminaciones de línea msdos/unix y separa por líneas en un array
-	$recording_details_content = preg_split("/[\r\n|\n\r|\n]/", $recording_details_content, NULL, PREG_SPLIT_NO_EMPTY);
+		}
+		$recording_details_file = $recording_details_file[0]; // $eval_dir . "/recording_details.par";
+		if ( false === ( $recording_details_content = file_get_contents($recording_details_file)) ) {
+	    	die("ERROR couldn't open $recording_details_file" . PHP_EOL);
+		}
+		// quita las terminaciones de línea msdos/unix y separa por líneas en un array
+		$recording_details_content = preg_split("/[\r\n|\n\r|\n]/", $recording_details_content, 0 /*NULL*/, PREG_SPLIT_NO_EMPTY);
 
         foreach( $recording_details_content as $recording_details_line ) { // por cada radar, abre el fichero .rdb correspondiente
-	    if ( (($count1 = preg_match("/^RADAR_DATAFILE_NAME(\d+)\s+(\w+)/", $recording_details_line, $m1, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count1>0) ) {
-	        $name = $m1[2][0];
-	        $sassc_id = $m1[1][0];
-	        exec("/usr/bin/find -L $eval_dir -name \"{$name}.rdb\" 2> /dev/null", $radar_rbk_file);
-	        if ( 0 == count($radar_rbk_file) ) {
-	            die("ERROR couldn't find {$name}.rdb inside $eval_dir" . PHP_EOL);
-                }
-	        $radar_rbk_file = $radar_rbk_file[0];
-	        $eval_dir . "/radar_data.rbk/" . $name . ".rdb";
-	        $radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, $sassc_id) );
-	    }
+	    	if ( (($count1 = preg_match("/^RADAR_DATAFILE_NAME(\d+)\s+(\w+)/", $recording_details_line, $m1, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count1>0) ) {
+	        	$name = $m1[2][0];
+	        	$sassc_id = $m1[1][0];
+	        	exec("/usr/bin/find -L $eval_dir -name \"{$name}.rdb\" 2> /dev/null", $radar_rbk_file);
+	        	if ( 0 == count($radar_rbk_file) ) {
+	            	die("ERROR couldn't find {$name}.rdb inside $eval_dir" . PHP_EOL);
+            	}
+	        	$radar_rbk_file = $radar_rbk_file[0] . $eval_dir . "/radar_data.rbk/" . $name . ".rdb";
+				print $radar_rbk_file . PHP_EOL; exit(-1); // comprobar este código porque 
+	        	$radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, $sassc_id) );
+	    	}
         }
     } else {
         exec("/usr/bin/find -L $eval_dir  -maxdepth 2 -name \"*.rdb\" 2> /dev/null", $radar_rbk_files);
-	if ( 0 == count($radar_rbk_files) ) {
-            die("ERROR couldn't find {$name}.rdb inside $eval_dir" . PHP_EOL);
+		if ( 0 == count($radar_rbk_files) ) {
+            die("ERROR couldn't find any rdb inside $eval_dir" . PHP_EOL);
         }
-	foreach($radar_rbk_files as $radar_rbk_file) {
-            $pathinfo = pathinfo($radar_rbk_file);
+		foreach($radar_rbk_files as $radar_rbk_file) {
+        	$pathinfo = pathinfo($radar_rbk_file);
     	    $name = $pathinfo['filename'];
     	    if ( $name[0] == "%" )
     	        continue;
-	    // print ".";
+	    	// print ".";
             $radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, -1) );
-	}
-	// print PHP_EOL;
+		}
+		// print PHP_EOL;
     }
     return $radars;
 }
@@ -71,14 +71,14 @@ function getRadars($eval_dir, $parse_all = false) {
  * (Convierte altitud total y posición a grados WGS-84)
  *
  * @param string $eval_dir Directorio donde está configurada la evaluación
- * @param string $name Nombre del radar[1~
+ * @param string $name Nombre del radar para el SASS-C, que se corresponde con el nombre del fichero .rbk sin la extensión
  * @param string $sassc_id Identificador del radar para el SASS-C
  *
  * @return array Listado de parámetros asociados a un radar
  */
 function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
 
-    if ( false === ($radar_rbk_contents = file_get_contents($radar_rbk_file)) ) {
+	if ( false === ($radar_rbk_contents = file_get_contents($radar_rbk_file)) ) {
 	logger(" E> No se puede acceder al contenido de >{$radar_rbk_file}<"); exit(-1);
     }
     clearstatcache();
@@ -92,18 +92,19 @@ function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
     $lat = $lon = ""; $radarGroundAltitude = 0; $values = array(); $radar = array();
     // quita las terminaciones de línea msdos/unix y separa por líneas en un array
     $radar_rbk_contents = preg_split("/[\r\n|\n\r|\n]/", $radar_rbk_contents, 0, PREG_SPLIT_NO_EMPTY);
-
+	
     foreach($radar_rbk_contents as $line) {
         //print $line . PHP_EOL;
+		
         if ( (($count2 = preg_match("/^radarLatitude: \"(\d+):(\d+):(\d+).(\d+)([N|S])\"/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
-            $lat = $m2[1][0] + $m2[2][0]/60 + ($m2[3][0] + $m2[4][0]/100)/3600;
-	    if ($m2[5][0]=="N") $lat *=1; else if ($m2[5][0]=="S") $lat *=-1;
-	    continue;
+			$lat = $m2[1][0] + $m2[2][0]/60 + ($m2[3][0] + $m2[4][0]/pow(10, strlen((string)$m2[4][0])))/3600;
+	    	if ($m2[5][0]=="N") $lat *=1; else if ($m2[5][0]=="S") $lat *=-1;
+	    	continue;
         }
         if ( (($count2 = preg_match("/^radarLongitude: \"(\d+):(\d+):(\d+).(\d+)([E|W])\"/", $line, $m2, PREG_OFFSET_CAPTURE)) !== FALSE) && ($count2>0) ) {
-	    $lon = $m2[1][0] + $m2[2][0]/60 + ($m2[3][0] + $m2[4][0]/100)/3600;
-	    if ($m2[5][0]=="E") $lon *=1; else if ($m2[5][0]=="W") $lon *=-1;
-	    continue;
+	    	$lon = $m2[1][0] + $m2[2][0]/60 + ($m2[3][0] + $m2[4][0]/pow(10, strlen((string)$m2[4][0])))/3600;
+	    	if ($m2[5][0]=="E") $lon *=1; else if ($m2[5][0]=="W") $lon *=-1;
+	    	continue;
         }
         /*
         // Vamos a capturar las alturas en el grupo genérico, y luego
@@ -132,10 +133,13 @@ function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
 	    'radar' => $name,
 	    'lat' => $lat,
 	    'lon' => $lon,
+		'lat_deg' => $lat,
+		'lon_deg' => $lon,
+		'lat_rad' => deg2rad($lat),
+		'lon_rad' => deg2rad($lon),
 	    'sassc_id' => $sassc_id,
 	);
 	$radar[$name] = array_merge($radar[$name], $values);
-
 	$radar[$name]['fecha_modificado'] = $fechaUltimaModificacion;
 
 	// si en el fichero se definen dos radares (PSR y SSR, hay que devolver dos radares, no uno!)

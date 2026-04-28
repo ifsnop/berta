@@ -538,37 +538,663 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
     return;
 }
 
-
 /**
  * CASO B
  * Funcion que calcula las coberturas cuando el nivel de vuelo FL, esta por debajo del radar
  * 
  * @param array $radar (ENTRADA / SALIDA)
  * @param int $flm nivel de vuelo en metros (ENTRADA)
- * @return void
+ * @return array
  */
-function calculosFLdebajoRadar2(&$radar, $flm){
+function calculosFLdebajoRadar2(&$radar, $flm) {
 
+    $debug = false;
     // $radar['screening']['totalAzimuths'];
     // $numPtosAzimut = count( $radar['screening']['listaAzimuths'][$i] );
-    $AnglHeight = $radar['screening']['listaAzimuths'];
-    $range = $radar['screening']['range'];
+    // $AnglHeight = $radar['screening']['listaAzimuths'];
+    // $range = $radar['screening']['range'];
     // print $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
-    $towerHeight = $radar['screening']['towerHeight'];
-    $terrainHeight = $radar['screening']['terrainHeight'];
-    $AzimIni = 0;
-    $AzimFin = 360;
-    $AziPaso = 360.0 / $radar['screening']['totalAzimuths'];
+    //$towerHeight = $radar['screening']['towerHeight'];
+    //$terrainHeight = $radar['screening']['terrainHeight'];
+    //$AzimIni = 0;
+    //$AzimFin = 360;
+    //$AziPaso = 360.0 / $radar['screening']['totalAzimuths'];
     // print $AziPaso . PHP_EOL;
         
+    $radar['lat_deg'] = $radar['lat'] = 41.773763888889;
+    $radar['lon_deg'] = $radar['lon'] = 2.4376138888889;
+    $radar['lat_rad'] = deg2rad(41.773763888889);
+    $radar['lon_rad'] = deg2rad(2.4376138888889);
+    
+    $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
+
+
     // Ángulo central máximo según rango en millas
-    $alpha_max = ($range * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
-    print "angulo central maximo segun rango en millas nauicas: " . $alpha_max . PHP_EOL;
+    $alpha_max = ($radar['screening']['range'] * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
+    if  ($debug)
+        print "angulo central maximo segun rango en millas nauicas: " . $alpha_max . PHP_EOL;
+    // línea de rango máximo
+    $m = tan(pi()/2 - $alpha_max); // pi()/2 = 90º en radianes
+
+    $matriz_obstaculos = []; // la estructura es [numero de azimuth][numero de obstaculo] 
+    $matriz_obstaculos_jorge = [];
+    // justo al revés que Jorge
+    foreach($radar['screening']['listaAzimuths'] as $azimut => $listaObstaculos) {
+        $alt = 0;
+        $xa = 0.0;
+        $ya = $radar['screening']['towerHeight'] +
+            $radar['screening']['terrainHeight'] +
+            $radar['screening']['radioTerrestreAumentado'];
+        $matriz_obstaculos[$azimut][0] = [$xa, $ya];
+        $matriz_obstaculos_jorge[0][$azimut] = [$xa, $ya];
+        if ($debug)
+            print "[0,$azimut] alt: $alt => $xa,$ya" . PHP_EOL;
+        
+        foreach($listaObstaculos as $idx => $obstaculo) {
+            $alt = $obstaculo['altura']; // Altitud del obstáculo i
+            $ang = $obstaculo['angulo']; // Ángulo central del obstáculo i
+            $r = $radar['screening']['radioTerrestreAumentado'] + $alt; // Radio del obstáculo
+            $xb = $r * sin($ang); // Coordenada horizontal del obstáculo
+            $yb = $r * cos($ang); // Coordenada vertical del obstáculo
+            if ($debug)
+                print "[" . $idx+1 . ",$azimut] alt: $alt, ang: $ang, r: $r => $xb,$yb" . PHP_EOL;
+            
+            $matriz_obstaculos[$azimut][$idx + 1] = [$xb, $yb];
+            $matriz_obstaculos_jorge[$idx + 1][$azimut] = [$xb, $yb];
+        }
+        $idx++;
+        
+        // Si no existe muro final, se calcula el muro: el primer punto será la intersección
+        // entre la línea que forman el radar y el último punto con la línea de máximo rango.
+        if ( $alt <= 30000 ) {
+            // coordenadas del radar en $xa, $ya
+            // coordenadas del último obstáculo en $x, $y
+            // línea de rango máximo en $m
+             /* Intersección segmento - línea
+              * Segmento:
+              *   x = xa + t*(xb-xa)
+              *   y = ya + t*(yb-ya)
+              *   t [0,1]
+              *
+              * Línea:
+              *   y = m*x
+              *
+              * Intersección:
+              *                m*xa - ya
+              *   ti = - ---------------------
+              *           m*(xb-xa) - (yb-ya)
+              */
+
+            print "xa: $xa ya: $ya xb: $xb yb: $yb" . PHP_EOL;
+
+            $dx = $xb - $xa;
+            $dy = $yb - $ya;
+            $t = ($m * $xa - $ya) / ($dy - $m * $dx);
+            if ($t >= 1) { // Más allá del último obstáculo
+                print "IFSNOP $azimut" . PHP_EOL; // exit(-1);
+                $xi = $xa + $t * $dx;   // Punto de intersección
+                $yi = $ya + $t * $dy;   // Punto de intersección
+
+                $alpha_m = atan($m);
+                $xil = (BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado']) * cos($alpha_m); // Punto límite del muro
+                $yil = (BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado']) * sin($alpha_m); // Punto límite del muro
+
+                if ($yi > $yil) $yil = $yi; // Punto de intersección por encima del límite del muro
+
+                // Se añaden los dos nuevos puntos
+                $matriz_obstaculos_jorge[$idx+1][$azimut] = [$xi, $yi];
+                $matriz_obstaculos[$azimut][$idx] = [$xi, $yi];
+                print "[$idx,$azimut] => $xi,$yi" . PHP_EOL;
+                $idx++;
+                $matriz_obstaculos_jorge[$idx+1][$azimut] = [$xil, $yil];
+                $matriz_obstaculos[$azimut][$idx] = [$xil, $yil];
+                print "[$idx,$azimut] => $xil,$yil" . PHP_EOL;
+                $idx++;
+            }
+        }
+    }
+    
+    /*
+    // print "FINAL DE LOS CALCULOS AHORA IMPRIMIR IFSNOP" . PHP_EOL;
+    for ($azi = 0; $azi<count($matriz_obstaculos); $azi++)
+        for ($obs = 0; $obs<count($matriz_obstaculos[$azi]); $obs++)
+            print "$azi,$obs: " . json_encode($matriz_obstaculos[$azi][$obs]) . PHP_EOL;
+    */
+    // $lat = $radar['lat']; $lon = $radar['lon'];
+    // $range = $radar['screening']['range'];
+    // $az = $radar['screening']['totalAzimuths'];
+    print "flm: $flm range: " . $radar['screening']['range'] .
+        " lat: " . $radar['lat'] .
+        " lon: " . $radar['lon'] .
+        " az: " . $radar['screening']['totalAzimuths'] . PHP_EOL;
+
+         /*******************************
+     * INTERSECCIONES POR ACIMUT
+     *******************************/
+    // $Intersec = array_fill(0, 1, array_fill(0, $az, 0.0));  // La primera fila corresponde al radar (0)
+    $intersec = array();
+
+    // for ($a = 0; $a < $az; $a++) {
+
+        //$count = 0;
+
+        $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
+        $W += 0.01;                     // Suma 10 cm para evitar errores numéricos
+        print "Rt: " . $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
+        print "W: $W" . PHP_EOL;
+        /* Esto es porque a veces el screening da dos valores de
+         * altitud consecutivos iguales. Si además coinciden con el
+         * FL, da lugar a errores al calcular la intersección ya que
+         * línea y circunferencia son tangentes.
+         */
+
+        // Intersección entre nivel de vuelo (arco de circunferencia) y polilínea de screening para acimuth a
+        // for ($i = 0; $i < $rowsX - 1; $i++) {
+        for ($azi = 0; $azi<count($matriz_obstaculos); $azi++) {
+            $count = 0;
+            $intersec[$azi] = array();
+            for ($obs = 0; $obs<count($matriz_obstaculos[$azi])-1; $obs++) {
+                
+
+                //if (is_nan($x2)) break;     // Final del azimuth cuando x2 es NaN
+
+                $x1 = $matriz_obstaculos[$azi][$obs][0];
+                $y1 = $matriz_obstaculos[$azi][$obs][1];
+                $x2 = $matriz_obstaculos[$azi][$obs+1][0];
+                $y2 = $matriz_obstaculos[$azi][$obs+1][1];
+
+                $dx = $x2 - $x1;
+                $dy = $y2 - $y1;
+                /* Segmento:
+                *   x = x1 + t*dx
+                *   y = y1 + t*dy
+                * Circunferencia:
+                *   x^2 + y^2 = W^2
+                */
+
+                // Coeficientes At^2 + Bt + C=0
+                $A = $dx * $dx + $dy * $dy;
+                $B = 2 * ($x1 * $dx + $y1 * $dy);
+                $C = $x1 * $x1 + $y1 * $y1 - $W * $W;
+
+                // Discriminante
+                $D = $B * $B - 4 * $A * $C;
+                //print "$azi,$obs: " . json_encode($matriz_obstaculos[$azi][$obs]) . PHP_EOL;
+                //print "rowsX: $obs Azimut: $azi x1: $x1 y1: $y1 x2: $x2 y2: $y2" . PHP_EOL;
+                //print "A: $A B: $B C: $C D: $D" . PHP_EOL;
+                $epsilon = 1e-12 * max(1.0, abs($B), abs($C));
+
+                // $A suficientemente distinto de 0 → sí es cuadrática
+                // $D no claramente negativo → hay raíces reales o casi reales
+                if ( (abs($A) > $epsilon) && $D >= -$epsilon ) {
+                //if (($D >= 0) && ($A != 0)) {       // Hay intersección
+
+                    $sqrt_d = sqrt($D);
+                    $A2 = $A*2;
+                    $t1 = (-$B - $sqrt_d) / $A2;
+                    $t2 = (-$B + $sqrt_d) / $A2;
+
+                    // Asegurarse de que la primera solución es la menor
+                    if ($t1 > $t2)
+                        [$t1, $t2] = [$t2, $t1];
+                    // print "t1: $t1 t2: $t2" . PHP_EOL;
+                    foreach([$t1, $t2] as $t) {
+                        if ($t >= 0 && $t <= 1) {   // Límites del segmento
+                            // print "t1: $t1 t2: $t2 DENTRO SEGMENTO" . PHP_EOL;
+
+                            $xi = $x1 + $t * $dx;   // Punto de intersección
+                            $yi = $y1 + $t * $dy;   // Punto de intersección
+
+                            // Distancia del radar a la intersección, un acimut por columna [nm]
+                            $alpha = M_PI / 2 - atan2($yi, $xi);    // atan2() pone el ángulo 0º en x=1, y=0, en sentido antihorario
+                            $dist_nm = ($radar['screening']['radioTerrestreAumentado'] * $alpha) / MILLA_NAUTICA_EN_METROS;
+                            if ( $dist_nm > $max_distancia_nm )
+                                $max_distancia_nm = $dist_nm;
+
+
+                            $intersec[$azi][$count] = $dist_nm;
+                            if ($debug)
+                                print "intersec count: $count obs: $obs azimut: $azi => dist_nm: $dist_nm" . PHP_EOL;
+                            $count++;
+                        }
+                    }
+                }
+            }
+        }
+    //}
+    print "Intersec" . PHP_EOL;
+    // print_r($intersec);
+
+
+/*******************************
+     * MALLA DE COBERTURA
+     *******************************/
+    $lat_rad = $radar['lat_rad'];
+    $lon_rad = $radar['lon_rad'];
+    $lat_deg = $radar['lat_deg'];
+    $lon_deg = $radar['lon_deg'];
+
+    // $LatDec = 2;        // Número de cifras decimales    
+    $precision_malla = 2; // Número de cifras decimales
+    //$LatRes = 0.01;     // Resolución vertical [º]
+    $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
+    print "Resolucion Malla: $resolucion_malla" . PHP_EOL;
+    print "Máxima distancia a obstáculo: $max_distancia_nm NM" . PHP_EOL;
+    $max_distancia_nm = round(ceil($max_distancia_nm), 0) + 1; // Redondear hacia arriba y sumar 1 NM de margen
+    logger(" V> Distancia Alcance Máximo Alineada: $max_distancia_nm NM / " . $max_distancia_nm * MILLA_NAUTICA_EN_METROS . " m");
+    // Límites de la malla
+    $margen = 0.1;                                                 // Margen para asegurar cobertura completa
+    // $Range_m = $radar['screening']['range'] * MILLA_NAUTICA_EN_METROS * (1 + $tol);                      // Rango máximo [m]
+    
+    // revisar range_maximum, no debería ser el configurado, sino el que tengamos de alcance
+    // quizás se debería posponer el cálculo del máximo hasta tener todos los polígonos de obstáculos
+    // $range_maximum = $radar['screening']['range'] * MILLA_NAUTICA_EN_METROS * (1 + $margen);                      // Rango máximo [m]
+    $range_maximum = $max_distancia_nm * MILLA_NAUTICA_EN_METROS; // Rango máximo [m]
+    $latitude_limit = rad2deg($range_maximum / RADIO_TERRESTRE); // Latitud límite desde el radar [º]
+    $longitude_limit = rad2deg($range_maximum / (RADIO_TERRESTRE * cos($lat_rad)));   // Longitud límite desde el radar [º]
+    print "radar_lat: {$lat_rad}rad radar_lon: {$lon_rad}rad" . PHP_EOL;
+    print "range_maximum: $range_maximum latitude_limit: $latitude_limit longitude_limit: $longitude_limit" . PHP_EOL;
+    
+    // Ajustar al mallado
+    // $north = round($LatRad + $LatLim, $LatDec); // Límite norte
+    // $south = round($LatRad - $LatLim, $LatDec); // Límite sur
+    // $west  = round($LonRad - $LonLim, $LonDec); // Límite oeste
+    // $east  = round($LonRad + $LonLim, $LonDec); // Límite este
+    $north = round(ceil (($lat_deg + $latitude_limit) / $resolucion_malla) * $resolucion_malla, $precision_malla); // Límite norte
+    $south = round(floor(($lat_deg - $latitude_limit) / $resolucion_malla) * $resolucion_malla, $precision_malla); // Límite sur
+    $west  = round(floor(($lon_deg - $longitude_limit) / $resolucion_malla) * $resolucion_malla, $precision_malla); // Límite oeste
+    $east  = round(ceil (($lon_deg + $longitude_limit) / $resolucion_malla) * $resolucion_malla, $precision_malla); // Límite este
+
+    print "north: $north south: $south east: $east west: $west" . PHP_EOL;
+
+
+    // Malla: rows = latitud, cols = longitud
+    $rows = intval(abs($north - $south) / $resolucion_malla) + 1;
+    $cols = intval(abs($east - $west) / $resolucion_malla) + 1;
+
+    print "rows: $rows cols: $cols" . PHP_EOL;
+
+    // Malla de coordenadas: [latitud , longitud] de cada centro
+    // $zlat = array_fill(0, $rows, array_fill(0, $cols, 0.0));
+    // $zlon = array_fill(0, $rows, array_fill(0, $cols, 0.0));
+
+    $malla_lat_lon = array();
+    for ($i = 0; $i < $rows; $i++) {
+        for ($j = 0; $j < $cols; $j++) {
+            $malla_lat_lon[$i][$j] = [
+                $north - $i * $resolucion_malla,
+                $west  + $j * $resolucion_malla,
+                0,
+            ];
+
+            /* Comprobación de progreso
+                echo "Fila " . $i + 1 . " de " . $rows . " ----- Columna " . $j + 1 . " de " . $cols . "\n";
+            */
+            
+            // $zlat[$i][$j] = $north - $i * $resolucion_malla;
+            // $zlon[$i][$j] = $west  + $j * $resolucion_malla;
+        }
+    }
+
+     // Malla de cobertura: 1 = cobertura, 0 = sin cobertura
+    // $zcobt = array_fill(0, $rows, array_fill(0, $cols, 0));
+
+    /*******************************
+     * POLÍGONO DE COBERTURA
+     *******************************/
+
+    // Cada celda es un polígono de 4 esquinas (sector anular)
+    // Se comprueba qué puntos de la malla están contenidos en cada polígono
+    // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
+
+    // $Lat90 = 90 - $radar['lat'];  // Ángulo complementario
+    $lat90_rad = M_PI_2 - $radar['lat_rad'];  // Ángulo complementario en radianes
+    $cos_lat90 = cos($lat90_rad);
+    $sin_lat90 = sin($lat90_rad);
+    $lat_rad = $radar['lat_rad'];
+    $lon_rad = $radar['lon_rad'];
+    
+    $NMmax = 20;            // Distancia máxima entre vértices [nm]
+    // $NMmax_radio = $NMmax * MILLA_NAUTICA_EN_METROS; // Distancia máxima entre vértices [m]
+
+
+    // Corrección al azimuth (+ x metros para asegurar solape entre polígonos)
+    $tol_lin = 20;                              // Tolerancia para asegurar solape entre acimuths [m]
+    // $tol_ang = rad2deg($tol_lin / RADIO_TERRESTRE);  // Tolerancia para asegurar solape entre azimuths [º]
+    $tol_rad = $tol_lin / RADIO_TERRESTRE;  // Tolerancia para asegurar solape entre azimuths [º]
+
+    // Más velocidad y menos precisión aumentando NM_max y tol_lin
+    // Más precisión y menos velocidad disminuyendo NM_max y tol_lin
+
+    
+    //for ($j = 0; $j < count($[0]); $j++) {
+    $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
+    
+    logger("[00%]", false); $countPct_old = 0;
+    
+    for ($azi = 0; $azi < count($intersec); $azi++) {
+        $countPct = $azi*100.0 / count($intersec);
+        if ( ($countPct - $countPct_old) > 10 ) { logger("[" . round($countPct) . "%]", false); $countPct_old = $countPct; }
+
+        // print "AZI>" . $azi . PHP_EOL;
+        $last = 1; // se empieza en la última fila con cobertura del polígono
+        $start_time = microtime(true);
+         // Cada columna se recorre hacia atrás empezando sin cobertura
+        $cont_i = 0;
+
+        // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
+        // $a1 = deg2rad( ($azi + 1) * $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
+        // $a2 = deg2rad( ($azi + 1) * $azimuth_step + ($azimuth_step / 2) );  // Segundo ángulo [rad]
+        // ojo, si tenemos 720º, en la lista de obstáculos tendremos 720 entradas. No vamos a poder entrar usando a1 como índice!
+        $a1_rad = deg2rad( $azi * $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
+        $a2_rad = deg2rad( $azi * $azimuth_step + ($azimuth_step / 2) );  // Segundo ángulo [rad]
+        $cos_a1 = $cos_a2 = $sin_a1 = $sin_a2 = false;
+
+        // Cada columna se recorre hacia atrás empezando sin cobertura
+        //for ($i = count($Intersec) - 1; $i >= 0; $i--) {
+        $p1 = $p2 = $p3 = $p4 = array(); // Esquinas del polígono
+
+        for ($i = count($intersec[$azi])-1; $i >= 0; $i--) {
+
+            //if (($Intersec[$i][$j] != 0) && ($last == 1)) {     // Última fila con cobertura del polígono
+            if ($intersec[$azi][$i] != 0 && $last == 1) {     // Última fila con cobertura del polígono
+
+                // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
+                     // Ùltimo radio [m]
+                $r2 = $intersec[$azi][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+                $alpha2 = $r2 / RADIO_TERRESTRE;             // Último ángulo central [rad]
+                // print "r2: $r2, alpha2: $alpha2" . PHP_EOL;
+                // print "lat90_rad: " . $lat90_rad . " lat90: " . rad2deg($lat90_rad) . PHP_EOL;
+                $cos_alpha2 = cos($alpha2);
+                $sin_alpha2 = sin($alpha2);
+                if (false === $cos_a1 ) { // sólo se calculan una vez por azimuth
+                    // pero no se saca fuera porque si en el azimut no hay cobertura, ahorramos el cálculo
+                    $cos_a1 = cos($a1_rad);
+                    $cos_a2 = cos($a2_rad);
+                    $sin_a1 = sin($a1_rad);
+                    $sin_a2 = sin($a2_rad);
+                }
+                $cos_lat90xcos_alpha2 = $cos_lat90 * $cos_alpha2;
+                $sin_lat90xsin_alpha2 = $sin_lat90 * $sin_alpha2;
+
+                // Teorema del Coseno Esférico - Latitud
+                $cos_lat1 = $cos_lat90xcos_alpha2 +
+                            $sin_lat90xsin_alpha2 * $cos_a1;
+                $asin_lat1_rad = asin($cos_lat1);
+                $lat1_rad = $asin_lat1_rad - $lat_rad;
+
+                $cos_lat2 = $cos_lat90xcos_alpha2 +
+                            $sin_lat90xsin_alpha2 * $cos_a2;
+                $asin_lat2_rad = asin($cos_lat2);
+                $lat2_rad = $asin_lat2_rad - $lat_rad;
+
+                // Teorema del Coseno Esférico - Longitud (optimizada para no usar cos(asin_lat1_rad))
+                $cos_par1 = cos($lat1_rad) * $cos_alpha2 +
+                            sin($lat1_rad) * $sin_alpha2 * $cos_a1;
+                $cos_par2 = cos($lat2_rad) * $cos_alpha2 +
+                            sin($lat2_rad) * $sin_alpha2 * $cos_a2;
+
+                $cos_lat_abs1 = sqrt(1.0 - $cos_lat1 * $cos_lat1);
+                $cos_lat_abs2 = sqrt(1.0 - $cos_lat2 * $cos_lat2);
+                $lon1_d = acos($cos_par1) / $cos_lat_abs1;
+                $lon2_d = acos($cos_par2) / $cos_lat_abs2;
+
+                 // $lon1_d = acos($cos_par1) / cos($asin_lat1_rad);
+                 // $lon2_d = acos($cos_par2) / cos($asin_lat2_rad);
+
+                // Signo según sin(ángulo)
+                $lon1_d = $lon_rad + (($sin_a1 >= 0) ? $lon1_d : -$lon1_d);
+                $lon2_d = $lon_rad + (($sin_a2 >= 0) ? $lon2_d : -$lon2_d);
+
+                // Corrección al acimut (+ x metros para asegurar solape entre polígonos)
+                // a1
+                $asin_lat1_rad += $tol_rad * $sin_a1;
+                $lon1_d -= $tol_rad * $cos_a1;
+                // a2
+                $asin_lat2_rad -= $tol_rad * $sin_a2;
+                $lon2_d += $tol_rad * $cos_a2;
+
+                // Guarda las primeras dos esquinas del polígono [lon, lat] [º]
+                // $p1 = [rad2deg($lon1_d), rad2deg($asin_lat1_rad)];
+                // $p2 = [rad2deg($lon2_d), rad2deg($asin_lat2_rad)];
+                $p1 = [rad2deg($asin_lat1_rad), rad2deg($lon1_d)];
+                $p2 = [rad2deg($asin_lat2_rad), rad2deg($lon2_d)];
+                
+                $last = 0; // marcamos que en esta intersección ya no hay cobertura del polígono
+                // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
+                // print "p1: " . json_encode($p1) . " p2: " . json_encode($p2) . PHP_EOL;
+                if (false && /*$debug &&*/ $azi== 0 && $i == 4) {
+                    $p1_check = [3.6356157745885453,43.08976905930698];
+                    $p2_check = [3.667011200629223,43.07377059296113];
+                    print $p1_check[0] - $p1[0] . " " . $p1_check[1] - $p1[1] . PHP_EOL;
+                    print $p2_check[0] - $p2[0] . " " . $p2_check[1] - $p2[1] . PHP_EOL;
+                }
+            }
+            elseif ($last == 0) {   // Primera fila con cobertura del polígono
+
+                // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
+                $r1 = $intersec[$azi][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+                $alpha1 = $r1 / RADIO_TERRESTRE;             // Último ángulo central [rad]
+
+                $cos_alpha1 = cos($alpha1);
+                $sin_alpha1 = sin($alpha1);
+                $cos_lat90xcos_alpha1 = $cos_lat90 * $cos_alpha1;
+                $sin_lat90xsin_alpha1 = $sin_lat90 * $sin_alpha1;
+
+                // Teorema del Coseno Esférico - Latitud
+                $cos_lat3 = $cos_lat90xcos_alpha1 +
+                            $sin_lat90xsin_alpha1 * $cos_a2;
+                $asin_lat3_rad = asin($cos_lat3);
+                $lat3_rad = $asin_lat3_rad - $lat_rad;
+                // $lat3 = 90 - acosd_php($cos_lat3);
+
+                $cos_lat4 = $cos_lat90xcos_alpha1 +
+                            $sin_lat90xsin_alpha1 * $cos_a1;
+                $asin_lat4_rad = asin($cos_lat4);
+                $lat4_rad = $asin_lat4_rad - $lat_rad;
+                // $lat4 = 90 - acosd_php($cos_lat4);
+
+                // Teorema del Coseno Esférico - Longitud
+                //$cos_par3 = cosd($lat3 - $LatRad) * cos($alpha1) +
+                //            sind($lat3 - $LatRad) * sin($alpha1) * $cos_a2;
+                // $lon3 = rad2deg(acos($cos_par3) / cosd($lat3));
+                //$cos_par4 = cosd($lat4 - $LatRad) * cos($alpha1) +
+                //            sind($lat4 - $LatRad) * sin($alpha1) * $cos_a1;
+                //$lon4 = rad2deg(acos($cos_par4) / cosd($lat4));
+                $cos_par3 = cos($lat3_rad) * $cos_alpha1 +
+                            sin($lat3_rad) * $sin_alpha1 * $cos_a2;
+                $cos_par4 = cos($lat4_rad) * $cos_alpha1 +
+                            sin($lat4_rad) * $sin_alpha1 * $cos_a1;
+                $cos_lat_abs3 = sqrt(1.0 - $cos_lat3 * $cos_lat3);
+                $cos_lat_abs4 = sqrt(1.0 - $cos_lat4 * $cos_lat4);
+                $lon3_d = acos($cos_par3) / $cos_lat_abs3;
+                $lon4_d = acos($cos_par4) / $cos_lat_abs4;
+
+                // Signo según sin(ángulo)
+                // $lon4 = (sin($a1) >= 0) ? $LonRad + $lon4 : $LonRad - $lon4;
+                // $lon3 = (sin($a2) >= 0) ? $LonRad + $lon3 : $LonRad - $lon3;
+                $lon3_d = $lon_rad + (($sin_a2 >= 0) ? $lon3_d : -$lon3_d);
+                $lon4_d = $lon_rad + (($sin_a1 >= 0) ? $lon4_d : -$lon4_d);
+
+                // Corrección al azimuth (+ x metros para asegurar solape entre polígonos)
+                // a1
+                $asin_lat4_rad += $tol_rad * $sin_a1;
+                $lon4_d -= $tol_rad * $cos_a1;
+                // a2
+                $asin_lat3_rad -= $tol_rad * $sin_a2;
+                $lon3_d += $tol_rad * $cos_a2;
+
+                // $lat4 += $tol_ang * sin($a1);
+                // $lon4 -= $tol_ang * cos($a1);
+                // a2
+                // $lat3 -= $tol_ang * sin($a2);
+                // $lon3 += $tol_ang * cos($a2);
+
+                // Guarda las últimas dos esquinas del polígono [lat,lon] [º]
+                // $p3 = [$lon3, $lat3];
+                // $p4 = [$lon4, $lat4];
+                // $p3 = [rad2deg($lon3_d), rad2deg($asin_lat3_rad)];
+                // $p4 = [rad2deg($lon4_d), rad2deg($asin_lat4_rad)];
+                $p3 = [rad2deg($asin_lat3_rad), rad2deg($lon3_d)];
+                $p4 = [rad2deg($asin_lat4_rad), rad2deg($lon4_d)];
+                            
+                // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
+
+                // print "p3: " . json_encode($p3) . " p4: " . json_encode($p4) . PHP_EOL;
+                
+                if (false && /*$debug &&*/ $azi== 0 && $i == 4) {
+                    
+                    $p3_check = [3.492870493185009,42.89364390134427];
+                    $p4_check = [3.4658423401029874,42.90740443622323];
+                    print $p3_check[0] - $p3[0] . " " . $p3_check[1] - $p3[1] . PHP_EOL;
+                    print $p4_check[0] - $p4[0] . " " . $p4_check[1] - $p4[1] . PHP_EOL;
+                }
+
+
+                // Aumento de resolución
+                /*
+                if ((($r2 - $r1) / RADIO_TERRESTRE) >= $NMmax) {   // Polígono demasiado largo
+                    // Se añaden n subdivisiones
+                    $n_subdiv = floor(2 * ($r2 - $r1) / ($NMmax_radio)) - 1;
+                    $a1_subd = array_fill(0, $n_subdiv, [0,0]);
+                    $a2_subd = array_fill(0, $n_subdiv, [0,0]);
+
+                    $x = array_fill(0, 5 + 2 * $n_subdiv, 0.0);
+                    $y = array_fill(0, 5 + 2 * $n_subdiv, 0.0);
+
+                    $x[0] = $p1[0];  $x[1] = $p2[0];    // Longitud
+                    $y[0] = $p1[1];  $y[1] = $p2[1];    // Latitud
+
+                    // Subdivisiones
+                    for ($s = 1; $s <= $n_subdiv; $s++) {
+                        // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
+                        $r_subd  = $r2 - $s * ($r2 - $r1) / ($n_subdiv + 1);    // Radio de subdivisión s [m]
+                        $alpha_s = $r_subd / RADIO_TERRESTRE;                        // Ángulo central de subdivisión s [rad]
+                        print "alpha_s: $alpha_s" . PHP_EOL;
+
+
+                        // Teorema del Coseno Esférico - Latitud
+                        $cos_lat_s1 = cosd($Lat90) * cos($alpha_s) +
+                                      sind($Lat90) * sin($alpha_s) * $cos_a1;
+                        $lat_s1 = 90 - acosd_php($cos_lat_s1);
+
+                        $cos_lat_s2 = cosd($Lat90) * cos($alpha_s) +
+                                      sind($Lat90) * sin($alpha_s) * $cos_a2;
+                        $lat_s2 = 90 - acosd_php($cos_lat_s2);
+
+                        // Teorema del Coseno Esférico - Longitud
+                        $cos_par_s1 = cosd($lat_s1 - $LatRad) * cos($alpha_s) +
+                                      sind($lat_s1 - $LatRad) * sin($alpha_s) * $cos_a1;
+                        $lon_s1 = rad2deg(acos($cos_par_s1) / cosd($lat_s1));
+
+                        $cos_par_s2 = cosd($lat_s2 - $LatRad) * cos($alpha_s) +
+                                      sind($lat_s2 - $LatRad) * sin($alpha_s) * $cos_a2;
+                        $lon_s2 = rad2deg(acos($cos_par_s2) / cosd($lat_s2));
+
+                        // Signo según sin(ángulo)
+                        $lon_s1 = (sin($a1) >= 0) ? $LonRad + $lon_s1 : $LonRad - $lon_s1;
+                        $lon_s2 = (sin($a2) >= 0) ? $LonRad + $lon_s2 : $LonRad - $lon_s2;
+
+                        // Corrección al azimuth (+ x metros para asegurar solape entre polígonos)
+                        // a1
+                        $lat_s1 += $tol_ang * sin($a1);
+                        $lon_s1 -= $tol_ang * cos($a1);
+
+                        // a2
+                        $lat_s2 -= $tol_ang * sin($a2);
+                        $lon_s2 += $tol_ang * cos($a2);
+
+                        $a1_subd[$s-1] = [$lon_s1, $lat_s1];
+                        $a2_subd[$s-1] = [$lon_s2, $lat_s2];
+
+                        $x[1 + $s] = $lon_s2;
+                        $y[1 + $s] = $lat_s2;
+                    }
+
+                    $x[2 + $n_subdiv] = $p3[0]; $x[3 + $n_subdiv] = $p4[0];
+                    $y[2 + $n_subdiv] = $p3[1]; $y[3 + $n_subdiv] = $p4[1];
+
+                    for ($s = 1; $s <= $n_subdiv; $s++) {
+                        $x[3 + $n_subdiv + $s] = $a1_subd[$n_subdiv - $s][0];
+                        $y[3 + $n_subdiv + $s] = $a1_subd[$n_subdiv - $s][1];
+                    }
+
+                    // Se cierra el polígono repitiendo el primer punto
+                    $x[4 + 2 * $n_subdiv] = $p1[0];
+                    $y[4 + 2 * $n_subdiv] = $p1[1];
+
+                } else {
+                */
+                    // Construye el polígono, vértices en sentido horario
+                    //$x = [$p1[0], $p2[0],           // Longitud
+                    //      $p3[0], $p4[0], $p1[0]];  // Longitud
+
+                    //$y = [$p1[1], $p2[1],           // Latitud
+                    //      $p3[1], $p4[1], $p1[1]];  // Latitud
+                    
+                    $poly = [ $p1, $p2, $p3, $p4 ]; // Polígono sin aumento de resolución
+
+                //}
+
+                // print "aqui" . PHP_EOL;
+                // Se hallan los puntos del mallado contenidos en el polígono
+                
+                //$inside = inpolygon_php($zlon, $zlat, $x, $y);
+                set_malla_coverage($malla_lat_lon, $poly);
+
+                /*
+                // Se incluyen a la malla completa
+                for ($r = 0; $r < $rows; $r++) {
+                    for ($c = 0; $c < $cols; $c++) {
+                        if ($inside[$r][$c])
+                            $zcobt[$r][$c] = 1;
+                    }
+                }
+
+                // Limpia la variable para ahorrar memoria
+                unset($inside);
+                */
+                // $cont_i++;
+                $last = 1;
+            }
+        }
+    }
+    
+    logger("[100%]" . PHP_EOL, false);
+
+    /*
+    $res = array();
+    foreach($malla_lat_lon as $i => $fila) {
+        foreach($fila as $j => $col) {
+            $res[$i][$j] = $col['cobertura'];
+            //print $col['cobertura'];
+        }
+        //print PHP_EOL;
+    }
+*/
+
+    //return $malla_lat_lon;
+    return $malla_lat_lon;
+    
+
+    /*
+    for ($obs = 0; $obs<count($matriz_obstaculos_jorge); $obs++)
+        for ($azi = 0; $azi<count($matriz_obstaculos_jorge[$obs]); $azi++) {
+            if ( !isset($matriz_obstaculos_jorge[$obs][$azi])) {
+                print "$obs $azi no está definido" . PHP_EOL; exit(-1);
+
+            }
+            print "$obs,$azi: " . json_encode($matriz_obstaculos_jorge[$obs][$azi]) . PHP_EOL;
+            //print "$obs,$azi: " . json_encode($matriz_obstaculos[$obs][$azi]) . PHP_EOL;
+        }
+    
+    */
+
     // Si los datos se corresponden con la circunferencia completa (360º), el primer punto (0º) se coloca al final
     // $col = ($AzimFin - $AzimIni == 360) ? 0 : 1;
 
     // $row = 1;
-
+/*
     for ($i = 0; $i < $radar['screening']['totalAzimuths']; $i++) {
         $valores = count($AnglHeight[$i]);
         $numPtosAzimut = count($radar['screening']['listaAzimuths'][$i]); // valores
@@ -588,22 +1214,58 @@ function calculosFLdebajoRadar2(&$radar, $flm){
         print_r($listaObstaculosAmpliada);
         foreach ($radar['screening']['listaAzimuths'][$i] as $obstaculoIdx => $obstaculo) {
 
-            print_r($obstaculo);
+            // print_r($obstaculo);
+            $ang = $obstaculo['angulo'];  // Ángulo central del obstáculo i
+            $alt = $obstaculo['altura'];  // Altitud del obstáculo i
+            $r = $radar['screening']['radioTerrestreAumentado']+ $alt; // Radio del obstáculo i
+            $xc = $r * sin($ang);       // Coordenada horizontal del obstáculo i = Radio * sin(Ángulo central) [m]
+            $yc = $r * cos($ang);       // Coordenada vertical del obstáculo   i = Radio * cos(Ángulo central) [m]
+
 
         }
         print_r($radar['screening']['listaAzimuths'][$i][0]);
-
-        
-        exit(0);
-
+*/
         // $radar['screening']['listaAzimuths'][$i]['angulo']
         // $radar['screening']['listaAzimuths'][$i]['altura']
-
-    }
-
     return;
 }
 
+//  Marca en la malla los puntos que están dentro del polígono
+function set_malla_coverage(&$malla_lat_lon, $poly)
+{
+
+    // Bounding box del polígono
+    $minLat = INF;
+    $maxLat = -INF;
+    $minLon = INF;
+    $maxLon = -INF;
+
+    foreach ($poly as $p) {
+        $minLat = min($minLat, $p[0]);
+        $maxLat = max($maxLat, $p[0]);
+        $minLon = min($minLon, $p[1]);
+        $maxLon = max($maxLon, $p[1]);
+    }
+
+    // recorre todas las filas y columnas de la malla
+    foreach ($malla_lat_lon as $i => $fila) {
+        foreach ($fila as $j => $col) {
+
+            // DESCARTE RÁPIDO
+            if (
+                $col[0] < $minLat || $col[0] > $maxLat ||
+                $col[1] < $minLon || $col[1] > $maxLon
+            )
+                continue;
+
+            //is_in_polygon no necesita un polígono cerrado
+            $inside = is_in_polygon($poly, [$col[0], $col[1]]);
+            if ($inside)
+                $malla_lat_lon[$i][$j][2] = 1;
+        }
+    }
+    return $malla_lat_lon;
+}
 
 /**
  * CASO B
@@ -824,6 +1486,7 @@ function calculosFLdebajoRadar(&$radar, $flm){
         */
     } // for
     logger("[100%]" . PHP_EOL, false);
+   
     return;
 }
 
@@ -914,7 +1577,7 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
     $alturaCentroFasesAntena = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
 
     $malla = array(); // creamos una malla vacia
-    $mallaLatLon = array(); // malla indexadaa por lat/lon
+    // $mallaLatLon = array(); // malla indexadaa por lat/lon
     $azimutTeorico = 0; // azimut teorico calculado
     $azimutCelda = 0; // azimut aproximado
     $pos = 0;
@@ -1020,12 +1683,15 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
     }
     print "[100%]" . PHP_EOL;
     //printf("[timer0: %3.3f]", microtime(true) - $timer0);
+    
+    // commenting unused code
+    // logger(" D> sortingMallaLatLon");
+    // ksort($mallaLatLon);
+    // foreach($mallaLatLon as $lat => &$lons) {
+    //     ksort($lons);
+    // }
+    // print_r($malla);
 
-    logger(" D> sortingMallaLatLon");
-    ksort($mallaLatLon);
-    foreach($mallaLatLon as $lat => &$lons) {
-        ksort($lons);
-    }
     return array('malla' => $malla);
 }
 
@@ -2121,4 +2787,399 @@ function ramer_douglas_peucker(array $points, $epsilon) {
     // Max distance is below epsilon, so return a line from with just the
     // start and end points.
     return array( $points[0], $points[$end] );
+}
+
+function marchingSquares(array $grid): array
+{
+    $rows = count($grid);
+    if ($rows < 2) return [];
+
+    $cols = count($grid[0]);
+    if ($cols < 2) return [];
+
+    $segments = [];
+
+    for ($y = 0; $y < $rows - 1; $y++) {
+        for ($x = 0; $x < $cols - 1; $x++) {
+
+            // Esquinas celda 2x2
+            $tl = $grid[$y][$x];
+            $tr = $grid[$y][$x + 1];
+            $br = $grid[$y + 1][$x + 1];
+            $bl = $grid[$y + 1][$x];
+
+            $v0 = $tl[2] ? 1 : 0; // top-left
+            $v1 = $tr[2] ? 1 : 0; // top-right
+            $v2 = $br[2] ? 1 : 0; // bottom-right
+            $v3 = $bl[2] ? 1 : 0; // bottom-left
+
+            $state = ($v0 << 3) | ($v1 << 2) | ($v2 << 1) | $v3;
+
+            if ($state === 0 || $state === 15) {
+                continue;
+            }
+
+            // Midpoints edges
+            $top    = midpoint($tl, $tr);
+            $right  = midpoint($tr, $br);
+            $bottom = midpoint($bl, $br);
+            $left   = midpoint($tl, $bl);
+
+            switch ($state) {
+
+                case 1:   // 0001
+                case 14:  // 1110
+                    $segments[] = [$left, $bottom];
+                    break;
+
+                case 2:
+                case 13:
+                    $segments[] = [$bottom, $right];
+                    break;
+
+                case 3:
+                case 12:
+                    $segments[] = [$left, $right];
+                    break;
+
+                case 4:
+                case 11:
+                    $segments[] = [$top, $right];
+                    break;
+
+                case 5:
+                    $segments[] = [$top, $left];
+                    $segments[] = [$bottom, $right];
+                    break;
+
+                case 6:
+                case 9:
+                    $segments[] = [$top, $bottom];
+                    break;
+
+                case 7:
+                case 8:
+                    $segments[] = [$top, $left];
+                    break;
+
+                case 10:
+                    $segments[] = [$top, $right];
+                    $segments[] = [$left, $bottom];
+                    break;
+            }
+        }
+    }
+
+    return $segments;
+}
+
+function midpoint(array $a, array $b): array
+{
+    return [
+        ($a[0] + $b[0]) / 2, // lat
+        ($a[1] + $b[1]) / 2  // lon
+    ];
+}
+
+/**
+ * Entrada:
+ * $segments = [
+ *   [
+ *     ['lat'=>..., 'lon'=>...],
+ *     ['lat'=>..., 'lon'=>...]
+ *   ],
+ *   ...
+ * ];
+ *
+ * Salida:
+ * [
+ *   [ [p1], [p2], [p3], ..., [p1] ],   // polígono cerrado
+ *   ...
+ * ]
+ */
+
+function buildPolygonsFromSegments(array $segments, int $precision = 8): array
+{
+    $adj = [];
+
+    foreach ($segments as $seg) {
+        $a = $seg[0];
+        $b = $seg[1];
+
+        $ka = pointKey($a, $precision);
+        $kb = pointKey($b, $precision);
+
+        $adj[$ka]['point'] = $a;
+        $adj[$kb]['point'] = $b;
+
+        $adj[$ka]['neighbors'][] = $kb;
+        $adj[$kb]['neighbors'][] = $ka;
+    }
+
+    $visitedEdges = [];
+    $polygons = [];
+
+    foreach ($adj as $startKey => $node) {
+        foreach ($node['neighbors'] as $nextKey) {
+
+            $edgeId = edgeKey($startKey, $nextKey);
+
+            if (isset($visitedEdges[$edgeId])) {
+                continue;
+            }
+
+            $polygon = tracePolygon($adj, $startKey, $nextKey, $visitedEdges);
+
+            if (count($polygon) >= 4) {
+                $polygons[] = $polygon;
+            }
+        }
+    }
+
+    return $polygons;
+}
+
+function tracePolygon(array $adj, string $startKey, string $nextKey, array &$visitedEdges): array
+{
+    $polygon = [];
+    $prev = $startKey;
+    $curr = $nextKey;
+
+    $polygon[] = $adj[$startKey]['point'];
+    $polygon[] = $adj[$nextKey]['point'];
+
+    $visitedEdges[edgeKey($startKey, $nextKey)] = true;
+
+    while (true) {
+
+        $neighbors = $adj[$curr]['neighbors'];
+
+        $candidate = null;
+
+        foreach ($neighbors as $n) {
+            if ($n !== $prev) {
+                $candidate = $n;
+                break;
+            }
+        }
+
+        if ($candidate === null) {
+            return [];
+        }
+
+        $eid = edgeKey($curr, $candidate);
+        $visitedEdges[$eid] = true;
+
+        if ($candidate === $startKey) {
+            $polygon[] = $adj[$startKey]['point'];
+            return $polygon;
+        }
+
+        $polygon[] = $adj[$candidate]['point'];
+
+        $prev = $curr;
+        $curr = $candidate;
+
+        if (count($polygon) > 100000) {
+            return [];
+        }
+    }
+}
+
+function pointKey(array $p, int $precision = 8): string
+{
+    return round($p[0], $precision) . ',' . round($p[1], $precision);
+}
+
+function edgeKey(string $a, string $b): string
+{
+    return strcmp($a, $b) < 0 ? "$a|$b" : "$b|$a";
+}
+
+
+/**
+ * Entrada:
+ * $polygons = [
+ *   [ ['lat'=>..,'lon'=>..], ... cerrado ],
+ *   ...
+ * ]
+ *
+ * Salida:
+ * [
+ *   [
+ *     'outer' => [... CCW ...],
+ *     'inners' => [
+ *          [... CW ...],
+ *          ...
+ *     ]
+ *   ],
+ *   ...
+ * ]
+ *
+ * Regla:
+ * - Nivel 0 = exterior
+ * - Nivel 1 = agujero
+ * - Nivel 2 = nuevo exterior
+ */
+
+function normalizePolygonsForKML(array $polygons): array
+{
+    $items = [];
+
+    foreach ($polygons as $poly) {
+        if (count($poly) < 4) continue;
+
+        if (!isClosed($poly)) {
+            $poly[] = $poly[0];
+        }
+
+        $items[] = [
+            'poly' => $poly,
+            'area' => abs(signedArea($poly)),
+            'parent' => null,
+            'depth' => 0
+        ];
+    }
+
+    // ordenar grandes primero
+    usort($items, fn($a, $b) => $b['area'] <=> $a['area']);
+
+    $n = count($items);
+
+    // detectar contención directa
+    for ($i = 0; $i < $n; $i++) {
+
+        $pt = interiorPoint($items[$i]['poly']);
+
+        for ($j = 0; $j < $i; $j++) {
+
+            if (pointInPolygon($pt, $items[$j]['poly'])) {
+                $items[$i]['parent'] = $j;
+                break;
+            }
+        }
+    }
+
+    // calcular profundidad
+    for ($i = 0; $i < $n; $i++) {
+        $depth = 0;
+        $p = $items[$i]['parent'];
+
+        while ($p !== null) {
+            $depth++;
+            $p = $items[$p]['parent'];
+        }
+
+        $items[$i]['depth'] = $depth;
+    }
+
+    $result = [];
+
+    // crear exteriores válidos: depth par (0,2,4...)
+    foreach ($items as $idx => $item) {
+
+        if ($item['depth'] % 2 === 0) {
+
+            $outer = ensureCCW($item['poly']);
+
+            $result[$idx] = [
+                'outer' => $outer,
+                'inners' => []
+            ];
+        }
+    }
+
+    // asignar agujeros: depth impar (1,3,5...)
+    foreach ($items as $idx => $item) {
+
+        if ($item['depth'] % 2 === 1) {
+
+            // buscar ancestro exterior inmediato
+            $p = $item['parent'];
+
+            while ($p !== null && ($items[$p]['depth'] % 2 === 1)) {
+                $p = $items[$p]['parent'];
+            }
+
+            if ($p !== null && isset($result[$p])) {
+                $result[$p]['inners'][] = ensureCW($item['poly']);
+            }
+        }
+    }
+
+    return array_values($result);
+}
+
+/* =======================================================
+   GEOMETRÍA
+======================================================= */
+
+function signedArea(array $poly): float
+{
+    $sum = 0.0;
+    $n = count($poly);
+
+    for ($i = 0; $i < $n - 1; $i++) {
+        $x1 = $poly[$i][1];
+        $y1 = $poly[$i][0];
+
+        $x2 = $poly[$i + 1][1];
+        $y2 = $poly[$i + 1][0];
+
+        $sum += ($x1 * $y2) - ($x2 * $y1);
+    }
+
+    return $sum / 2.0;
+}
+
+function ensureCCW(array $poly): array
+{
+    return signedArea($poly) > 0 ? $poly : array_reverse($poly);
+}
+
+function ensureCW(array $poly): array
+{
+    return signedArea($poly) < 0 ? $poly : array_reverse($poly);
+}
+
+function isClosed(array $poly): bool
+{
+    $a = $poly[0];
+    $b = $poly[count($poly) - 1];
+
+    return $a[0] == $b[0] && $a[1] == $b[1];
+}
+
+function interiorPoint(array $poly): array
+{
+    // primer vértice sirve normalmente
+    return $poly[0];
+}
+
+function pointInPolygon(array $p, array $poly): bool
+{
+    $inside = false;
+    $x = $p[1]; // lon
+    $y = $p[0]; // lat
+
+    $n = count($poly);
+
+    for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
+
+        $xi = $poly[$i][1];
+        $yi = $poly[$i][0];
+
+        $xj = $poly[$j][1];
+        $yj = $poly[$j][0];
+
+        $intersect =
+            (($yi > $y) != ($yj > $y)) &&
+            ($x < ($xj - $xi) * ($y - $yi) / (($yj - $yi) ?: 1e-12) + $xi);
+
+        if ($intersect) {
+            $inside = !$inside;
+        }
+    }
+
+    return $inside;
 }
