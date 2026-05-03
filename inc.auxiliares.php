@@ -8,6 +8,7 @@
  */
 function altitudeModetoString ($altitudeMode){
 
+    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     $modo = "";
     switch($altitudeMode){
 	case 0: $modo = "clampToGround"; break; // "Subject to the ground"; break;
@@ -20,7 +21,7 @@ function altitudeModetoString ($altitudeMode){
 }
 
 function printMalla($malla, $relleno = " ") {
-
+    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     for($i = 0; $i < count($malla); $i++) {
         for($j = 0; $j < count($malla[$i]); $j++) {
             if ( $malla[$i][$j] == "0" ) {
@@ -49,6 +50,7 @@ function printContornos($contornos, $malla) {
         }
     }
 */
+    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     $alfa = array(
         'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
         'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'
@@ -70,12 +72,12 @@ function printContornos($contornos, $malla) {
 
 /**
  * Express number with a byte prefix (byte, Kb, Mb, Gb...)
- * @param size float number
- * @return float rounded number with prefix
+ * @param float $size number of bytes
+ * @return string rounded number with prefix
 */
-function convertBytes($size) {
+function convertBytes(float $size) {
         $unit = array('b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb');
-        return @round($size / pow(1024, ($i = floor(log($size, 1024)))), 1) . '' . $unit[$i];
+        return @round($size / pow(1024, ($i = (int)floor(log($size, 1024)))), 1) . '' . $unit[$i];
 }
 
 /**
@@ -92,11 +94,13 @@ function convertBytes($size) {
 *
 * @url https://stackoverflow.com/questions/23348339/optimizing-array-merge-operation
 *
-* @param array1 source and destination array
-* @param array2 second array to copy to array1
+* @param array $array1 source and destination array
+* @param array $array2 second array to copy to array1
 */
-function array_merge_fast(&$array1, &$array2) {
-    foreach($array2 as $i) {
+function array_merge_fast(&$array1, &$array2)
+{
+    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    foreach ($array2 as $i) {
         $array1[] = $i;
     }
 }
@@ -129,7 +133,7 @@ function countSetBits($num) {
  * si insert_EOL, añade fecha y salto de línea
  *
  */
-function logger($str, $insert_EOL = true) {
+function logger(string $str, bool $insert_EOL = true) {
 
     $d = new DateTime();
     if ( $insert_EOL )
@@ -234,7 +238,8 @@ class Combinations
  * Convierte un número de segundos en una cadena legible para humanos con unidades
  *
  */
-function timer_unidades( $t ) {
+
+function timer_unidades( float $t ) {
 
     $t = floor($t);
     $unidad = "";
@@ -253,17 +258,17 @@ function timer_unidades( $t ) {
 	}
     }
 
-    $timer_string = date($format, $t);
+    $timer_string = date($format, (int)floor($t));
 
     return $timer_string . " " . $unidad;
 }
 
 /**
  * Returns the area of a closed path on Earth.
- * @param path A closed path.
- * @return The path's area in square kilometers.
+ * @param float $path A closed path.
+ * @return float The path's area in square kilometers.
  */
-function computeArea($path) {
+function computeArea(float $path) {
     return abs(computeSignedArea($path)/1000000.0);
 }
 
@@ -271,8 +276,8 @@ function computeArea($path) {
  * Returns the signed area of a closed path on Earth. The sign of the area may be used to
  * determine the orientation of the path.
  * "inside" is the surface that does not contain the South Pole.
- * @param path A closed path.
- * @return The loop's area in square meters.
+ * @param float path A closed path.
+ * @return float The loop's area in square meters.
  */
 function computeSignedArea($path) {
     return computeSignedAreaP($path, RADIO_TERRESTRE);
