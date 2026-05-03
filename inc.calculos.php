@@ -1,5 +1,10 @@
 <?php
 
+// Más velocidad y menos precisión aumentando INTERSECTION_SUBDIVISION_LIMIT
+// Más precisión y menos velocidad disminuyendo INTERSECTION_SUBDIVISION_LIMIT
+const INTERSECTION_TOLERANCE_LIMIT_NM = 20; // Tolerancia para asegurar solape entre azimuths (NM)
+const INTERSECTION_TOLERANCE_LIMIT_RAD = INTERSECTION_TOLERANCE_LIMIT_NM / RADIO_TERRESTRE;
+const INTERSECTION_TOLERANCE_LIMIT_M = INTERSECTION_TOLERANCE_LIMIT_NM * MILLA_NAUTICA_EN_METROS; // Distancia máxima entre subdivisiones entre vértices
 CONST FRONTERA_LATITUD = 90; // latitud complementaria
 CONST FEET_TO_METERS = 0.30480370641307;
 // CONST PASO_A_GRADOS = 180.0;
@@ -11,7 +16,7 @@ CONST FEET_TO_METERS = 0.30480370641307;
  * Funcion que permite buscar los puntos limitantes necesarios para poder calcular la cobertura.
  * 
  * @param array $listaObstaculos (ENTRADA)
- * @param int $flm (ENTRADA)
+ * @param float $flm (ENTRADA)
  * @param float $alturaPrimerPtoSinCob (ENTRADA/SALIDA)
  * @param float $anguloPrimerPtoSinCob (ENTRADA/SALIDA)
  * @param float $alturaUltimoPtoCob (ENTRADA/SALIDA)
@@ -548,7 +553,7 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
  * @return array malla[i][j] = array(lat,lon,cobertura)
  */
 function calculosFLdebajoRadar2(array &$radar, float $flm) {
-
+    $time_malla_coverage_total = 0;
     $debug = false;
     // $radar['screening']['totalAzimuths'];
     // $numPtosAzimut = count( $radar['screening']['listaAzimuths'][$i] );
@@ -824,19 +829,6 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     $lat_rad = $radar['lat_rad'];
     $lon_rad = $radar['lon_rad'];
     
-    $max_distance_vertex_NM = 20;            // Distancia máxima entre vértices [nm]
-    $max_distance_vertex_m = $max_distance_vertex_NM * MILLA_NAUTICA_EN_METROS; // Distancia máxima entre vértices [m]
-
-
-    // Corrección al azimuth (+ x metros para asegurar solape entre polígonos)
-    $tol_lin = 20;                              // Tolerancia para asegurar solape entre acimuths [m]
-    // $tol_ang = rad2deg($tol_lin / RADIO_TERRESTRE);  // Tolerancia para asegurar solape entre azimuths [º]
-    $tol_rad = $tol_lin / RADIO_TERRESTRE;  // Tolerancia para asegurar solape entre azimuths [º]
-
-    // Más velocidad y menos precisión aumentando NM_max y tol_lin
-    // Más precisión y menos velocidad disminuyendo NM_max y tol_lin
-
-    
     //for ($j = 0; $j < count($[0]); $j++) {
 
     $start_time = microtime(true);
@@ -848,10 +840,9 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
         $countPct = $azi*100.0 / count($intersec);
         if ( ($countPct - $countPct_old) > 10 ) { logger("[" . round($countPct) . "%]", false); $countPct_old = $countPct; }
 
-        // print "AZI>" . $azi . PHP_EOL;
         $last = 1; // se empieza en la última fila con cobertura del polígono
          // Cada columna se recorre hacia atrás empezando sin cobertura
-        $cont_i = 0;
+        // $cont_i = 0;
 
         // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
         // $a1 = deg2rad( ($azi + 1) * $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
@@ -859,7 +850,7 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
         // ojo, si tenemos 720º, en la lista de obstáculos tendremos 720 entradas. No vamos a poder entrar usando a1 como índice!
         $a1_rad = deg2rad( $azi * $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
         $a2_rad = deg2rad( $azi * $azimuth_step + ($azimuth_step / 2) );  // Segundo ángulo [rad]
-        $cos_a1 = $cos_a2 = $sin_a1 = $sin_a2 = false;
+        // $cos_a1 = $cos_a2 = $sin_a1 = $sin_a2 = false;
 
         // Cada columna se recorre hacia atrás empezando sin cobertura
         //for ($i = count($Intersec) - 1; $i >= 0; $i--) {
@@ -877,11 +868,10 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
                     $r2,
                     $a1_rad,
                     $a2_rad,
-                    $tol_rad,
-                    $cos_a1,
-                    $sin_a1,
-                    $cos_a2,
-                    $sin_a2,
+//                    $cos_a1,
+//                    $sin_a1,
+//                    $cos_a2,
+//                    $sin_a2,
                     $cos_lat90,
                     $sin_lat90,
                     $lat_rad,
@@ -906,11 +896,10 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
                     $r1,
                     $a1_rad,
                     $a2_rad,
-                    $tol_rad,
-                    $cos_a1,
-                    $sin_a1,
-                    $cos_a2,
-                    $sin_a2,
+//                    $cos_a1,
+//                    $sin_a1,
+//                    $cos_a2,
+//                    $sin_a2,
                     $cos_lat90,
                     $sin_lat90,
                     $lat_rad,
@@ -932,8 +921,9 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
                 // Aumento de resolución
                 // print "En azimut $azi, la distancia entre vertices es: " .(($r2 - $r1) / MILLA_NAUTICA_EN_METROS) . "NM" . PHP_EOL;
 
-                if ((($r2 - $r1) / MILLA_NAUTICA_EN_METROS) >= $max_distance_vertex_NM) {   // Polígono demasiado largo
-                    $n_subdivisiones = (int)floor(2 * ($r2 - $r1) / ($max_distance_vertex_m)) - 1;
+                // if ((($r2 - $r1) / MILLA_NAUTICA_EN_METROS) >= INTERSECTION_TOLERANCE_LIMIT_NM) {   // Polígono demasiado largo
+                if (($r2 - $r1) >= INTERSECTION_TOLERANCE_LIMIT_RAD) {   // Polígono demasiado largo
+                    $n_subdivisiones = (int)floor(2 * ($r2 - $r1) / (INTERSECTION_TOLERANCE_LIMIT_M)) - 1;
                     // print "Necesarias $n_subdivisiones subdivisiones en azimut $azi, distancia entre vertices es de " . round(($r2 - $r1)/MILLA_NAUTICA_EN_METROS,2) . " NM" . PHP_EOL;
                     // print "r2: " . $r2 . " r1: " . $r1 . PHP_EOL;
                     $poly = [$p1, $p2];
@@ -950,11 +940,10 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
                             $r_subd,
                             $a1_rad,
                             $a2_rad,
-                            $tol_rad,
-                            $cos_a1,
-                            $sin_a1,
-                            $cos_a2,
-                            $sin_a2,
+//                    $cos_a1,
+//                    $sin_a1,
+//                    $cos_a2,
+//                    $sin_a2,
                             $cos_lat90,
                             $sin_lat90,
                             $lat_rad,
@@ -981,7 +970,9 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
                 }
 
                 // Se hallan los puntos del mallado contenidos en el polígono
+                $timer_malla_coverage = microtime(true);
                 set_malla_coverage($malla_lat_lon, $poly);
+                $time_malla_coverage_total = microtime(true) - $timer_malla_coverage;
                 $last = 1;
             }
         }
@@ -989,6 +980,9 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     
     logger("[100%]" . PHP_EOL, false);
     logger(" I> Malla de cobertura generada (" . round(microtime(true) - $start_time, 3) . "s)");
+    logger(" I> Tiempo en set_malla_coverage: " . round($time_malla_coverage_total,3) . "s");
+    logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+        "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
     /*
         $res = array();
@@ -1012,27 +1006,89 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
  * Función que calcula los vértices de intersección entre el círculo definido por el radio r y el sector anular definido por los ángulos a1 y a2
  * Se optimiza para no calcular sin(a1), cos(a1), sin(a2), cos(a2)
  * Se corrige el azimuth con una tolerancia para asegurar solape entre polígonos
- * return array con los vértices de intersección [lat, lon] [º]
+ * @param float $cos_lat90 depende del radar, no cambia
+ * @param float $sin_lat90 depende del radar, no cambia
+ * @param float $lat_rad depende del radar, no cambia
+ * @param float $lon_rad depende del radar, no cambia
+ * 
+ * @return array con los vértices de intersección [lat, lon] [º]
  */
 function calcula_vertices_interseccion(
     float $r,
     float $a1_rad,
     float $a2_rad,
-    float $tol_rad,
-    float &$cos_a1,
-    float &$sin_a1,
-    float &$cos_a2,
-    float &$sin_a2,
+//    float &$cos_a1,
+//    float &$sin_a1,
+//    float &$cos_a2,
+//    float &$sin_a2,
     float $cos_lat90,
     float $sin_lat90,
     float $lat_rad,
     float $lon_rad
 ) {
 
-    $alpha = $r / RADIO_TERRESTRE;             // Último ángulo central [rad]
+    static $alpha_cache = [];
+    static $a1a2_cache = [];
+    //static $count = 0;
 
-    $cos_alpha = cos($alpha);
-    $sin_alpha = sin($alpha);
+    // $r = round($r,0);
+      $alpha = $r / RADIO_TERRESTRE;
+        $cos_alpha = cos($alpha);
+        $sin_alpha = sin($alpha);
+  
+    $a1_rad  = round($a1_rad,2);
+    $a2_rad  = round($a2_rad,2);
+    
+    // CACHEANDO RESULTAADOS
+    //print "$r,$a1_rad,$a2_rad" . PHP_EOL;
+    /*
+    */
+    // print "$r,$a1_rad,$a2_rad" . PHP_EOL;
+    
+    // print $count . " " . count($alpha_cache) . " " . count($a1a2_cache) . PHP_EOL;
+     // print_r($alpha_cache);
+    //$count++;
+/*
+    if (!isset($alpha_cache[(string)$r])) {
+        $alpha = $r / RADIO_TERRESTRE;
+        $cos_alpha = cos($alpha);
+        $sin_alpha = sin($alpha);
+        $alpha_cache[(string)$r] = [
+            'cos' => $cos_alpha,
+            'sin' => $sin_alpha
+        ];
+    } else {
+        $cos_alpha = $alpha_cache[(string)$r]['cos'];
+        $sin_alpha = $alpha_cache[(string)$r]['sin'];
+    }
+*/
+    if (!isset($a1a2_cache[(string)$a1_rad])) {
+        $cos_a1 = cos($a1_rad);
+        $sin_a1 = sin($a1_rad);
+        $a1a2_cache[(string)$a1_rad] = [
+            'cos' => $cos_a1,
+            'sin' => $sin_a1
+        ];
+    } else {
+        $cos_a1 = $a1a2_cache[(string)$a1_rad]['cos'];
+        $sin_a1 = $a1a2_cache[(string)$a1_rad]['sin'];
+    }
+    
+    if (!isset($a1a2_cache[(string)$a2_rad])) {
+        $cos_a2 = cos($a2_rad);
+        $sin_a2 = sin($a2_rad);
+        $a1a2_cache[(string)$a2_rad] = [
+            'cos' => $cos_a2,
+            'sin' => $sin_a2
+        ];
+    } else {
+        $cos_a2 = $a1a2_cache[(string)$a2_rad]['cos'];
+        $sin_a2 = $a1a2_cache[(string)$a2_rad]['sin'];
+    }
+    
+    // $cos_alpha = cos($alpha);
+    // $sin_alpha = sin($alpha);
+/*
     if (false == $cos_a1) { // sólo se calculan una vez por azimuth
         // pero no se saca fuera porque si en el azimut no hay cobertura, ahorramos el cálculo
         $cos_a1 = cos($a1_rad);
@@ -1040,6 +1096,7 @@ function calcula_vertices_interseccion(
         $sin_a1 = sin($a1_rad);
         $sin_a2 = sin($a2_rad);
     }
+*/
     $cos_lat90xcos_alpha2 = $cos_lat90 * $cos_alpha;
     $sin_lat90xsin_alpha2 = $sin_lat90 * $sin_alpha;
 
@@ -1065,20 +1122,17 @@ function calcula_vertices_interseccion(
     $lon1_d = acos($cos_par1) / $cos_lat_abs1;
     $lon2_d = acos($cos_par2) / $cos_lat_abs2;
 
-    // $lon1_d = acos($cos_par1) / cos($asin_lat1_rad);
-    // $lon2_d = acos($cos_par2) / cos($asin_lat2_rad);
-
     // Signo según sin(ángulo)
     $lon1_d = $lon_rad + (($sin_a1 >= 0) ? $lon1_d : -$lon1_d);
     $lon2_d = $lon_rad + (($sin_a2 >= 0) ? $lon2_d : -$lon2_d);
 
     // Corrección al acimut (+ x metros para asegurar solape entre polígonos)
     // a1
-    $asin_lat1_rad += $tol_rad * $sin_a1;
-    $lon1_d -= $tol_rad * $cos_a1;
+    $asin_lat1_rad += INTERSECTION_TOLERANCE_LIMIT_RAD * $sin_a1;
+    $lon1_d -= INTERSECTION_TOLERANCE_LIMIT_RAD * $cos_a1;
     // a2
-    $asin_lat2_rad -= $tol_rad * $sin_a2;
-    $lon2_d += $tol_rad * $cos_a2;
+    $asin_lat2_rad -= INTERSECTION_TOLERANCE_LIMIT_RAD * $sin_a2;
+    $lon2_d += INTERSECTION_TOLERANCE_LIMIT_RAD * $cos_a2;
 
     $p1 = [rad2deg($asin_lat1_rad), rad2deg($lon1_d)];
     $p2 = [rad2deg($asin_lat2_rad), rad2deg($lon2_d)];

@@ -56,7 +56,7 @@ $config = array(
         'cache' => "." . DIRECTORY_SEPARATOR . "cache" . DIRECTORY_SEPARATOR,
         'resultados_multi' => "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR . "MULTI" . DIRECTORY_SEPARATOR,
     ),
-    'mode' => array('monoradar' => false, 'multiradar' => false, 'multiradar_unica' => false, 'list' => false), // monoradar, multiradar
+    'mode' => array('monoradar' => true, 'multiradar' => false, 'multiradar_unica' => false, 'list' => false), // monoradar, multiradar
     'disable-kmz' => false,
 );
 
@@ -371,11 +371,11 @@ function programaPrincipal(array $config)
 
 }
 
-function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCono = false) { //, $modo = 'monoradar') {
+function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCono = false)
+{
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
     $flm = $fl * 100 * FEET_TO_METERS; // fl en metros
-
 
     // DISTINCIÓN DE CASOS 
     if ($flm >= $hA) { // CASO A (nivel de vuelo por encima de la posición del radar)
@@ -388,37 +388,23 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
         $radar['range'] = round($newRange);
         $listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
         // ya sabemos que la lista exterior de alcances va a estar
-	    // CW y tenemos que invertirla (porque se calcula siguiendo los azimut de 0 a 360ª)
-	    // y la interior igual.
-	    // para un kml deberíamos tener:
-	    // exterior rings: counter-clockwise CCW
-	    // interior rings (holes): clockwise direction CW
+        // CW y tenemos que invertirla (porque se calcula siguiendo los azimut de 0 a 360ª)
+        // y la interior igual.
+        // para un kml deberíamos tener:
+        // exterior rings: counter-clockwise CCW
+        // interior rings (holes): clockwise direction CW
         // todo eso se hará en normalizePolygonsForKML
 
-        
+        $listaContornosConos2 = false;
         if ($calculoCono) {
             $radioConom = ($flm - $hA) * tan(deg2rad(ANGULO_CONO));
             $radioCono = $radioConom / MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
             $distanciasConos = array_fill(0, count($distanciasAlcances), $radioCono);
             logger(" N> Radio del Cono: " . round($radioCono, 2) . "NM / " . round($radioConom, 2) . "m");
             $listaContornosConos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasConos);
-        } else {
-            $listaContornosConos2 = false;
         }
-        
-        $result = normalizePolygonsForKML( array_merge(array($listaContornos2), array($listaContornosConos2)));
 
-        creaKml3(
-            $result,
-            array($radar['screening']['site']),
-            array("./"),
-            $nivelVuelo,
-            $altMode = "RelativeToGround",
-            $appendToFilename = '',
-            $coverageLevel = 'mono'
-        );
-
-
+        $result = normalizePolygonsForKML(array_merge(array($listaContornos2), array($listaContornosConos2)));
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
         if ($calculoCono) {
@@ -432,69 +418,9 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
             logger(" I> No existe cobertura para el sensor {$radar['radar']} a FL{$nivelVuelo}");
             return false;
         }
-        print_r($polygons);exit(0);
+
         $result = normalizePolygonsForKML($polygons);
-
-        // esta llamada no debería estar aquí, sino en main.
-        creaKml3(
-            $result,
-            array($radar['screening']['site']),
-            array("./"),
-            $nivelVuelo,
-            $altMode = "RelativeToGround",
-            $appendToFilename = '',
-            $coverageLevel = 'mono'
-        );
-
-        //exit(0);
-
-        /*
-        $malla = calculosFLdebajoRadar2($radar, $flm);
-        $newRange = obtieneMaxAnguloConCoberturaB($radar);
-        $radar['screening']['range'] = round($newRange);
-        $radar['range'] = round($newRange);
-
-        // if ( 'multiradar' == $modo ) { // puede ser hasta 10 segundos más lenta que sin LatLon en 170NM
-        logger(" D> generacionMalladoLatLon start"); $timer0 = microtime(true);
-        $mallado = generacionMalladoLatLon($radar, $flm, $distanciasAlcances = array());
-        logger(" D> generacionMalladoLatLon ended " . round(microtime(true) - $timer0,3) . " segundos");
-        // }
-
-        // comprobación si hay cobertura en las esquinas de la malla. En ese caso,
-        // determinaContornos2 podría fallar
-        */
-        /*
-        logger(" D> check coverage overflow start"); $timer0 = microtime(true);
-        checkCoverageOverflow($mallado['malla']);
-        logger(" D> check coverage overflow ended " . round(microtime(true) - $timer0,3) . " segundos");;
-
-	logger(" D> determinaContornos2 start"); $timer0 = microtime(true);
-        $listaContornos2 = determinaContornos2($mallado['malla']);
-	logger(" D> determinaContornos2 ended " . round(microtime(true) - $timer0,3) . " segundos");
-
-	if ( 0 == count($listaContornos2) ) {
-	    logger(" I> No se generan contornos porque no existe cobertura del sensor {$radar['radar']} a FL{$nivelVuelo}");
-	    return false;
-	}
-        logger(" D> calculaCoordenadasGeograficasB"); $timer0 = microtime(true);
-        $listaContornos2 = calculaCoordenadasGeograficasB($radar, $flm, $listaContornos2);
-	logger(" D> calculaCoordenadasGeograficasB ended " . round(microtime(true) - $timer0, 3) . " segundos");
-	// print_r($listaContornos2); exit(0);
     }
-*/
-        // print_r($listaContornos2);exit(0);
-        /*
-    print "[crearKml]" . PHP_EOL;
-    creaKml2(
-        $listaContornos2,
-        $radar['screening']['site'],
-        $ruta,
-        $fl,
-        $altMode,
-        $appendToFilename = '',
-        $coverageLevel = 'mono'
-    );
-*/
-        return false; //$listaContornos2;
-    }
+
+    return $result;
 }

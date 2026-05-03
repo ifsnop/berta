@@ -97,23 +97,26 @@ function fromPolygons2KML3($polygons, $radarWithFL, $rgb, $altMode, $fl)
  * @param array $rutas Paths donde guardar el fichero generado (ENTRADA)
  * @param string $nivelVuelo Nivel de vuelo usado para el cálculo
  * @param string $altMode Si el KML está pegado al suelo "clampToGround|clampToSeaFloor" o la altura es relativa "RelativeToGround" o absoluta "absolute" (ENTRADA)
- * @param string|array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
- * @param bool $kmz true or false for kml
+ * @param string $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
+ * @param bool $disableKmz Disable generation of compressed kml (kmz) files
  * @return bool
  */
-function creaKml3(array $listaContornos, array $sensors, array $rutas, $nivelVuelo, $altMode, $appendToFilename = "", $coverageLevel = 'mono', $disableKmz = true)
+function creaKml3(array $listaContornos, array $sensors, array $rutas, string $nivelVuelo, string $altMode, string $appendToFilename = "", string $coverageLevel = 'mono', bool $disableKmz = true)
 {
     // conversión a metros para usar en el kmz
     $flm = round(((float)$nivelVuelo) * 100.0 * FEET_TO_METERS, 2);
     // aseguramos el formato del nivel de vuelo
     $nivelVuelo = str_pad($nivelVuelo, 3, "0", STR_PAD_LEFT);
+    $coverageLevelAppend = "-" . $coverageLevel;
 
     switch ($coverageLevel) {
         case "unica":
             $rgb = "7d00ff00";
+            $coverageLevelAppend = "";
             break;         // igual que mono
         case "mono":
             $rgb = "7d00ff00";
+            $coverageLevelAppend = "";
             break;
         // case "mono": $rgb = "e6ff9724"; break;          // Rascal
         case "doble":
@@ -145,9 +148,9 @@ function creaKml3(array $listaContornos, array $sensors, array $rutas, $nivelVue
         $appendToFilename = "-" . implode("_", $appendToFilename);
     }
 
-    
-    $radarWithFL = implode(",", $sensors) . "-" .
-    $coverageLevel . "-FL" . $nivelVuelo . $appendToFilename;
+
+    $radarWithFL = implode(",", $sensors) . 
+        $coverageLevelAppend . "-FL" . $nivelVuelo . $appendToFilename;
     // else {
     //    $radarWithFL = $radarName . "-FL" . $nivelVuelo . $appendToFilename;
     //}
