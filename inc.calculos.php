@@ -566,12 +566,12 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     //$AzimFin = 360;
     //$AziPaso = 360.0 / $radar['screening']['totalAzimuths'];
     // print $AziPaso . PHP_EOL;
-
+/*
     $radar['lat_deg'] = $radar['lat'] = 41.773763888889;
     $radar['lon_deg'] = $radar['lon'] = 2.4376138888889;
     $radar['lat_rad'] = deg2rad(41.773763888889);
     $radar['lon_rad'] = deg2rad(2.4376138888889);
-
+*/
     $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
 
     // Ángulo central máximo según rango en millas
@@ -629,13 +629,13 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
               *           m*(xb-xa) - (yb-ya)
               */
 
-            print "xa: $xa ya: $ya xb: $xb yb: $yb" . PHP_EOL;
+            // print "xa: $xa ya: $ya xb: $xb yb: $yb" . PHP_EOL;
 
             $dx = $xb - $xa;
             $dy = $yb - $ya;
             $t = ($m * $xa - $ya) / ($dy - $m * $dx);
             if ($t >= 1) { // Más allá del último obstáculo
-                print "IFSNOP $azimut" . PHP_EOL; // exit(-1);
+                //print "IFSNOP $azimut" . PHP_EOL; exit(-1);
                 $xi = $xa + $t * $dx;   // Punto de intersección
                 $yi = $ya + $t * $dy;   // Punto de intersección
 
@@ -647,10 +647,10 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
 
                 // Se añaden los dos nuevos puntos
                 $matriz_obstaculos[$azimut][$i] = [$xi, $yi];
-                print "[$i,$azimut] => $xi,$yi" . PHP_EOL;
+                // print "[$i,$azimut] => $xi,$yi" . PHP_EOL;
                 $i++;
                 $matriz_obstaculos[$azimut][$i] = [$xil, $yil];
-                print "[$i,$azimut] => $xil,$yil" . PHP_EOL;
+                // print "[$i,$azimut] => $xil,$yil" . PHP_EOL;
                 $i++;
             }
         }
@@ -852,13 +852,11 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
         $a2_rad = deg2rad( $azi * $azimuth_step + ($azimuth_step / 2) );  // Segundo ángulo [rad]
         // $cos_a1 = $cos_a2 = $sin_a1 = $sin_a2 = false;
 
-        // Cada columna se recorre hacia atrás empezando sin cobertura
-        //for ($i = count($Intersec) - 1; $i >= 0; $i--) {
+        // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
         $p1 = $p2 = $p3 = $p4 = array(); // Esquinas del polígono
         $r1 = $r2 = 0; // Radios de las esquinas del polígono
         for ($i = count($intersec[$azi])-1; $i >= 0; $i--) {
 
-            //if (($Intersec[$i][$j] != 0) && ($last == 1)) {     // Última fila con cobertura del polígono
             if ($intersec[$azi][$i] != 0 && $last == 1) {     // Última fila con cobertura del polígono
 
                 // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
@@ -1720,6 +1718,7 @@ $listaC = array(
  * @return array nuevo punto con filas asociadas con la longitud y columnas con latitud en grados (SALIDA)
  */
 function transformaCoordenadas($radar, $flm, $tamMallaMitad, $p, $latComp) {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     // ¿por qué se utiliza el -1? RESPUESTA porque le hemos añadido un 1 a la malla cuando
     // la generábamos, para hacer la malla impar y que la celda del centro es la que contenga
     // al radar
@@ -1839,7 +1838,7 @@ function determinaContornos2_getContornos($malla) {
  * polígonos, así que se pueden crear varios contornos.
  * Apuntamos cual es la esquina inferior izquierda porque luego la usaremos para rotar el polígono
  * (si está dentro o fuera, debe ir CW o CCW).
- * @param array $contorno lista de segmentos de contornos (ENTRADA)
+ * @param array $c lista de segmentos de contornos (ENTRADA)
  * @return array lista de contornos cerrados
  */
 function determinaContornos2_joinContornos($c) {
@@ -2121,7 +2120,7 @@ function determinaContornos2_joinContornos($c) {
  * Helper de determinaContornos2. Ordena la jerarquía de una lista de
  * contornos cerrados, para saber quién depende de quién. También rota
  * los contornos dependiendo de si están dentro o fuera de otro.
- * @param array $contorno lista de contornos cerrados (ENTRADA)
+ * @param array $listaContornos lista de contornos cerrados (ENTRADA)
  * @return array jerarquía de contornos ya clasificados y rotados
  */
 function determinaContornos2_sortContornos($listaContornos, $is_in_polygon_function = 'is_in_polygon2') {

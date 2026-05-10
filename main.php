@@ -130,9 +130,13 @@ function programaPrincipal(array $config)
             case 'r':
                 // var_dump($value);
                 if ("" != $value) {
+                    $i = 0;
                     $config['sensores'] = explode(" ", trim($value));
-                    foreach ($config['sensores'] as $index => $sensor)
-                        $config['sensores'][$index] = strtolower($sensor);
+                    foreach ($config['sensores'] as $sensor) {
+                        if ("" == $sensor)
+                                continue;
+                        $config['sensores'][$i++] = strtolower($sensor);
+                    }
                 } // else coje la lista completa por defecto
                 logger(" I> Ejecutando con la siguiente selección de sensor(es) (" . implode(",", $config['sensores']) . ")");
                 break;

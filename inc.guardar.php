@@ -7,11 +7,14 @@ const PERMISOS = 0775;
  * Genera un KML a partir de una definición de poligonos. Cada polígono
  * puede tener huecos, definidos en los subarrays "innners". Función para
  * parsear directamente la salida de normalizePolygonsForKML.
- * @param array polygons
+ * @param array $polygons
+ * @param string $radarWithFL
+ * @param string $rgb
+ * @param string $altMode
+ * @param float $fl
  * @return string kml
- * @return bool
  */
-function fromPolygons2KML3($polygons, $radarWithFL, $rgb, $altMode, $fl)
+function fromPolygons2KML3(array $polygons, string $radarWithFL, string $rgb, string $altMode, float $fl)
 {
 
     $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
@@ -51,6 +54,9 @@ function fromPolygons2KML3($polygons, $radarWithFL, $rgb, $altMode, $fl)
         //if ( 10000 < count($polygon['polygon']) ) {
         // $count = count($polygon['outer']);
         //    print "DEBUG current/refined vertex count => " . count($polygon['polygon']) . "/";
+        if ( !isset( $polygon['outer']) ) {
+            throw new InvalidArgumentException("Polygon doesn't have outer definitino, error with polygon");
+        }
         $polygon['outer'] = ramer_douglas_peucker($polygon['outer'], 0.0000000001);
         // $new_count = count($polygon['outer']);
         //if ( $count != $new_count ) {

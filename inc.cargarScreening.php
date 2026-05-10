@@ -49,7 +49,7 @@ function cargarDatosTerreno ($radar, $forzarAlcance = false) {
 	    $lineaActual++;
 	}
 	// anotamos el acimut actual
-	$acimutActual = substr($contenidoFichero[$lineaActual++], 8) + 0;
+	$acimutActual = (int) substr($contenidoFichero[$lineaActual++], 8);
 
 	// comprobación de coherencia entre acimuts
         if ( ($acimutActual - $acimutOld) > 1 ) {
