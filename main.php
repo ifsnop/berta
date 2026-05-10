@@ -17,7 +17,6 @@ require_once('inc.cargarScreening.php');
 require_once('inc.cargarCoordenadas.php');
 require_once('inc.auxiliares.php');
 require_once('inc.calculos.php');
-require_once('inc.multiCalculos.php');
 require_once('inc.guardar.php');
 require_once('vendor/autoload.php');
 
@@ -342,6 +341,9 @@ function programaPrincipal(array $config)
         }
 	if ( (isset($config['mode']['multiradar']) && $config['mode']['multiradar'] === true ) ||
 	    (isset($config['mode']['multiradar_unica']) && $config['mode']['multiradar_unica'] === true) ) {
+
+        // included here because it uses php >=8
+        require_once('inc.multiCalculos.php');
 
 	    crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
 	    multicobertura(

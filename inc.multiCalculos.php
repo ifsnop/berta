@@ -2,6 +2,19 @@
 
 use Ifsnop\MartinezRueda as MR;
 
+/*
+// Quick test code
+$region_a =  [[[0,0], [0,1], [1,1], [1,0]]];
+$region_b = [[[1,0], [2,0], [2,1], [1,1]]];
+$pa = MR\Polygon::create()->fillFromArray($region_a);
+$pb = MR\Polygon::create()->fillFromArray($region_b);
+$result = MR\Algorithm::union($pa, $pb)->getArray();
+print_r($result);
+exit(0);
+
+*/
+
+
 /**
  * Helper para convertir los contornos que generamos (lat,lon) en una lista
  * de vértices (0=>lat, 1=>lon) que espera MartinezRueda.
