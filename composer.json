@@ -2,5 +2,8 @@
     "require-dev": {
         "phpstan/phpstan": "^2.1",
         "shipmonk/dead-code-detector": "^1.1"
+    },
+    "require" : {
+        "ifsnop/martinez-rueda-php": "^1.0.1"
     }
 }
