@@ -13,30 +13,33 @@ const ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, serí
 const BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
 
 // INCLUSIÓN DE FICHEROS
-include_once('inc.cargarScreening.php');
-include_once('inc.cargarCoordenadas.php');
-include_once('inc.auxiliares.php');
-include_once('inc.calculos.php');
-include_once('inc.multiCalculos.php');
-include_once('inc.guardar.php');
+require_once('inc.cargarScreening.php');
+require_once('inc.cargarCoordenadas.php');
+require_once('inc.auxiliares.php');
+require_once('inc.calculos.php');
+require_once('inc.multiCalculos.php');
+require_once('inc.guardar.php');
 
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Algorithm.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/CombinedPolySegments.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Fill.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Intersecter.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/IntersectionPoint.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/LinkedList.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Matcher.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Node.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Point.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/PolyBoolException.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Polygon.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/PolySegments.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/RegionIntersecter.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentChainerMatcher.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentIntersecter.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Segment.php');
-include_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Transition.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Algorithm.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/CombinedPolySegments.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Debug.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Fill.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/GJTools.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Intersecter.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/IntersectionPoint.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/InvalidArgumentException.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Matcher.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Node.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Point.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/PolyBoolException.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Polygon.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/PolySegments.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/RegionIntersecter.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentChainerMatcher.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/SegmentIntersecter.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Segment.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/StatusList.php');
+require_once('martinez-rueda-php/src/Ifsnop/MartinezRueda/Transition.php');
 
 
 $config = array(

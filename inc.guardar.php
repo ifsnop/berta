@@ -830,9 +830,10 @@ function writeKMZ($fileName, $radarWithFL, $content, $disableKmz = false)
     if (true === $disableKmz || !class_exists('ZipArchive')) {
         // generar kml y volver
         logger(" V> Guardando fichero {$fileName}.kml");
-        if (false === ($ret = file_put_contents("{$fileName}.kml", $content))) {
+        if (false === ($ret = @file_put_contents("{$fileName}.kml", $content))) {
             logger(" E> Problema al guardar {$fileName}.kml");
-            return false;
+            exit(-1);
+            //return false;
         }
 
         return true;
