@@ -293,7 +293,7 @@ function computeArea(float $path) {
  * Returns the signed area of a closed path on Earth. The sign of the area may be used to
  * determine the orientation of the path.
  * "inside" is the surface that does not contain the South Pole.
- * @param float path A closed path.
+ * @param float $path A closed path.
  * @return float The loop's area in square meters.
  */
 function computeSignedArea($path) {

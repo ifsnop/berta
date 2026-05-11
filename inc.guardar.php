@@ -238,8 +238,8 @@ function normalizePolygonsForKML(array $polygons): array
         $pt = interiorPoint($items[$i]['poly']);
 
         for ($j = 0; $j < $i; $j++) {
-
-            if (pointInPolygon($pt, $items[$j]['poly'])) {
+    
+            if (pointInPolygon($pt[0], $pt[1], $items[$j]['poly'], count($items[$j]['poly']))) {
                 $items[$i]['parent'] = $j;
                 break;
             }
@@ -355,23 +355,23 @@ function interiorPoint(array $poly): array
 }
 /*
     * Test if point is inside polygon
-    * @param array $p point [lat, lon]
+    * @param float $x latitude
+    * @param float $y longitude
     * @param array $poly list of points [[lat, lon], ...] doesn't need to be closed
+    * @param int $n number of points in poly
     * @return bool true if inside
     */
-function pointInPolygon(array $p, array $poly, float $eps = 1e-12): bool
+function pointInPolygon(float $y, float $x, array &$poly, int $n): bool
 {
-    //die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     // Devuelve:
     //  true  -> dentro
     //  false  -> fuera
     //  exception -> sobre el borde 
     
     $inside = false;
-    $x = $p[1]; // lon
-    $y = $p[0]; // lat
-
-    $n = count($poly);
+    // $x = $p[1]; // lon
+    // $y = $p[0]; // lat
+    // $n = count($poly);
                 
     for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
         $xi = $poly[$i][1];
@@ -383,15 +383,25 @@ function pointInPolygon(array $p, array $poly, float $eps = 1e-12): bool
         // if (pointOnSegment($x, $y, $xi, $yi, $xj, $yj, $eps)) {
         //    throw new InvalidArgumentException("el punto {$x},{$y} se encuentra sobre el segmento del polígono");
         //}
+/*
+        if ( ($yi > $y) !== ($yj > $y) ) {
+            $denom = $yj - $yi;
+            if ($denom != 0.0 && $x < ($xj - $xi) * ($y - $yi) / $denom + $xi) {
+                $inside = !$inside;
+            }
+        }
+*/
+
+        
         $intersect =
             (($yi > $y) != ($yj > $y)) &&
-            ($x < ($xj - $xi) * ($y - $yi) / (($yj - $yi) ?: 1e-12) + $xi);
+            ($x < ($xj - $xi) * ($y - $yi) / (($yj - $yi)) + $xi);
 
         if ($intersect) {
             $inside = !$inside;
         }
+        
     }
-
     return $inside;
 }
 
@@ -414,7 +424,6 @@ function pointOnSegment(float $px, float $py, float $x1, float $y1, float $x2, f
 
     return true;
 }
-
 
 // BORRAR A PARTIR DE AQUI
 

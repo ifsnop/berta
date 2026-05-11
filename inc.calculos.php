@@ -554,6 +554,7 @@ function obtenerPtosCorte($earthToRadar, $gammaMax, $earthToFl, $radioTerrestreA
  */
 function calculosFLdebajoRadar2(array &$radar, float $flm) {
     $time_malla_coverage_total = 0;
+    $time_calcula_vertices_interseccion_total = 0;
     $debug = false;
     // $radar['screening']['totalAzimuths'];
     // $numPtosAzimut = count( $radar['screening']['listaAzimuths'][$i] );
@@ -835,10 +836,10 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
     
     logger("[00%]", false); $countPct_old = 0;
-    
-    for ($azi = 0; $azi < count($intersec); $azi++) {
-        $countPct = $azi*100.0 / count($intersec);
-        if ( ($countPct - $countPct_old) > 10 ) { logger("[" . round($countPct) . "%]", false); $countPct_old = $countPct; }
+    $count_intersec = count($intersec);
+    for ($azi = 0; $azi < $count_intersec; $azi++) {
+        $countPct = $azi / $count_intersec;
+        if ( ($countPct - $countPct_old) >= 0.10 ) { logger("[" . round($countPct*100) . "%]", false); $countPct_old = $countPct; }
 
         $last = 1; // se empieza en la última fila con cobertura del polígono
          // Cada columna se recorre hacia atrás empezando sin cobertura
@@ -855,27 +856,25 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
         // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
         $p1 = $p2 = $p3 = $p4 = array(); // Esquinas del polígono
         $r1 = $r2 = 0; // Radios de las esquinas del polígono
-        for ($i = count($intersec[$azi])-1; $i >= 0; $i--) {
+        $count_intersec_azi = count($intersec[$azi])-1;
+        for ($i = $count_intersec_azi; $i >= 0; $i--) {
 
             if ($intersec[$azi][$i] != 0 && $last == 1) {     // Última fila con cobertura del polígono
 
                 // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
                 // Ùltimo radio [m]
                 $r2 = $intersec[$azi][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+                $time_calcula_vertices_interseccion = microtime(true);
                 [$p1, $p2] = calcula_vertices_interseccion(
                     $r2,
                     $a1_rad,
                     $a2_rad,
-//                    $cos_a1,
-//                    $sin_a1,
-//                    $cos_a2,
-//                    $sin_a2,
                     $cos_lat90,
                     $sin_lat90,
                     $lat_rad,
                     $lon_rad
                 );
-
+                $time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
                 $last = 0; // marcamos que en esta intersección ya no hay cobertura del polígono
                 // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
                 // print "p1: " . json_encode($p1) . " p2: " . json_encode($p2) . PHP_EOL;
@@ -890,19 +889,17 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
 
                 // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
                 $r1 = $intersec[$azi][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
-                  [$p4, $p3] = calcula_vertices_interseccion(
+                $time_calcula_vertices_interseccion = microtime(true);
+                [$p4, $p3] = calcula_vertices_interseccion(
                     $r1,
                     $a1_rad,
                     $a2_rad,
-//                    $cos_a1,
-//                    $sin_a1,
-//                    $cos_a2,
-//                    $sin_a2,
                     $cos_lat90,
                     $sin_lat90,
                     $lat_rad,
                     $lon_rad
                 );
+                $time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
 
                 // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
 
@@ -934,19 +931,17 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
                         // $alpha_s = $r_subd / RADIO_TERRESTRE;                        // Ángulo central de subdivisión s [rad]
                         // print "s: $s/$n_subdivisiones r_subd: $r_subd" . PHP_EOL;
                         //exit(0);
+                        $time_calcula_vertices_interseccion = microtime(true);
                         [$ps1, $ps2] = calcula_vertices_interseccion(
                             $r_subd,
                             $a1_rad,
                             $a2_rad,
-//                    $cos_a1,
-//                    $sin_a1,
-//                    $cos_a2,
-//                    $sin_a2,
                             $cos_lat90,
                             $sin_lat90,
                             $lat_rad,
                             $lon_rad
                         );
+                        $time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
                         // apuntamos las soluciones del azimut derecho, y guardamos las del izquierdo
 
                         $subdivisiones[] = $ps1;
@@ -959,9 +954,11 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
                     // cerrar el polígono. Es el equivalente a apuntarlos todos y ordenar los vértices
                     // en sentido horario (realmente anti-horario, pero da igual porque el algoritmo de 
                     // punto en polígono no distingue entre ambos sentidos)
-                    for($s=count($subdivisiones)-1; $s>=0; $s--) {
+                    $count_subdivisiones = count($subdivisiones) - 1;
+                    for ($s = $count_subdivisiones; $s >= 0; $s--) {
                         $poly[] = $subdivisiones[$s];
                     }
+
                 } else {
                  // Polígono sin aumento de resolución y sin cerrar (no es necesario repetir el primer punto) [lat,lon] [º]
                     $poly = [ $p1, $p2, $p3, $p4 ]; 
@@ -969,8 +966,8 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
 
                 // Se hallan los puntos del mallado contenidos en el polígono
                 $timer_malla_coverage = microtime(true);
-                set_malla_coverage($malla_lat_lon, $poly);
-                $time_malla_coverage_total = microtime(true) - $timer_malla_coverage;
+                set_malla_coverage2($malla_lat_lon, $poly, $resolucion_malla);
+                $time_malla_coverage_total += microtime(true) - $timer_malla_coverage;
                 $last = 1;
             }
         }
@@ -979,6 +976,7 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     logger("[100%]" . PHP_EOL, false);
     logger(" I> Malla de cobertura generada (" . round(microtime(true) - $start_time, 3) . "s)");
     logger(" I> Tiempo en set_malla_coverage: " . round($time_malla_coverage_total,3) . "s");
+    logger(" I> Tiempo en calcula_vertices_interseccion: " . round($time_calcula_vertices_interseccion_total,3) . "s");
     logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
         "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
@@ -1015,10 +1013,6 @@ function calcula_vertices_interseccion(
     float $r,
     float $a1_rad,
     float $a2_rad,
-//    float &$cos_a1,
-//    float &$sin_a1,
-//    float &$cos_a2,
-//    float &$sin_a2,
     float $cos_lat90,
     float $sin_lat90,
     float $lat_rad,
@@ -1029,10 +1023,10 @@ function calcula_vertices_interseccion(
     static $a1a2_cache = [];
     //static $count = 0;
 
-    // $r = round($r,0);
-      $alpha = $r / RADIO_TERRESTRE;
-        $cos_alpha = cos($alpha);
-        $sin_alpha = sin($alpha);
+    $r = round($r,0);
+    // $alpha = $r / RADIO_TERRESTRE;
+    // $cos_alpha = cos($alpha);
+    // $sin_alpha = sin($alpha);
   
     $a1_rad  = round($a1_rad,2);
     $a2_rad  = round($a2_rad,2);
@@ -1046,7 +1040,7 @@ function calcula_vertices_interseccion(
     // print $count . " " . count($alpha_cache) . " " . count($a1a2_cache) . PHP_EOL;
      // print_r($alpha_cache);
     //$count++;
-/*
+
     if (!isset($alpha_cache[(string)$r])) {
         $alpha = $r / RADIO_TERRESTRE;
         $cos_alpha = cos($alpha);
@@ -1059,7 +1053,7 @@ function calcula_vertices_interseccion(
         $cos_alpha = $alpha_cache[(string)$r]['cos'];
         $sin_alpha = $alpha_cache[(string)$r]['sin'];
     }
-*/
+
     if (!isset($a1a2_cache[(string)$a1_rad])) {
         $cos_a1 = cos($a1_rad);
         $sin_a1 = sin($a1_rad);
@@ -1138,16 +1132,26 @@ function calcula_vertices_interseccion(
     return [$p1, $p2];
 }
 
-
 //  Marca en la malla los puntos que están dentro del polígono
-function set_malla_coverage(array &$malla_lat_lon, array $poly)
+function set_malla_coverage(array &$malla_lat_lon, array &$poly)
 {
-
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     // Bounding box del polígono
     $minLat = INF;
     $maxLat = -INF;
     $minLon = INF;
     $maxLon = -INF;
+
+    print "izq arriba: " . $malla_lat_lon[0][0][0] . " " . $malla_lat_lon[0][0][1] . PHP_EOL;
+
+    $maxi = count($malla_lat_lon) - 1;
+    $maxj = count($malla_lat_lon[$maxi]) - 1;
+
+
+
+    print "dch abajo: " . $malla_lat_lon[$maxi][$maxj][0] . " " . $malla_lat_lon[$maxi][$maxj][1] . PHP_EOL;
+    
+
 
     foreach ($poly as $p) {
         $minLat = min($minLat, $p[0]);
@@ -1155,11 +1159,10 @@ function set_malla_coverage(array &$malla_lat_lon, array $poly)
         $minLon = min($minLon, $p[1]);
         $maxLon = max($maxLon, $p[1]);
     }
-
+    $count_poly = count($poly);
     // recorre todas las filas y columnas de la malla
     foreach ($malla_lat_lon as $i => $fila) {
         foreach ($fila as $j => $col) {
-
             // DESCARTE RÁPIDO
             if (
                 $col[0] < $minLat || $col[0] > $maxLat ||
@@ -1168,13 +1171,63 @@ function set_malla_coverage(array &$malla_lat_lon, array $poly)
                 continue;
 
             //is_in_polygon no necesita un polígono cerrado
-            $inside = pointInPolygon([$col[0], $col[1]], $poly);
+            $inside = pointInPolygon($col[0], $col[1], $poly, $count_poly);
             if ($inside)
                 $malla_lat_lon[$i][$j][2] = 1;
         }
     }
     return $malla_lat_lon;
 }
+
+/*
+ * Marca en la malla los puntos que están dentro del polígono
+ * Se accede directamente a la malla sin necesidad de consultar las coordenadas,
+ * dado que conocemos el salto de la malla, que [0][0] es la esquina superior noroeste
+ * y que a mayor $i, la latitud decrece [99][99] será la esquina sureste.
+ * 
+ */ 
+
+function set_malla_coverage2(array &$malla_lat_lon, array &$poly, float $paso_de_malla)
+{
+    // Esquina noroeste (origen de la malla)
+    $lat_nw = $malla_lat_lon[0][0][0];
+    $lon_nw = $malla_lat_lon[0][0][1];
+
+    $num_filas = count($malla_lat_lon);
+    $num_cols  = count($malla_lat_lon[0]);
+
+    // Bounding box del polígono en coordenadas
+    $minLat = INF;  $maxLat = -INF;
+    $minLon = INF;  $maxLon = -INF;
+    foreach ($poly as $p) {
+        if ($p[0] < $minLat) $minLat = $p[0];
+        if ($p[0] > $maxLat) $maxLat = $p[0];
+        if ($p[1] < $minLon) $minLon = $p[1];
+        if ($p[1] > $maxLon) $maxLon = $p[1];
+    }
+
+    // Convertir bounding box a índices, con margen de 1 celda por redondeo
+    $i_min = max(0,           (int) floor(($lat_nw - $maxLat) / $paso_de_malla));
+    $i_max = min($num_filas - 1, (int) ceil (($lat_nw - $minLat) / $paso_de_malla));
+    $j_min = max(0,           (int) floor(($minLon - $lon_nw) / $paso_de_malla));
+    $j_max = min($num_cols  - 1, (int) ceil (($maxLon - $lon_nw) / $paso_de_malla));
+
+    $count_poly = count($poly);
+
+    // Iterar solo sobre la subregión de la malla que intersecta el polígono
+    for ($i = $i_min; $i <= $i_max; $i++) {
+        $lat = $lat_nw - $i * $paso_de_malla;   // lat del punto sin leer el array
+        for ($j = $j_min; $j <= $j_max; $j++) {
+            $lon = $lon_nw + $j * $paso_de_malla;   // lon del punto sin leer el array
+            if (pointInPolygon($lat, $lon, $poly, $count_poly)) {
+                $malla_lat_lon[$i][$j][2] = 1;
+            }
+        }
+    }
+
+    return $malla_lat_lon;
+}
+
 
 /**
  * CASO B
@@ -1612,7 +1665,7 @@ function generacionMalladoLatLon($radar, $flm, $distanciasAlcances) {
  *
  * @param array $radar (ENTRADA)
  * @param int $flm (ENTRADA)
- * @param array $listaC (ENTRADA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
+ * @param array $listaContornos (ENTRADA), estructura que asocia la fila con la long, la col con la latitud y que ademas almacena la altura
  * @return array filas asociadas con la longitud y columnas con latitud 
  */
 function calculaCoordenadasGeograficasB( $radar, $flm, $listaContornos ) {
