@@ -11,5 +11,3 @@ parameters:
         - ./inc.guardar.php
     excludePaths:
         - 'cache/*'
-        - 'martinez-rueda-php/*'
-        - 'MartinezRueda/*'
