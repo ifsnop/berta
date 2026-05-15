@@ -103,11 +103,11 @@ function fromPolygons2KML3(array $polygons, string $radarWithFL, string $rgb, st
  * @param array $rutas Paths donde guardar el fichero generado (ENTRADA)
  * @param string $nivelVuelo Nivel de vuelo usado para el cálculo
  * @param string $altMode Si el KML está pegado al suelo "clampToGround|clampToSeaFloor" o la altura es relativa "RelativeToGround" o absoluta "absolute" (ENTRADA)
- * @param string $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
+ * @param array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
  * @param bool $disableKmz Disable generation of compressed kml (kmz) files
  * @return bool
  */
-function creaKml3(array $listaContornos, array $sensors, array $rutas, string $nivelVuelo, string $altMode, string $appendToFilename = "", string $coverageLevel = 'mono', bool $disableKmz = true)
+function creaKml3(array $listaContornos, array $sensors, array $rutas, string $nivelVuelo, string $altMode, array $appendToFilename = array(), string $coverageLevel = 'mono', bool $disableKmz = true)
 {
     // conversión a metros para usar en el kmz
     $flm = round(((float)$nivelVuelo) * 100.0 * FEET_TO_METERS, 2);
@@ -150,13 +150,18 @@ function creaKml3(array $listaContornos, array $sensors, array $rutas, string $n
 
     logger(" D> Nivel de cobertura: $coverageLevel");
 
-    if (is_array($appendToFilename)) {
-        $appendToFilename = "-" . implode("_", $appendToFilename);
+    if ( count($appendToFilename) > 1 ) {
+        $appendStr = "-" . implode("_", $appendToFilename);
+    } else if ( count($appendToFilename) == 1 ) {
+        $appendStr = $appendToFilename[0];
+    } else {
+        $appendStr = "";
+
     }
 
 
     $radarWithFL = implode(",", $sensors) . 
-        $coverageLevelAppend . "-FL" . $nivelVuelo . $appendToFilename;
+        $coverageLevelAppend . "-FL" . $nivelVuelo . $appendStr;
     // else {
     //    $radarWithFL = $radarName . "-FL" . $nivelVuelo . $appendToFilename;
     //}
@@ -379,20 +384,7 @@ function pointInPolygon(float $y, float $x, array &$poly, int $n): bool
 
         $xj = $poly[$j][1];
         $yj = $poly[$j][0];
-        // Comprobar si el punto está SOBRE el segmento
-        // if (pointOnSegment($x, $y, $xi, $yi, $xj, $yj, $eps)) {
-        //    throw new InvalidArgumentException("el punto {$x},{$y} se encuentra sobre el segmento del polígono");
-        //}
-/*
-        if ( ($yi > $y) !== ($yj > $y) ) {
-            $denom = $yj - $yi;
-            if ($denom != 0.0 && $x < ($xj - $xi) * ($y - $yi) / $denom + $xi) {
-                $inside = !$inside;
-            }
-        }
-*/
-
-        
+       
         $intersect =
             (($yi > $y) != ($yj > $y)) &&
             ($x < ($xj - $xi) * ($y - $yi) / (($yj - $yi)) + $xi);
@@ -405,21 +397,59 @@ function pointInPolygon(float $y, float $x, array &$poly, int $n): bool
     return $inside;
 }
 
-function pointOnSegment(float $px, float $py, float $x1, float $y1, float $x2, float $y2, float $eps = 1e-12): bool
+function writeKMZ(string $fileName, string $radarWithFL, string $content, bool $disableKmz = false)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-    // 1. Colinealidad (producto cruzado ≈ 0)
-    $cross = ($px - $x1) * ($y2 - $y1) - ($py - $y1) * ($x2 - $x1);
-    if (abs($cross) > $eps) {
-        return false;
-    }
 
-    // 2. Dentro del bounding box
+    if (true === $disableKmz || !class_exists('ZipArchive')) {
+        // generar kml y volver
+        logger(" V> Guardando fichero {$fileName}.kml");
+        if (false === ($ret = @file_put_contents("{$fileName}.kml", $content))) {
+            logger(" E> Problema al guardar {$fileName}.kml");
+            exit(-1);
+            //return false;
+        }
+
+        return true;
+    }
+    logger(" V> Guardando fichero {$fileName}.kmz");
+
+    $zip = new ZipArchive();
     if (
-        $px < min($x1, $x2) - $eps || $px > max($x1, $x2) + $eps ||
-        $py < min($y1, $y2) - $eps || $py > max($y1, $y2) + $eps
+        false === $zip->open(
+            $fileName . ".kmz",
+            ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE
+        )
     ) {
-        return false;
+        logger(" E> No se puede crear el fichero {$filename}.kmz");
+        exit(-1);
+    }
+    $zip->addFromString($radarWithFL . ".kml", $content);
+    $zip->close();
+
+    return;
+}
+
+/**
+ * Funcion para crear una carpeta con los resultados para cada radar
+ * 
+ * @param string $ruta  (ENTRADA)
+ * @return boolean para comprobar si la funcion a tenido exito o no (SALIDA)
+ */
+function crearCarpetaResultados($ruta)
+{
+
+    if (!is_dir($ruta)) {
+        logger(" V> Creando carpeta >{$ruta}<");
+        //clearstatcache();
+        //$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
+        if (mkdir($ruta, PERMISOS, true)) {
+            logger(" V> Carpeta >{$ruta}< creada correctamente");
+            return true;
+        } else {
+            logger(" E> Error creando carpeta >{$ruta}<");
+            exit(-1);
+            // return false;
+        }
     }
 
     return true;
@@ -830,65 +860,6 @@ function fromPolygons2KML_One_Folder_Per_Content($polygons, $radarWithFL, $rgb, 
     }
     $kml .= $kmlFooter_Content;
     return $kml;
-}
-
-
-function writeKMZ($fileName, $radarWithFL, $content, $disableKmz = false)
-{
-
-    if (true === $disableKmz || !class_exists('ZipArchive')) {
-        // generar kml y volver
-        logger(" V> Guardando fichero {$fileName}.kml");
-        if (false === ($ret = @file_put_contents("{$fileName}.kml", $content))) {
-            logger(" E> Problema al guardar {$fileName}.kml");
-            exit(-1);
-            //return false;
-        }
-
-        return true;
-    }
-    logger(" V> Guardando fichero {$fileName}.kmz");
-
-    $zip = new ZipArchive();
-    if (
-        false === $zip->open(
-            $fileName . ".kmz",
-            ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE
-        )
-    ) {
-        logger(" E> No se puede crear el fichero {$filename}.kmz");
-        exit(-1);
-    }
-    $zip->addFromString($radarWithFL . ".kml", $content);
-    $zip->close();
-
-    return;
-}
-
-/**
- * Funcion para crear una carpeta con los resultados para cada radar
- * 
- * @param string $ruta  (ENTRADA)
- * @return boolean para comprobar si la funcion a tenido exito o no (SALIDA)
- */
-function crearCarpetaResultados($ruta)
-{
-
-    if (!is_dir($ruta)) {
-        logger(" V> Creando carpeta >{$ruta}<");
-        //clearstatcache();
-        //$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
-        if (mkdir($ruta, PERMISOS, true)) {
-            logger(" V> Carpeta >{$ruta}< creada correctamente");
-            return true;
-        } else {
-            logger(" E> Error creando carpeta >{$ruta}<");
-            exit(-1);
-            // return false;
-        }
-    }
-
-    return true;
 }
 
 /*

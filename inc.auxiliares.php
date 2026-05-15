@@ -31,57 +31,20 @@ function altitudeModetoString($altitudeMode)
     return $modo;
 }
 
-function printMalla($malla, $relleno = " ")
-{
-    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-
-    for ($i = 0; $i < count($malla); $i++) {
-        for ($j = 0; $j < count($malla[$i]); $j++) {
-            if ($malla[$i][$j] == "0") {
-                print $relleno;
-            } else {
-                print $malla[$i][$j];
-            }
-        }
-        print PHP_EOL;
-    }
-}
-
-/*
- * Desde que se utiliza conrec para los contornos, los índices son decimales 
- * (ahora el contorno se situa entre medias de la celda a 1 y la celda a 0
- * y printContornos no funciona)
+/**
+ * Obtiene un valor cacheado o lo calcula si no existe.
  *
+ * @param array  &$cache     Array de caché (pasado por referencia)
+ * @param string  $key       Clave de caché
+ * @param callable $compute  Función que calcula y devuelve el valor
+ * @return mixed             Valor cacheado o recién calculado
  */
-function printContornos($contornos, $malla) {
-/*
-    $malla = array();
-    for($i=0; $i<$tamMalla; $i++) {
-        $malla[$i] = array();
-        for($j=0; $j<$tamMalla; $j++) {
-            $malla[$i][$j] = 0;
-        }
+function getCached(array &$cache, string $key, callable $compute): mixed
+{
+    if (!isset($cache[$key])) {
+        $cache[$key] = $compute();
     }
-*/
-    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-    
-    $alfa = array(
-        'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-        'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'
-    );
-    $i = 0;
-    foreach($contornos as $contorno) {
-        foreach($contorno as $pto) {
-            if ( $malla[$pto['fila']][$pto['col']] == "0" ) {
-                $malla[$pto['fila']][$pto['col']] = $alfa[(($i++)%count($alfa))];
-            } else {
-                print "punto repetido!" . PHP_EOL;
-            }
-        }
-    }
-    printMalla($malla);
-
-    return true;
+    return $cache[$key];
 }
 
 /**
@@ -92,31 +55,6 @@ function printContornos($contornos, $malla) {
 function convertBytes(float $size) {
         $unit = array('b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb');
         return @round($size / pow(1024, ($i = (int)floor(log($size, 1024)))), 1) . '' . $unit[$i];
-}
-
-/**
-* If the input arrays have the same string keys, then the later value
-* for that key will overwrite the previous one. If, however, the arrays
-* contain numeric keys, the later value will not overwrite the original
-* value, but will be appended.
-* Values in the input array with numeric keys will be renumbered with
-* incrementing keys starting from zero in the result array.
-* So this function is actually making some conditional statements. You
-* can replace array merge with normal adding, consisting of the loop
-* (foreach or any other) and the [] operator. You can write a function
-* imitating array_merge, like(using reference to not copy the array..).
-*
-* @url https://stackoverflow.com/questions/23348339/optimizing-array-merge-operation
-*
-* @param array $array1 source and destination array
-* @param array $array2 second array to copy to array1
-*/
-function array_merge_fast(&$array1, &$array2)
-{
-    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-    foreach ($array2 as $i) {
-        $array1[] = $i;
-    }
 }
 
 $num_to_bits = array(0, 1, 1, 2, 1, 2, 2, 3,
@@ -286,6 +224,7 @@ function timer_unidades(float $t)
  * @return float The path's area in square kilometers.
  */
 function computeArea(float $path) {
+    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     return abs(computeSignedArea($path)/1000000.0);
 }
 
@@ -297,6 +236,7 @@ function computeArea(float $path) {
  * @return float The loop's area in square meters.
  */
 function computeSignedArea($path) {
+    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     return computeSignedAreaP($path, RADIO_TERRESTRE);
 }
 
@@ -306,6 +246,7 @@ function computeSignedArea($path) {
  * Used by SphericalUtilTest.
  */
 function computeSignedAreaP($path,  $radius) {
+    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
         $size = count($path);
         if ($size < 3) { return 0; }
         $total = 0;
@@ -332,6 +273,7 @@ function computeSignedAreaP($path,  $radius) {
  * The arguments named "tan" are tan((pi/2 - latitude)/2).
  */
 function polarTriangleArea($tan1,  $lng1, $tan2, $lng2) {
+    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
         $deltaLng = $lng1 - $lng2;
         $t = $tan1 * $tan2;
         return 2 * atan2($t * sin($deltaLng), 1 + $t * cos($deltaLng));

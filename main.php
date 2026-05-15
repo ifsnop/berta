@@ -330,7 +330,7 @@ function programaPrincipal(array $config)
                     $rutas,
                     $nivelVuelo,
                     $altMode = "clampToGround",
-                    $appendToFilename = '',
+                    $appendToFilename = array(),
                     $coverageLevel = 'mono',
                     $config['disable-kmz']
                 );

@@ -531,7 +531,7 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
         }
     }
 
-    logger(" D> Generando malla de cobertura");
+    
 
     /*******************************
      * MALLA DE COBERTURA
@@ -539,6 +539,9 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
 
     $precision_malla = 2;
     $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
+
+    logger(" D> Generando malla de cobertura con precision: {$precision_malla} y resolución: {$resolucion_malla}");
+
     /*
      * esta configuración (precision = 2, resolucion = 0.01
      * produce una malla de 395x529
@@ -747,19 +750,29 @@ function calcula_vertices_interseccion(
     $a1_rad  = round($a1_rad,2);
     $a2_rad  = round($a2_rad,2);
     
-    if (!isset($alpha_cache[(string)$r])) {
-        $alpha = $r / RADIO_TERRESTRE;
-        $cos_alpha = cos($alpha);
-        $sin_alpha = sin($alpha);
-        $alpha_cache[(string)$r] = [
-            'cos' => $cos_alpha,
-            'sin' => $sin_alpha
-        ];
-    } else {
-        $cos_alpha = $alpha_cache[(string)$r]['cos'];
-        $sin_alpha = $alpha_cache[(string)$r]['sin'];
-    }
 
+[$cos_alpha, $sin_alpha ] = getCached($alpha_cache, (string)$r, function() use ($r) {
+    $alpha = $r / RADIO_TERRESTRE;
+    return [
+        cos($alpha),
+        sin($alpha),
+    ];
+});
+
+[$cos_a1, $sin_a1 ] = getCached($a1a2_cache, (string) $a1_rad, function() use ($a1_rad) {
+    return [
+        cos($a1_rad),
+        sin($a1_rad),
+    ];
+});
+
+[$cos_a2, $sin_a2 ] = getCached($a1a2_cache, (string) $a2_rad, function() use ($a2_rad) {
+    return [
+        cos($a2_rad),
+        sin($a2_rad),
+    ];
+});
+/*
     if (!isset($a1a2_cache[(string)$a1_rad])) {
         $cos_a1 = cos($a1_rad);
         $sin_a1 = sin($a1_rad);
@@ -783,7 +796,7 @@ function calcula_vertices_interseccion(
         $cos_a2 = $a1a2_cache[(string)$a2_rad]['cos'];
         $sin_a2 = $a1a2_cache[(string)$a2_rad]['sin'];
     }
-    
+  */  
     $cos_lat90xcos_alpha2 = $cos_lat90 * $cos_alpha;
     $sin_lat90xsin_alpha2 = $sin_lat90 * $sin_alpha;
 
@@ -925,8 +938,7 @@ function create_malla(array $radar, float $max_distancia_nm, int $precision_mall
     // Malla: rows = latitud, cols = longitud
     $rows = intval(abs($north - $south) / $resolucion_malla) + 1;
     $cols = intval(abs($east - $west) / $resolucion_malla) + 1;
-
-    print $rows . " " . $cols . PHP_EOL;
+    logger(" D> Tamaño de la malla {$rows}x{$cols}");
 
     $malla_lat_lon = array();
     for ($i = 0; $i < $rows; $i++) {
