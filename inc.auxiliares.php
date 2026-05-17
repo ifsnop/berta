@@ -57,14 +57,15 @@ function convertBytes(float $size) {
         return @round($size / pow(1024, ($i = (int)floor(log($size, 1024)))), 1) . '' . $unit[$i];
 }
 
-$num_to_bits = array(0, 1, 1, 2, 1, 2, 2, 3,
-                     1, 2, 2, 3, 2, 3, 3, 4);
 /*
  * Count set bits by pre-storing count set bits in nibbles.
  * @param int number to count bits set to '1'
  * @return int number of bits set to '1'
  */
-function countSetBits($num) {
+function countSetBits(int $num) {
+    $num_to_bits = array(0, 1, 1, 2, 1, 2, 2, 3,
+                     1, 2, 2, 3, 2, 3, 3, 4);
+
     global $num_to_bits;
     $nibble = 0;
     if (0 == $num)
@@ -83,7 +84,10 @@ function countSetBits($num) {
 /*
  * escribe la cadena enviada a stderr, añadiendo fecha
  * si insert_EOL, añade fecha y salto de línea
- *
+ * @param string $str cadena a imprimir
+ * @param bool $insert_EOL por defecto pone fecha y salgo de línea, si se pasa false, imprime el texto sin modificar
+ * 
+ * @return bool siempre verdadero
  */
 function logger(string $str, bool $insert_EOL = true) {
 

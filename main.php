@@ -30,7 +30,7 @@ $config = array(
     'radar-data' => "spain.tsk/",
     'fl' => array('min' => 1, 'max' => 400, 'step' => 1),
     'cone' => false,
-    'max-range' => false,
+    'max-range' => -1,
     'force' => false,
     'path' => array(
         'resultados_mono' => "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR . "MONO" . DIRECTORY_SEPARATOR,
@@ -128,7 +128,7 @@ function programaPrincipal(array $config)
                 break;
             case 'max-range':
             case 'm':
-                $config['max-range'] = $value;
+                $config['max-range'] = doubleval($value);
                 logger(" I> Alcance forzado a $value NM");
                 $config['force'] = true; // forzar alcance implica ignorar caché y forzar recálculo
                 logger(" I> Modo *forzado* activado");
@@ -285,8 +285,8 @@ function programaPrincipal(array $config)
                 $timer = microtime(true);
                 logger(" D> Leyendo información del terreno de {$sensor}");
                 // ¿tenemos datos del terreno cargados? vamos a cargarlos una sola vez
-                if (!isset($coberturas[$sensor]['terreno']) || false === $coberturas[$sensor]['terreno']) {
-                    $coberturas[$sensor]['terreno'] = cargarDatosTerreno($infoCoral[$sensor], $config['max-range'] !== false ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange']);
+                if ( !isset($coberturas[$sensor]['terreno']) ) {
+                    $coberturas[$sensor]['terreno'] = cargarDatosTerreno($infoCoral[$sensor], $config['max-range'] !== -1 ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange']);
                     if (false !== strpos($sensor, "-psr")) {
                         logger(" V> Detectado PSR, ajustando alcance");
                         $coberturas[$sensor]['terreno']['range'] = $infoCoral[$sensor]['primaryMaximumRange'] * MILLA_NAUTICA_EN_METROS;

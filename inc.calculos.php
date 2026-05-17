@@ -110,7 +110,7 @@ function calculaAnguloMaximaCobertura($radar, $flm){
 function calculosFLencimaRadar(array $radar, float $flm): array
 {
 
-    $debug = false;
+    $debug = true;
     $distanciasAlcances = array();
     $radioTerrestreAumentado = $radar['screening']['radioTerrestreAumentado'];
     $anguloMaxCob = calculaAnguloMaximaCobertura($radar, $flm); // AlphaRange en Matlab
@@ -176,13 +176,13 @@ function calculosFLencimaRadar(array $radar, float $flm): array
                 $distanciasAlcances[$i] = $radioTerrestreAumentado * $epsilon / MILLA_NAUTICA_EN_METROS;
             }
             // print ($i/2) . "\tA1 distancia: " . $distanciasAlcances[$i] . "NM" . PHP_EOL;
-            if ($debug /* && $i == 180 */) {
+            if ($debug) {
                 print "flm >= obstaculoLimitante " . PHP_EOL;
                 print "  radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
                 print "  count: " . $count . PHP_EOL;
                 print "  obstaculoLimitante: " . $obstaculoLimitante . PHP_EOL;
                 print "  earthToEvalPoint: " . $earthToEvalPoint . PHP_EOL;
-                print "  angulo:" . $angulo . PHP_EOL;
+                print "  angulo: " . $angulo . PHP_EOL;
                 print "  distancia: " . $distancia . PHP_EOL;
                 print "  gammaMax: " . $gammaMax . PHP_EOL;
                 print "  theta: " . $theta . PHP_EOL;
@@ -211,7 +211,9 @@ function calculosFLencimaRadar(array $radar, float $flm): array
                 $alturaCentroFasesAntena = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight']
             );
             if (false === $ret) {
-                debug_print_backtrace(); die("Unexpected error: " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+                debug_print_backtrace(); 
+				fwrite(STDERR, "Unexpected error: " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
+				exit(-1);
             }
             // A2.3 (con objeto de paliar una posible excesiva separación entre puntos consecutivos,
             // se procede a calcular la intersección entre el nivel de vuelo y la recta que une los dos
@@ -229,7 +231,7 @@ function calculosFLencimaRadar(array $radar, float $flm): array
 
             // print ($i) . "\tA2 distancia: " . $distanciasAlcances[$i] . "NM" . PHP_EOL;
 
-            if ($debug /* && $i == 180 */) {
+            if ($debug)  {
                 print "flm < obstaculoLimitante " . PHP_EOL;
                 print "  radioTerrestreAumentado: " . $radioTerrestreAumentado . PHP_EOL;
                 print "  count: " . $count . PHP_EOL;
@@ -357,190 +359,37 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     $time_malla_coverage_total = 0;
     $time_calcula_vertices_interseccion_total = 0;
     $debug = false;
+
+    $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
+    
 /*
     $radar['lat_deg'] = $radar['lat'] = 41.773763888889;
     $radar['lon_deg'] = $radar['lon'] = 2.4376138888889;
     $radar['lat_rad'] = deg2rad(41.773763888889);
     $radar['lon_rad'] = deg2rad(2.4376138888889);
 */
-    $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
 
-    // Ángulo central máximo según rango en millas
-    $alpha_max = ($radar['screening']['range'] * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
-    if ($debug)
-        print "angulo central maximo segun rango en millas nauicas: " . $alpha_max . PHP_EOL;
-    // línea de rango máximo
-    $m = tan(pi()/2 - $alpha_max); // pi()/2 = 90º en radianes
-
-    logger(" V> fl: {$flm}m range: {$radar['screening']['range']}NM " .
-        "lat: {$radar['lat']}º lon: {$radar['lon']}º " . 
-        "num az: {$radar['screening']['totalAzimuths']}");
-
-    $matriz_obstaculos = []; // la estructura es [numero de azimuth][numero de obstaculo] 
-    foreach($radar['screening']['listaAzimuths'] as $azimut => $listaObstaculos) {
-        $i = 0;
-        $alt = 0;
-        $xb = 0; $yb = 0;
-        $xa = 0.0;
-        $ya = $radar['screening']['towerHeight'] +
-            $radar['screening']['terrainHeight'] +
-            $radar['screening']['radioTerrestreAumentado'];
-        $matriz_obstaculos[$azimut][0] = [$xa, $ya];
-        if ($debug)
-            print "[0,$azimut] alt: $alt => $xa,$ya" . PHP_EOL;
-        
-        $i = 0;
-        foreach($listaObstaculos as $i => $obstaculo) {
-            $alt = $obstaculo['altura']; // Altitud del obstáculo i
-            $ang = $obstaculo['angulo']; // Ángulo central del obstáculo i
-            $r = $radar['screening']['radioTerrestreAumentado'] + $alt; // Radio del obstáculo
-            $xb = $r * sin($ang); // Coordenada horizontal del obstáculo
-            $yb = $r * cos($ang); // Coordenada vertical del obstáculo
-            if ($debug)
-                print "[" . $i+1 . ",$azimut] alt: $alt, ang: $ang, r: $r => $xb,$yb" . PHP_EOL;
-            
-            $matriz_obstaculos[$azimut][$i + 1] = [$xb, $yb];
-        }
-        $i++;
-        
-        // Si no existe muro final, se calcula el muro: el primer punto será la intersección
-        // entre la línea que forman el radar y el último punto con la línea de máximo rango.
-        if ( $alt <= 30000 ) {
-            // coordenadas del radar en $xa, $ya
-            // coordenadas del último obstáculo en $x, $y
-            // línea de rango máximo en $m
-             /* Intersección segmento - línea
-              * Segmento:
-              *   x = xa + t*(xb-xa)
-              *   y = ya + t*(yb-ya)
-              *   t [0,1]
-              *
-              * Línea:
-              *   y = m*x
-              *
-              * Intersección:
-              *                m*xa - ya
-              *   ti = - ---------------------
-              *           m*(xb-xa) - (yb-ya)
-              */
-
-            $dx = $xb - $xa;
-            $dy = $yb - $ya;
-            $t = ($m * $xa - $ya) / ($dy - $m * $dx);
-            if ($t >= 1) { // Más allá del último obstáculo
-                //print "IFSNOP $azimut" . PHP_EOL; exit(-1);
-                $xi = $xa + $t * $dx;   // Punto de intersección
-                $yi = $ya + $t * $dy;   // Punto de intersección
-
-                $alpha_m = atan($m);
-                $xil = (BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado']) * cos($alpha_m); // Punto límite del muro
-                $yil = (BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado']) * sin($alpha_m); // Punto límite del muro
-
-                if ($yi > $yil) $yil = $yi; // Punto de intersección por encima del límite del muro
-
-                // Se añaden los dos nuevos puntos
-                $matriz_obstaculos[$azimut][$i++] = [$xi, $yi];
-                // print "[$i,$azimut] => $xi,$yi" . PHP_EOL;
-                $matriz_obstaculos[$azimut][$i++] = [$xil, $yil];
-                // print "[$i,$azimut] => $xil,$yil" . PHP_EOL;
-            }
-        }
-    }
+    $matriz_obstaculos = create_matriz_obstaculos($radar);
 
     /*******************************
     * INTERSECCIONES POR ACIMUT
     *******************************/
-    $intersec = array();
-
+    
     $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
     $W += 0.01;                     // Suma 10 cm para evitar errores numéricos
-    print "Rt: " . $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
-    print "W: $W" . PHP_EOL;
+    logger(" D> Radio Terrestre Aumentado: {$radar['screening']['radioTerrestreAumentado']}m");
+    logger(" D> Radio Circunferencia al Nivel de Vuelo: {$W}m");
     /* Esto es porque a veces el screening da dos valores de
      * altitud consecutivos iguales. Si además coinciden con el
      * FL, da lugar a errores al calcular la intersección ya que
      * línea y circunferencia son tangentes.
      */
 
-    // Intersección entre nivel de vuelo (arco de circunferencia) y polilínea de screening para acimuth a
-    for ($azi = 0; $azi < count($matriz_obstaculos); $azi++) {
-        $count = 0;
-        $intersec[$azi] = array();
-        for ($obs = 0; $obs < count($matriz_obstaculos[$azi]) - 1; $obs++) {
-
-            $x1 = $matriz_obstaculos[$azi][$obs][0];
-            $y1 = $matriz_obstaculos[$azi][$obs][1];
-            $x2 = $matriz_obstaculos[$azi][$obs + 1][0];
-            $y2 = $matriz_obstaculos[$azi][$obs + 1][1];
-
-            $dx = $x2 - $x1;
-            $dy = $y2 - $y1;
-            /* Segmento:
-             *   x = x1 + t*dx
-             *   y = y1 + t*dy
-             * Circunferencia:
-             *   x^2 + y^2 = W^2
-            */
-            // Coeficientes At^2 + Bt + C=0
-            $A = $dx * $dx + $dy * $dy;
-            $B = 2 * ($x1 * $dx + $y1 * $dy);
-            $C = $x1 * $x1 + $y1 * $y1 - $W * $W;
-
-            // Discriminante
-            $D = $B * $B - 4 * $A * $C;
-            //print "$azi,$obs: " . json_encode($matriz_obstaculos[$azi][$obs]) . PHP_EOL;
-            //print "rowsX: $obs Azimut: $azi x1: $x1 y1: $y1 x2: $x2 y2: $y2" . PHP_EOL;
-            //print "A: $A B: $B C: $C D: $D" . PHP_EOL;
-            $epsilon = 1e-12 * max(1.0, abs($B), abs($C));
-
-            // $A suficientemente distinto de 0 → sí es cuadrática
-            // $D no claramente negativo → hay raíces reales o casi reales
-            if ((abs($A) > $epsilon) && $D >= -$epsilon) {
-                //if (($D >= 0) && ($A != 0)) {       // Hay intersección
-
-                $sqrt_d = sqrt($D);
-                $A2 = $A * 2;
-                $t1 = (-$B - $sqrt_d) / $A2;
-                $t2 = (-$B + $sqrt_d) / $A2;
-
-                // Asegurarse de que la primera solución es la menor
-                if ($t1 > $t2)
-                    [$t1, $t2] = [$t2, $t1];
-                // print "t1: $t1 t2: $t2" . PHP_EOL;
-                foreach ([$t1, $t2] as $t) {
-                    if ($t >= 0 && $t <= 1) {   // Límites del segmento
-                        // print "t1: $t1 t2: $t2 DENTRO SEGMENTO" . PHP_EOL;
-
-                        $xi = $x1 + $t * $dx;   // Punto de intersección
-                        $yi = $y1 + $t * $dy;   // Punto de intersección
-
-                        // Distancia del radar a la intersección, un acimut por columna [nm]
-                        $alpha = M_PI / 2 - atan2($yi, $xi);    // atan2() pone el ángulo 0º en x=1, y=0, en sentido antihorario
-                        $dist_nm = ($radar['screening']['radioTerrestreAumentado'] * $alpha) / MILLA_NAUTICA_EN_METROS;
-                        if ($dist_nm > $max_distancia_nm)
-                            $max_distancia_nm = $dist_nm;
-
-
-                        $intersec[$azi][$count] = $dist_nm;
-                        if ($debug)
-                            print "intersec count: $count obs: $obs azimut: $azi => dist_nm: $dist_nm" . PHP_EOL;
-                        $count++;
-                    }
-                }
-            }
-        }
-    }
-
-    
+    $intersec = create_matriz_intersecciones($radar, $matriz_obstaculos, $W, $max_distancia_nm);
 
     /*******************************
      * MALLA DE COBERTURA
      ******************************/
-
-    $precision_malla = 2;
-    $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
-
-    logger(" D> Generando malla de cobertura con precision: {$precision_malla} y resolución: {$resolucion_malla}");
 
     /*
      * esta configuración (precision = 2, resolucion = 0.01
@@ -549,7 +398,18 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
      * 43.73 -0.2    43.73 -0.19    43.73 -0.18    
      * 43.72 -0.2    43.72 -0.19    43.72 -0.18  
      */
-    [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla);
+    $precision_malla = 2;
+    $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
+    logger(" D> Generando malla de cobertura con precision: {$precision_malla} y resolución: {$resolucion_malla}");
+    $ret = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla);
+    if ( 0 == count($ret) ) {
+        $precision_malla++;
+        $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
+        $ret = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla, true);
+    }
+
+    [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $ret;
+
     /*
      * // Código de depuración
      * for($i=0;$i<3; $i++) { for($j=0; $j<3; $j++) {
@@ -714,11 +574,196 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
         "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
+    /*
+    for($i=0;$i<count($malla_lat_lon);$i++) {
+        for($j=0;$j<count($malla_lat_lon[$i]);$j++) {
+                print $malla_lat_lon[$i][$j][2];
+        }
+        print PHP_EOL;
+    }
+    */
+
     $segments = marchingSquares($malla_lat_lon);
     $polygons = buildPolygonsFromSegments($segments);
 
     return $polygons;
 
+}
+
+/*
+ * Convierte el fichero de screening en una matriz de obstáculos teniendo en cuenta el radio terrestre
+ * @param array $radar Datos del sensor
+ * @return array matriz de obstáculos con respecto al centro de la tierra
+ *
+ */
+function create_matriz_obstaculos(array &$radar)
+{
+    $debug = false;
+
+    //print_r($radar['screening']['listaAzimuths'][0]);
+
+    // Ángulo central máximo según rango en millas
+    $alpha_max = ($radar['screening']['range'] * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
+    logger(" V> Ángulo central máximo según rango en fichero screening: {$alpha_max}rad");
+    // línea de rango máximo
+    $m = tan(pi() / 2 - $alpha_max); // pi()/2 = 90º en radianes
+
+    logger(" D> range: {$radar['screening']['range']}NM " .
+        "lat: {$radar['lat']}º lon: {$radar['lon']}º " .
+        "num az: {$radar['screening']['totalAzimuths']}");
+
+    $matriz_obstaculos = []; // la estructura es [numero de azimuth][numero de obstaculo] 
+    foreach ($radar['screening']['listaAzimuths'] as $azimut => $listaObstaculos) {
+        $xa = $xb = $yb = $alt = 0.0;
+        $ya = $radar['screening']['towerHeight'] +
+            $radar['screening']['terrainHeight'] +
+            $radar['screening']['radioTerrestreAumentado'];
+        // se añade el radar como primer obstáculo (ojo porque ya estaba añadido al cargar screening)
+        // $matriz_obstaculos[$azimut][0] = [$xa, $ya];
+        if ($debug)
+            print "[0,$azimut] alt: $alt => $xa,$ya" . PHP_EOL;
+
+        $i = 0;
+        foreach ($listaObstaculos as $i => $obstaculo) {
+            $alt = $obstaculo['altura']; // Altitud del obstáculo i
+            $ang = $obstaculo['angulo']; // Ángulo central del obstáculo i
+            $r = $radar['screening']['radioTerrestreAumentado'] + $alt; // Radio del obstáculo
+            $xb = $r * sin($ang); // Coordenada horizontal del obstáculo
+            $yb = $r * cos($ang); // Coordenada vertical del obstáculo
+            if ($debug)
+                print "[" . $i + 1 . ",$azimut] alt: $alt, ang: $ang, r: $r => $xb,$yb" . PHP_EOL;
+
+            $matriz_obstaculos[$azimut][$i] = [$xb, $yb];
+        }
+        $i++;
+
+        // Si no existe muro final, se calcula el muro: el primer punto será la intersección
+        // entre la línea que forman el radar y el último punto con la línea de máximo rango.
+        if ($alt <= 30000) {
+            // coordenadas del radar en $xa, $ya
+            // coordenadas del último obstáculo en $x, $y
+            // línea de rango máximo en $m
+            /* Intersección segmento - línea
+              * Segmento:
+              *   x = xa + t*(xb-xa)
+              *   y = ya + t*(yb-ya)
+              *   t [0,1]
+              *
+              * Línea:
+              *   y = m*x
+              *
+              * Intersección:
+              *                m*xa - ya
+              *   ti = - ---------------------
+              *           m*(xb-xa) - (yb-ya)
+              */
+
+            $dx = $xb - $xa;
+            $dy = $yb - $ya;
+            $t = ($m * $xa - $ya) / ($dy - $m * $dx);
+            if ($t >= 1) { // Más allá del último obstáculo
+                $xi = $xa + $t * $dx;   // Punto de intersección
+                $yi = $ya + $t * $dy;   // Punto de intersección
+
+                $alpha_m = atan($m);
+                $xil = (BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado']) * cos($alpha_m); // Punto límite del muro
+                $yil = (BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado']) * sin($alpha_m); // Punto límite del muro
+
+                if ($yi > $yil) $yil = $yi; // Punto de intersección por encima del límite del muro
+
+                // Se añaden los dos nuevos puntos
+                $matriz_obstaculos[$azimut][$i++] = [$xi, $yi];
+                // print "[$i,$azimut] => $xi,$yi" . PHP_EOL;
+                $matriz_obstaculos[$azimut][$i++] = [$xil, $yil];
+                // print "[$i,$azimut] => $xil,$yil" . PHP_EOL;
+            }
+        }
+    }
+    
+    return $matriz_obstaculos;
+}
+
+/*
+ * Calcula intersecciones a partir de la matriz de obstáculos
+ * @param array $radar parámetros del radar 
+ * @param array $matriz_obstaculos
+ * @param float $W radio de la circunferencia del nivel de vuelo
+ * @param float $max_distancia_nm se actualiza la máxima distancia de cobertura en NM después de los cálculos
+ * @return array matriz intersecciones
+ */
+function create_matriz_intersecciones(array &$radar, array &$matriz_obstaculos, float $W, float &$max_distancia_nm) {
+    $debug = false;
+
+    // Intersección entre nivel de vuelo (arco de circunferencia) y polilínea de screening para acimuth a
+    $intersec = array();
+    for ($azi = 0; $azi < count($matriz_obstaculos); $azi++) {
+        $count = 0;
+        $intersec[$azi] = array();
+        for ($obs = 0; $obs < count($matriz_obstaculos[$azi]) - 1; $obs++) {
+
+            $x1 = $matriz_obstaculos[$azi][$obs][0];
+            $y1 = $matriz_obstaculos[$azi][$obs][1];
+            $x2 = $matriz_obstaculos[$azi][$obs + 1][0];
+            $y2 = $matriz_obstaculos[$azi][$obs + 1][1];
+
+            $dx = $x2 - $x1;
+            $dy = $y2 - $y1;
+            /* Segmento:
+             *   x = x1 + t*dx
+             *   y = y1 + t*dy
+             * Circunferencia:
+             *   x^2 + y^2 = W^2
+            */
+            // Coeficientes At^2 + Bt + C=0
+            $A = $dx * $dx + $dy * $dy;
+            $B = 2 * ($x1 * $dx + $y1 * $dy);
+            $C = $x1 * $x1 + $y1 * $y1 - $W * $W;
+
+            // Discriminante
+            $D = $B * $B - 4 * $A * $C;
+            //print "$azi,$obs: " . json_encode($matriz_obstaculos[$azi][$obs]) . PHP_EOL;
+            //print "rowsX: $obs Azimut: $azi x1: $x1 y1: $y1 x2: $x2 y2: $y2" . PHP_EOL;
+            //print "A: $A B: $B C: $C D: $D" . PHP_EOL;
+            $epsilon = 1e-12 * max(1.0, abs($B), abs($C));
+
+            // $A suficientemente distinto de 0 → sí es cuadrática
+            // $D no claramente negativo → hay raíces reales o casi reales
+            if ((abs($A) > $epsilon) && $D >= -$epsilon) {
+                //if (($D >= 0) && ($A != 0)) {       // Hay intersección
+
+                $sqrt_d = sqrt($D);
+                $A2 = $A * 2;
+                $t1 = (-$B - $sqrt_d) / $A2;
+                $t2 = (-$B + $sqrt_d) / $A2;
+
+                // Asegurarse de que la primera solución es la menor
+                if ($t1 > $t2)
+                    [$t1, $t2] = [$t2, $t1];
+                // print "t1: $t1 t2: $t2" . PHP_EOL;
+                foreach ([$t1, $t2] as $t) {
+                    if ($t >= 0 && $t <= 1) {   // Límites del segmento
+                        // print "t1: $t1 t2: $t2 DENTRO SEGMENTO" . PHP_EOL;
+
+                        $xi = $x1 + $t * $dx;   // Punto de intersección
+                        $yi = $y1 + $t * $dy;   // Punto de intersección
+
+                        // Distancia del radar a la intersección, un acimut por columna [nm]
+                        $alpha = M_PI / 2 - atan2($yi, $xi);    // atan2() pone el ángulo 0º en x=1, y=0, en sentido antihorario
+                        $dist_nm = ($radar['screening']['radioTerrestreAumentado'] * $alpha) / MILLA_NAUTICA_EN_METROS;
+                        if ($dist_nm > $max_distancia_nm)
+                            $max_distancia_nm = $dist_nm;
+                        $intersec[$azi][$count] = $dist_nm;
+
+                        if ($debug)
+                            print "intersec count: $count obs: $obs azimut: $azi => dist_nm: $dist_nm" . PHP_EOL;
+
+                        $count++;
+                    }
+                }
+            }
+        }
+    }
+    return $intersec;
 }
 
 /*
@@ -896,13 +941,13 @@ function set_malla_coverage(array &$malla_lat_lon, array &$poly, float $paso_de_
 function obtieneMaxAnguloConCoberturaA(array $distanciasAlcances) {
     // Como es por encima, habrá un array con la máxima distancia en millas
     $newRange = max($distanciasAlcances)*MILLA_NAUTICA_EN_METROS;
-    logger(" V> distanciaAlcanceMáximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m");
+    logger(" V> Distancia Alcance Máximo: " . round($newRange/MILLA_NAUTICA_EN_METROS,2) . "NM / " . round($newRange,2) . "m");
     // además de alinear el alcance máximo a múltiplos de 1852 (1NM), le sumamos
     // una milla adicional, para que la matriz nunca acabe con cobertura en una de
     // sus esquinas
     $newRange = round($newRange,0) + (1852 - (round($newRange,0) % 1852)) + 1852;
     // no debería hacer falta hacer un round
-    logger(" V> distanciaAlcanceMáximoAlineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / {$newRange}m");
+    logger(" V> Distancia Alcance Máximo Alineada: " . ($newRange/MILLA_NAUTICA_EN_METROS) . "NM / {$newRange}m");
 
     return $newRange;
 }
@@ -912,9 +957,10 @@ function obtieneMaxAnguloConCoberturaA(array $distanciasAlcances) {
  * arrray $radar datos para ubicar el centro de la malla en el radar
  * int $precision_malla Número de cifras decimales
  * float $resolucion_malla LSB del salto de una celda de la malla a la siguiente, depende de precision_malla
+ * bool $force genera la matriz aunque tenga poca resolucion, pensado para cuando se aumenta la resolución y sigue siendo pequeña
  * return array Matriz con índices genéricos para anotar los obstáculos 
  */
-function create_malla(array $radar, float $max_distancia_nm, int $precision_malla, float $resolucion_malla)
+function create_malla(array $radar, float $max_distancia_nm, int $precision_malla, float $resolucion_malla, bool $force = false)
 {
     $lat_rad = $radar['lat_rad'];
     // $lon_rad = $radar['lon_rad'];
@@ -922,7 +968,7 @@ function create_malla(array $radar, float $max_distancia_nm, int $precision_mall
     $lon_deg = $radar['lon_deg'];
     
     $max_distancia_nm = round(ceil($max_distancia_nm), 0) + 1; // Redondear hacia arriba y sumar 1 NM de margen
-    logger(" V> Distancia Alcance Máximo Alineada: $max_distancia_nm NM / " . $max_distancia_nm * MILLA_NAUTICA_EN_METROS . " m");
+    logger(" V> Distancia Alcance Máximo Alineada: {$max_distancia_nm}NM / " . $max_distancia_nm * MILLA_NAUTICA_EN_METROS . "m");
     $range_maximum = $max_distancia_nm * MILLA_NAUTICA_EN_METROS; // Rango máximo [m]
     
     $latitude_limit = rad2deg($range_maximum / RADIO_TERRESTRE); // Latitud límite desde el radar [º]
@@ -939,6 +985,10 @@ function create_malla(array $radar, float $max_distancia_nm, int $precision_mall
     $rows = intval(abs($north - $south) / $resolucion_malla) + 1;
     $cols = intval(abs($east - $west) / $resolucion_malla) + 1;
     logger(" D> Tamaño de la malla {$rows}x{$cols}");
+
+    // si la malla es demasiado pequeña, abortamos y volveremos a intentar con más precisión
+    if ( !$force && ($rows*$cols < 22500) )
+        return array();
 
     $malla_lat_lon = array();
     for ($i = 0; $i < $rows; $i++) {

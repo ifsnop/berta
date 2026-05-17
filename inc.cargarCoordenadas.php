@@ -8,8 +8,7 @@
  * evaluación, un array con la información.
  *
  * @param string $eval_dir Directorio donde está configurada la evaluación
- * @param bool   $parse_all Ignora recording_details.par y lee todos los
- *   radares definidos
+ * @param bool   $parse_all Ignora recording_details.par y lee todos los radares definidos
  *
  * @return array Listado de radares configurado
  */
@@ -58,7 +57,7 @@ function getRadars($eval_dir, $parse_all = false) {
     	    if ( $name[0] == "%" )
     	        continue;
 	    	// print ".";
-            $radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name, -1) );
+            $radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name) );
 		}
 		// print PHP_EOL;
     }
@@ -70,24 +69,27 @@ function getRadars($eval_dir, $parse_all = false) {
  * realizando conversiones para los parámetros que lo necesiten.
  * (Convierte altitud total y posición a grados WGS-84)
  *
- * @param string $eval_dir Directorio donde está configurada la evaluación
+ * @param string $radar_rbk_file Directorio donde está configurada la evaluación
  * @param string $name Nombre del radar para el SASS-C, que se corresponde con el nombre del fichero .rbk sin la extensión
  * @param string $sassc_id Identificador del radar para el SASS-C
  *
  * @return array Listado de parámetros asociados a un radar
  */
-function parseRBKFile($radar_rbk_file, $name, $sassc_id) {
+function parseRBKFile(string $radar_rbk_file, string $name, string $sassc_id = "none")
+{
 
-	if ( false === ($radar_rbk_contents = file_get_contents($radar_rbk_file)) ) {
-	logger(" E> No se puede acceder al contenido de >{$radar_rbk_file}<"); exit(-1);
-    }
-    clearstatcache();
-    if ( false === ($fechaUltimaModificacion = filemtime($radar_rbk_file)) ) {
-	logger(" E> No se pudo obtener fecha de última modificación de >{$radar_rbk_file}<"); exit(-1);
-    };
+	if (false === ($radar_rbk_contents = file_get_contents($radar_rbk_file))) {
+		logger(" E> No se puede acceder al contenido de >{$radar_rbk_file}<");
+		exit(-1);
+	}
+	clearstatcache();
+	if (false === ($fechaUltimaModificacion = filemtime($radar_rbk_file))) {
+		logger(" E> No se pudo obtener fecha de última modificación de >{$radar_rbk_file}<");
+		exit(-1);
+	};
 
-    logger(" D> Última modificación de >" . basename($radar_rbk_file) . "< el " .
-	date("Y/m/d H:i:s", $fechaUltimaModificacion));
+	logger(" D> Última modificación de >" . basename($radar_rbk_file) . "< el " .
+		date("Y/m/d H:i:s", $fechaUltimaModificacion));
 
     $lat = $lon = ""; $radarGroundAltitude = 0; $values = array(); $radar = array();
     // quita las terminaciones de línea msdos/unix y separa por líneas en un array
