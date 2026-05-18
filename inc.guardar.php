@@ -130,7 +130,6 @@ function fromPolygons2KML4(array $multi_polygons, string $radarWithFL, string $r
         </Document></kml>';
 
     $kml = $kmlHeader;
-
     foreach ($multi_polygons as $polygons) {
         $outer = true;
         $kmlOuter = "";
@@ -157,40 +156,6 @@ function fromPolygons2KML4(array $multi_polygons, string $radarWithFL, string $r
     }
     $kml .= $kmlFooter;
     return $kml;
-
-    foreach ($polygons as &$polygon) {
-        $kmlOuter = "";
-        //if ( 10000 < count($polygon['polygon']) ) {
-        // $count = count($polygon['outer']);
-        //    print "DEBUG current/refined vertex count => " . count($polygon['polygon']) . "/";
-        if ( !isset( $polygon['outer']) ) {
-            throw new InvalidArgumentException("Polygon doesn't have outer definition, error with polygon");
-        }
-        $polygon['outer'] = ramer_douglas_peucker($polygon['outer'], 0.0000000001);
-        // $new_count = count($polygon['outer']);
-        //if ( $count != $new_count ) {
-        //    logger(" V> current/refined vertex cound => $count/$new_count");
-        //    print count($polygon['polygon']) . PHP_EOL;
-        //}
-        foreach ($polygon['outer'] as &$p) {
-            $kmlOuter .= $p[1] . "," . $p[0] . "," . $fl . " ";
-        }
-        $kml .= $kmlPolygonHeader . $kmlOuter . $kmlPolygonFooter_1 . PHP_EOL;
-        if (isset($polygon['inners'])) {
-            foreach ($polygon['inners'] as &$polygons_inside) {
-                $kmlInner = "";
-                foreach ($polygons_inside as &$p_inside) {
-                    $kmlInner .=  $p_inside[1] . "," . $p_inside[0] . "," . $fl . " ";
-                }
-                if ("" != $kmlInner) {
-                    $kml .= $kmlInnerHeader . PHP_EOL . $kmlInner . PHP_EOL . $kmlInnerFooter;
-                }
-            }
-        }
-        $kml .= $kmlPolygonFooter_2;
-    }
-    $kml .= $kmlFooter;
-    return $kml;
 }
 
 
@@ -202,11 +167,9 @@ function fromPolygons2KML4(array $multi_polygons, string $radarWithFL, string $r
  * Entrada:
  * [
  *   [
- *     'outer' => [... CCW ...],
- *     'inners' => [
- *          [... CW ...],
+ *     [... CCW ...], // outer
+       [... CW ...], // inner
  *          ...
- *     ]
  *   ],
  *   ...
  * ]
@@ -280,7 +243,7 @@ function creaKml3(array $listaContornos, array $sensors, array $rutas, string $n
     if (false) {
         print "nivelVuelo: " . $nivelVuelo . PHP_EOL;
         print "radarWithFL: " . $radarWithFL . PHP_EOL;
-        print "ruta: " . print_r($ruta, true) . PHP_EOL;
+        print "ruta: " . print_r($rutas, true) . PHP_EOL;
     }
 
     if (0 == count($listaContornos)) {
@@ -529,13 +492,9 @@ function writeKMZ(string $fileName, string $radarWithFL, string $content, bool $
     logger(" V> Guardando fichero {$fileName}.kmz");
 
     $zip = new ZipArchive();
-    if (
-        false === $zip->open(
-            $fileName . ".kmz",
-            ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE
-        )
-    ) {
-        logger(" E> No se puede crear el fichero {$filename}.kmz");
+    $res = $zip->open($fileName . ".kmz",            ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE);
+    if ( ! $res ) {
+        logger(" E> No se puede crear el fichero {$fileName}.kmz");
         exit(-1);
     }
     $zip->addFromString($radarWithFL . ".kml", $content);

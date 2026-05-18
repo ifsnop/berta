@@ -56,10 +56,8 @@ function getRadars($eval_dir, $parse_all = false) {
     	    $name = $pathinfo['filename'];
     	    if ( $name[0] == "%" )
     	        continue;
-	    	// print ".";
             $radars = array_merge( $radars, parseRBKFile($radar_rbk_file, $name) );
 		}
-		// print PHP_EOL;
     }
     return $radars;
 }
