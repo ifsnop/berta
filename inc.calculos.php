@@ -356,12 +356,9 @@ function transformaFromPolarToLatLon($radar, $rho, $theta, $latComp) {
  * @return array malla[i][j] = array(lat,lon,cobertura)
  */
 function calculosFLdebajoRadar2(array &$radar, float $flm) {
-    $time_malla_coverage_total = 0;
-    $time_calcula_vertices_interseccion_total = 0;
-    $debug = false;
 
     $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
-    
+   
 /*
     $radar['lat_deg'] = $radar['lat'] = 41.773763888889;
     $radar['lon_deg'] = $radar['lon'] = 2.4376138888889;
@@ -401,14 +398,14 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     $precision_malla = 2;
     $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
     logger(" D> Generando malla de cobertura con precision: {$precision_malla} y resolución: {$resolucion_malla}");
-    $ret = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla);
-    if ( 0 == count($ret) ) {
+    $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla);
+    if ( 0 == count($malla) ) {
         $precision_malla++;
         $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
-        $ret = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla, true);
+        $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla, true);
     }
 
-    [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $ret;
+    // [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $malla;
 
     /*
      * // Código de depuración
@@ -423,9 +420,35 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
      * POLÍGONO DE COBERTURA
      *******************************/
 
+    $malla_lat_lon = create_poligonos_cobertura($radar, $intersec, $malla);
+
+    $segments = marchingSquares($malla_lat_lon);
+    $polygons = buildPolygonsFromSegments($segments);
+
+    return $polygons;
+
+}
+
+/*
+ * Genera polígonos de cobertura que cubren las intersecciones y modifica la malla para marcar
+ * con 1's y 0's las zonas donde hay cobertura.
+ * @param array $radar parámetros de radar
+ * @param array $intersec lista de intersecciones para cada azimut
+ * @param array $malla malla inicializada a 0's del tamaño de la cobertura
+ *
+ * @return array malla de cobertura
+ */
+function create_poligonos_cobertura(array &$radar, array &$intersec, array &$malla) {
     // Cada celda es un polígono de 4 esquinas (sector anular)
     // Se comprueba qué puntos de la malla están contenidos en cada polígono
     // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
+
+    $debug = false;
+
+    $time_malla_coverage_total = 0;
+    $time_calcula_vertices_interseccion_total = 0;
+
+    [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw, $resolucion_malla] = $malla;
 
     $lat_rad = $radar['lat_rad'];
     $lon_rad = $radar['lon_rad'];
@@ -574,19 +597,7 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
         "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
-    /*
-    for($i=0;$i<count($malla_lat_lon);$i++) {
-        for($j=0;$j<count($malla_lat_lon[$i]);$j++) {
-                print $malla_lat_lon[$i][$j][2];
-        }
-        print PHP_EOL;
-    }
-    */
-
-    $segments = marchingSquares($malla_lat_lon);
-    $polygons = buildPolygonsFromSegments($segments);
-
-    return $polygons;
+    return $malla_lat_lon;
 
 }
 
@@ -790,58 +801,34 @@ function calcula_vertices_interseccion(
     static $alpha_cache = [];
     static $a1a2_cache = [];
 
-    $r = round($r,0);
+    $r = round($r, 0);
 
-    $a1_rad  = round($a1_rad,2);
-    $a2_rad  = round($a2_rad,2);
-    
+    $a1_rad  = round($a1_rad, 2);
+    $a2_rad  = round($a2_rad, 2);
 
-[$cos_alpha, $sin_alpha ] = getCached($alpha_cache, (string)$r, function() use ($r) {
-    $alpha = $r / RADIO_TERRESTRE;
-    return [
-        cos($alpha),
-        sin($alpha),
-    ];
-});
 
-[$cos_a1, $sin_a1 ] = getCached($a1a2_cache, (string) $a1_rad, function() use ($a1_rad) {
-    return [
-        cos($a1_rad),
-        sin($a1_rad),
-    ];
-});
-
-[$cos_a2, $sin_a2 ] = getCached($a1a2_cache, (string) $a2_rad, function() use ($a2_rad) {
-    return [
-        cos($a2_rad),
-        sin($a2_rad),
-    ];
-});
-/*
-    if (!isset($a1a2_cache[(string)$a1_rad])) {
-        $cos_a1 = cos($a1_rad);
-        $sin_a1 = sin($a1_rad);
-        $a1a2_cache[(string)$a1_rad] = [
-            'cos' => $cos_a1,
-            'sin' => $sin_a1
+    [$cos_alpha, $sin_alpha] = getCached($alpha_cache, (string)$r, function () use ($r) {
+        $alpha = $r / RADIO_TERRESTRE;
+        return [
+            cos($alpha),
+            sin($alpha),
         ];
-    } else {
-        $cos_a1 = $a1a2_cache[(string)$a1_rad]['cos'];
-        $sin_a1 = $a1a2_cache[(string)$a1_rad]['sin'];
-    }
-    
-    if (!isset($a1a2_cache[(string)$a2_rad])) {
-        $cos_a2 = cos($a2_rad);
-        $sin_a2 = sin($a2_rad);
-        $a1a2_cache[(string)$a2_rad] = [
-            'cos' => $cos_a2,
-            'sin' => $sin_a2
+    });
+
+    [$cos_a1, $sin_a1] = getCached($a1a2_cache, (string) $a1_rad, function () use ($a1_rad) {
+        return [
+            cos($a1_rad),
+            sin($a1_rad),
         ];
-    } else {
-        $cos_a2 = $a1a2_cache[(string)$a2_rad]['cos'];
-        $sin_a2 = $a1a2_cache[(string)$a2_rad]['sin'];
-    }
-  */  
+    });
+
+    [$cos_a2, $sin_a2] = getCached($a1a2_cache, (string) $a2_rad, function () use ($a2_rad) {
+        return [
+            cos($a2_rad),
+            sin($a2_rad),
+        ];
+    });
+
     $cos_lat90xcos_alpha2 = $cos_lat90 * $cos_alpha;
     $sin_lat90xsin_alpha2 = $sin_lat90 * $sin_alpha;
 
@@ -1001,7 +988,7 @@ function create_malla(array $radar, float $max_distancia_nm, int $precision_mall
         }
     }
 
-    return array($malla_lat_lon, $rows, $cols, $north, $west);
+    return array($malla_lat_lon, $rows, $cols, $north, $west, $resolucion_malla);
 }
 
 /*
