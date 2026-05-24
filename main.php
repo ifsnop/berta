@@ -370,6 +370,10 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
         // inicio para calculo por encima con método vectorial
         // se devuelve para cada azimut, la distancia más lejana
         $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
+        $polygons = calculosFLencimaRadar2($radar, $flm);
+        $result = normalizePolygonsForKML($polygons);
+        /*
+        $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
 
         $newRange = obtieneMaxAnguloConCoberturaA($distanciasAlcances);
         $radar['screening']['range'] = round($newRange);
@@ -393,6 +397,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
         }
 
         $result = normalizePolygonsForKML(array_merge(array($listaContornos2), array($listaContornosConos2)));
+        */
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
         if ($calculoCono) {
