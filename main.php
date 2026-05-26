@@ -286,7 +286,7 @@ function programaPrincipal(array $config)
                 logger(" D> Leyendo información del terreno de {$sensor}");
                 // ¿tenemos datos del terreno cargados? vamos a cargarlos una sola vez
                 if ( !isset($coberturas[$sensor]['terreno']) ) {
-                    $coberturas[$sensor]['terreno'] = cargarDatosTerreno($infoCoral[$sensor], $config['max-range'] !== -1 ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange']);
+                    $coberturas[$sensor]['terreno'] = cargarDatosTerreno($infoCoral[$sensor], $config['max-range']); /*  !== -1 ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange']); */
                     if (false !== strpos($sensor, "-psr")) {
                         logger(" V> Detectado PSR, ajustando alcance");
                         $coberturas[$sensor]['terreno']['range'] = $infoCoral[$sensor]['primaryMaximumRange'] * MILLA_NAUTICA_EN_METROS;
@@ -364,7 +364,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
     $flm = $fl * 100 * FEET_TO_METERS; // fl en metros
-
+    logger(" D> Altitud del radar: " . round($hA) . "m Altitud de vuelo: " . round($flm) . "m / FL" . $nivelVuelo);
     // DISTINCIÓN DE CASOS 
     if ($flm >= $hA) { // CASO A (nivel de vuelo por encima de la posición del radar)
         // inicio para calculo por encima con método vectorial

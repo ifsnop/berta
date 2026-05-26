@@ -77,7 +77,7 @@ function buscarPuntosLimitantes(array $listaObstaculos, float $flm, float &$altu
  */
 function calculaAnguloMaximaCobertura($radar, $flm){
 
-    $debug = false;
+    $debug = true;
     $earthToRadar = $radar['screening']['towerHeight'] +
         $radar['screening']['terrainHeight'] +
         $radar['screening']['radioTerrestreAumentado'];
@@ -220,7 +220,6 @@ function calculosFLencimaRadar(array $radar, float $flm): array
             // puntos consecutivos límite, es decir el último punto con cobertura y el primero sin ella.
             // ¿es una interpolación? ¿por qué?
             $anguloLimitante = (($flm - $alturaUltimoPtoCob) * (($anguloPrimerPtoSinCob - $anguloUltimoPtoCob) / ($alturaPrimerPtoSinCob - $alturaUltimoPtoCob))) + $anguloUltimoPtoCob;
-
             if ($anguloLimitante > $anguloMaxCob) {
                 // este valor se puede precalcular siempre será el mismo
                 $distanciasAlcances[$i] = $distanciaMaxCobertura;
@@ -268,7 +267,7 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
 
     $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
     $matriz_obstaculos = create_matriz_obstaculos($radar);
-     $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
+    $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
     $W += 0.01;                     // Suma 10 cm para evitar errores numéricos
     logger(" D> Radio Terrestre Aumentado: {$radar['screening']['radioTerrestreAumentado']}m");
     logger(" D> Radio Circunferencia al Nivel de Vuelo: {$W}m");
@@ -620,6 +619,9 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     * INTERSECCIONES POR ACIMUT
     *******************************/
 
+    // ACTUALMENTE HAY UN PROBLEMA, NO SE CORTA CON RANGE DEL RADAR, SINO CON RANGE DEL SCREENING!!!!
+    // ¿COMO SE ARREGLA ESO? HAY QUE REVISAR LO QUE APARECE EN EL CODIGO DE PABLO PISONERO
+
     $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
     $W += 0.01;                     // Suma 10 cm para evitar errores numéricos
     logger(" D> Radio Terrestre Aumentado: {$radar['screening']['radioTerrestreAumentado']}m");
@@ -857,11 +859,11 @@ function create_matriz_obstaculos(array &$radar)
 {
     $debug = false;
 
-    //print_r($radar['screening']['listaAzimuths'][0]);
-
     // Ángulo central máximo según rango en millas
     $alpha_max = ($radar['screening']['range'] * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
-    logger(" V> Ángulo central máximo según rango en fichero screening: {$alpha_max}rad");
+    logger(" V> Ángulo central máximo según rango en fichero screening: {$alpha_max}rad / " . rad2deg($alpha_max) . "º");
+    
+    print ">" . calculaAnguloMaximaCobertura($radar, 400*FEET_TO_METERS*100) . "<" . PHP_EOL;
     // línea de rango máximo
     $m = tan(pi() / 2 - $alpha_max); // pi()/2 = 90º en radianes
 
@@ -884,6 +886,10 @@ function create_matriz_obstaculos(array &$radar)
         foreach ($listaObstaculos as $i => $obstaculo) {
             $alt = $obstaculo['altura']; // Altitud del obstáculo i
             $ang = $obstaculo['angulo']; // Ángulo central del obstáculo i
+
+//            if ( $azimut == 180)
+  //              print $ang . " < " . $alpha_max . PHP_EOL;
+
             $r = $radar['screening']['radioTerrestreAumentado'] + $alt; // Radio del obstáculo
             $xb = $r * sin($ang); // Coordenada horizontal del obstáculo
             $yb = $r * cos($ang); // Coordenada vertical del obstáculo
@@ -892,8 +898,8 @@ function create_matriz_obstaculos(array &$radar)
 
             $matriz_obstaculos[$azimut][$i] = [$xb, $yb];
         }
-        $i++;
 
+        $i++;
         // Si no existe muro final, se calcula el muro: el primer punto será la intersección
         // entre la línea que forman el radar y el último punto con la línea de máximo rango.
         if ($alt <= 30000) {
@@ -914,7 +920,6 @@ function create_matriz_obstaculos(array &$radar)
               *   ti = - ---------------------
               *           m*(xb-xa) - (yb-ya)
               */
-
             $dx = $xb - $xa;
             $dy = $yb - $ya;
             $t = ($m * $xa - $ya) / ($dy - $m * $dx);
