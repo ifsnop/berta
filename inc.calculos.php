@@ -77,14 +77,14 @@ function buscarPuntosLimitantes(array $listaObstaculos, float $flm, float &$altu
  */
 function calculaAnguloMaximaCobertura($radar, $flm){
 
-    $debug = true;
+    $debug = false;
     $earthToRadar = $radar['screening']['towerHeight'] +
         $radar['screening']['terrainHeight'] +
         $radar['screening']['radioTerrestreAumentado'];
     $earthToFl = $radar['screening']['radioTerrestreAumentado'] + $flm;
 
     $anguloMaxCob = acos(
-        (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range'],2))
+        (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range']*MILLA_NAUTICA_EN_METROS,2))
         / (2 * $earthToRadar * $earthToFl)
     );
     if ( $debug ) {
@@ -264,7 +264,9 @@ function calculosFLencimaRadar(array $radar, float $flm): array
  */
 function calculosFLencimaRadar2(array $radar, float $flm): array
 {
-
+    $alpha_max = calculaAnguloMaximaCobertura($radar, $flm);
+    print "alpha_max: " . $alpha_max . "rad / " . rad2deg($alpha_max) . "º / " . $alpha_max*$radar['screening']['radioTerrestreAumentado']/1852 .  "NM". PHP_EOL;
+    // print ($radar['screening']['range'] * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado']* . PHP_EOL;
     $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
     $matriz_obstaculos = create_matriz_obstaculos($radar);
     $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
@@ -278,6 +280,7 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
      */
 
     $intersec = create_matriz_intersecciones($radar, $matriz_obstaculos, $W, $max_distancia_nm);
+    exit(1);
     print "JORGE" . PHP_EOL;
     foreach($intersec as $i => $nm) {
         print "acimut: " . ($i) . "\t distancia: " . round($nm[0], 2) . PHP_EOL;
@@ -852,18 +855,20 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
 /*
  * Convierte el fichero de screening en una matriz de obstáculos teniendo en cuenta el radio terrestre
  * @param array $radar Datos del sensor
+ * @param float $flm Nivel de vuelo en metros
  * @return array matriz de obstáculos con respecto al centro de la tierra
  *
  */
-function create_matriz_obstaculos(array &$radar)
+function create_matriz_obstaculos(array &$radar, float $flm)
 {
     $debug = false;
 
-    // Ángulo central máximo según rango en millas
+    // Ángulo central máximo según rango en millas (sin tener en cuenta el nivel de vuelo)
     $alpha_max = ($radar['screening']['range'] * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
     logger(" V> Ángulo central máximo según rango en fichero screening: {$alpha_max}rad / " . rad2deg($alpha_max) . "º");
     
-    print ">" . calculaAnguloMaximaCobertura($radar, 400*FEET_TO_METERS*100) . "<" . PHP_EOL;
+    // este si tiene en cuenta el nivel de vuelo
+    print ">" . calculaAnguloMaximaCobertura($radar, $flm) . "<" . PHP_EOL;
     // línea de rango máximo
     $m = tan(pi() / 2 - $alpha_max); // pi()/2 = 90º en radianes
 
