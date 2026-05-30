@@ -369,7 +369,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
     if ($flm >= $hA) { // CASO A (nivel de vuelo por encima de la posición del radar)
         // inicio para calculo por encima con método vectorial
         // se devuelve para cada azimut, la distancia más lejana
-        $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
+        // $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
         $polygons = calculosFLencimaRadar2($radar, $flm);
         $result = normalizePolygonsForKML($polygons);
         /*
