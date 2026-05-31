@@ -12,6 +12,11 @@ const GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 const ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
 const BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
 
+// TODO:
+// Probar a generar cono de silencio
+// Mejorar la creación de polígonos utilizando martinz rueda para unirlos en lugar
+// de usar una malla.
+
 // INCLUSIÓN DE FICHEROS
 require_once('inc.cargarScreening.php');
 require_once('inc.cargarCoordenadas.php');
@@ -23,9 +28,16 @@ require_once('vendor/autoload.php');
 $config = array(
     'sensores' => array(),
     /*
-	    "paracuellos1",
 	    "alcolea",
-	    "monflorite"
+        "barajas",
+        "canchoblanco",
+        "erillas",
+	    "monflorite",
+        "paracuellos1",
+        "paracuellos2",
+        "sesolles",
+        "valdespina",
+        "valladolid"
     */
     'radar-data' => "spain.tsk/",
     'fl' => array('min' => 1, 'max' => 400, 'step' => 1),

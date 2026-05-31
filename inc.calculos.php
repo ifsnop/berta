@@ -289,75 +289,34 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
     $sin_lat90 = sin($lat90_rad);
     $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
     
-    $count_intersec = count($intersec);
     $polygons = array();
 
-    for ($azi = 0; $azi < $count_intersec; $azi++) {
-        
-        $last = 1; // se empieza en la última fila con cobertura del polígono
-        $a_rad = deg2rad( $azi ); //* $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
-        // $a2_rad = deg2rad( $azi * $azimuth_step + ($azimuth_step / 2) );  // Segundo ángulo [rad]
-        // $cos_a1 = $cos_a2 = $sin_a1 = $sin_a2 = false;
-        
-        // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
-        $p1 = /*$p2 = */$p3 /*= $p4 */ = array(); // Esquinas del polígono
-        $r1 = 0; // Radios de las esquinas del polígono
-        $r2 = 0;
-        $count_intersec_azi = count($intersec[$azi])-1;
+    $count_intersec = count($intersec);
+    for ($azimuth = 0; $azimuth < $count_intersec; $azimuth++) {
+        $azimuth_real = $azimuth * $azimuth_step;
+        $a_rad = deg2rad($azimuth_real); //* $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
 
-        // print "AZI :$azi a:" . $azi*$azimuth_step - ($azimuth_step/2) . " intersec_count: $count_intersec_azi b:" . $azi*$azimuth_step + ($azimuth_step/2) . PHP_EOL;
+        // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
+        $p = array(); // Esquina del polígono
+        $r = 0; // Radio de las esquina del polígono
+        $count_intersec_azi = count($intersec[$azimuth]) - 1;
+        // print "AZI :$azimuth azimut_step: $azimuth_step a:" . $azimuth * $azimuth_step - ($azimuth_step / 2) . " intersec_count: $count_intersec_azi b:" . $azimuth * $azimuth_step + ($azimuth_step / 2) . PHP_EOL;
 
         for ($i = $count_intersec_azi; $i >= 0; $i--) {
-            if ($intersec[$azi][$i] != 0 && $last == 1) {     // Última fila con cobertura del polígono
-                //print "intersec[$azi][$i]: " . $intersec[$azi][$i] . PHP_EOL;
-                // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
-                // Ùltimo radio [m]
-                $r2 = $intersec[$azi][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
-                // $time_calcula_vertices_interseccion = microtime(true);
-                [$p1] = calcula_vertices_interseccion(
-                    $r2,
-                    $a_rad,
-                    false,
-                    $cos_lat90,
-                    $sin_lat90,
-                    $lat_rad,
-                    $lon_rad
-                );
-                //$time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
-                $last = 0; // marcamos que en esta intersección ya no hay cobertura del polígono
-                // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
-                // print "p1: " . json_encode($p1) . PHP_EOL;
-                $polygons[] = $p1;
-
-            }
-            elseif ($last == 0) {   // Primera fila con cobertura del polígono
-
-                // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
-                $r1 = $intersec[$azi][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
-                //$time_calcula_vertices_interseccion = microtime(true);
-                [$p4] = calcula_vertices_interseccion(
-                    $r1,
-                    $a_rad,
-                    false,
-                    $cos_lat90,
-                    $sin_lat90,
-                    $lat_rad,
-                    $lon_rad
-                );
-                 // Polígono sin aumento de resolución y sin cerrar (no es necesario repetir el primer punto) [lat,lon] [º]
-                // print "p3: " . json_encode($p3) . PHP_EOL;
-                die("FIN" . PHP_EOL);
-                 $poly = [ $p1, $p2, $p3, $p4 ]; 
-
-                // Se hallan los puntos del mallado contenidos en el polígono
-                $timer_malla_coverage = microtime(true);
-                set_malla_coverage($malla_lat_lon, $poly, $resolucion_malla, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw);
-                $time_malla_coverage_total += microtime(true) - $timer_malla_coverage;
-                $last = 1;
-            }
+            print $azimuth . " " . $i . PHP_EOL;
+            $r = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+            [$p] = calcula_vertices_interseccion(
+                $r,
+                $a_rad,
+                false,
+                $cos_lat90,
+                $sin_lat90,
+                $lat_rad,
+                $lon_rad
+            );
+            $polygons[] = $p;
         }
     }
-    
     return [$polygons];
 }
 
@@ -460,7 +419,7 @@ function calculaCoordenadasGeograficasA( $radar, $flm, $distanciasAlcances ){
  *
  */
 function transformaFromPolarToLatLon($radar, $rho, $theta, $latComp) {
-debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     $ret = array();
 
     // CALCULO LATITUD
@@ -511,19 +470,13 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     /*******************************
     * INTERSECCIONES POR ACIMUT
     *******************************/
-
-    // ACTUALMENTE HAY UN PROBLEMA, NO SE CORTA CON RANGE DEL RADAR, SINO CON RANGE DEL SCREENING!!!!
-    // ¿COMO SE ARREGLA ESO? HAY QUE REVISAR LO QUE APARECE EN EL CODIGO DE PABLO PISONERO
-
     $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
     $W += 0.01;                     // Suma 10 cm para evitar errores numéricos
+    // Esto es porque a veces el screening da dos valores de altitud consecutivos
+    // iguales. Si además coinciden con el FL, da lugar a errores al calcular
+    //la intersección ya que línea y circunferencia son tangentes.
     logger(" D> Radio Terrestre Aumentado: {$radar['screening']['radioTerrestreAumentado']}m");
     logger(" D> Radio Circunferencia al Nivel de Vuelo: {$W}m");
-    /* Esto es porque a veces el screening da dos valores de
-     * altitud consecutivos iguales. Si además coinciden con el
-     * FL, da lugar a errores al calcular la intersección ya que
-     * línea y circunferencia son tangentes.
-     */
 
     $intersec = create_matriz_intersecciones($radar, $matriz_obstaculos, $W, $max_distancia_nm);
 
@@ -546,14 +499,14 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
         $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla, true);
     }
 
-    // [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $malla;
+    [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $malla;
 
-    /*
-     * // Código de depuración
-     * for($i=0;$i<3; $i++) { for($j=0; $j<3; $j++) {
-     * print $malla_lat_lon[$i][$j][0] . " " . $malla_lat_lon[$i][$j][1] . "    ";
-     * } print PHP_EOL; }
-     */
+    
+      // Código de depuración (imprime la esquina sup izq de la malla en 3x3)
+      //for($i=0;$i<3; $i++) { for($j=0; $j<3; $j++) {
+      //print $malla_lat_lon[$i][$j][0] . " " . $malla_lat_lon[$i][$j][1] . "    ";
+      //} print PHP_EOL; }
+    
     logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
         "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
@@ -562,6 +515,13 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
      *******************************/
 
     $malla_lat_lon = create_poligonos_cobertura($radar, $intersec, $malla);
+
+    // for($i=0; $i<count($malla_lat_lon); $i++) {
+    //    for($j=0;$j<count($malla_lat_lon[$i]); $j++) {
+    //        print $malla_lat_lon[$i][$j][2];
+    //    }
+    //    print PHP_EOL;
+    // }
 
     $segments = marchingSquares($malla_lat_lon);
     $polygons = buildPolygonsFromSegments($segments);
@@ -573,11 +533,13 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
 /*
  * Genera polígonos de cobertura que cubren las intersecciones y modifica la malla para marcar
  * con 1's y 0's las zonas donde hay cobertura.
+ * Se tiene en cuenta el número de azimuts que existen en el screening, dado que la precisión
+ * de PREDICT es configurable.
  * @param array $radar parámetros de radar
  * @param array $intersec lista de intersecciones para cada azimut
  * @param array $malla malla inicializada a 0's del tamaño de la cobertura
  *
- * @return array malla de cobertura
+ * @return array malla de cobertura (malla_lat_lon)
  */
 function create_poligonos_cobertura(array &$radar, array &$intersec, array &$malla) {
     // Cada celda es un polígono de 4 esquinas (sector anular)
@@ -585,6 +547,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
 
     $debug = false;
+    $start_time = microtime(true);
 
     $time_malla_coverage_total = 0;
     $time_calcula_vertices_interseccion_total = 0;
@@ -596,39 +559,35 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     $lat90_rad = M_PI_2 - $lat_rad;  // Ángulo complementario en radianes
     $cos_lat90 = cos($lat90_rad);
     $sin_lat90 = sin($lat90_rad);
-    
-    $start_time = microtime(true);
-    $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
+    $azimuth_step = 360.0 / $radar['screening']['totalAzimuths']; 
     
     logger("[00%]", false); $countPct_old = 0;
     $count_intersec = count($intersec);
-    for ($azi = 0; $azi < $count_intersec; $azi++) {
-        $countPct = $azi / $count_intersec;
+    for ($azimuth = 0; $azimuth < $count_intersec; $azimuth++) {
+        $countPct = $azimuth / $count_intersec;
         if ( ($countPct - $countPct_old) >= 0.10 ) { logger("[" . round($countPct*100) . "%]", false); $countPct_old = $countPct; }
 
+        // transformar azimuth en un azimuth real
+        $azimuth_real = $azimuth * $azimuth_step; // MAL
+
         $last = 1; // se empieza en la última fila con cobertura del polígono
-        // Cada columna se recorre hacia atrás empezando sin cobertura
-        // $cont_i = 0;
 
         // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
-        // $a1 = deg2rad( ($azi + 1) * $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
-        // $a2 = deg2rad( ($azi + 1) * $azimuth_step + ($azimuth_step / 2) );  // Segundo ángulo [rad]
-        // ojo, si tenemos 720º, en la lista de obstáculos tendremos 720 entradas. No vamos a poder entrar usando a1 como índice!
-        $a1_rad = deg2rad( $azi * $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
-        $a2_rad = deg2rad( $azi * $azimuth_step + ($azimuth_step / 2) );  // Segundo ángulo [rad]
-        // $cos_a1 = $cos_a2 = $sin_a1 = $sin_a2 = false;
+        $a1_rad = deg2rad( $azimuth_real - ($azimuth_step / 2) );  // Primer ángulo [rad]
+        $a2_rad = deg2rad( $azimuth_real + ($azimuth_step / 2) );  // Segundo ángulo [rad]
+        // print "a1_rad: $a1_rad a1_deg:" . rad2deg($a1_rad) . "º a2_rad: $a2_rad a2_deg:" . rad2deg($a2_rad) . PHP_EOL;
 
         // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
         $p1 = $p2 = $p3 = $p4 = array(); // Esquinas del polígono
         $r1 = $r2 = 0; // Radios de las esquinas del polígono
-        $count_intersec_azi = count($intersec[$azi])-1;
+        $count_intersec_azi = count($intersec[$azimuth])-1;
         for ($i = $count_intersec_azi; $i >= 0; $i--) {
 
-            if ($intersec[$azi][$i] != 0 && $last == 1) {     // Última fila con cobertura del polígono
+            if ($intersec[$azimuth][$i] != 0 && $last == 1) {     // Última fila con cobertura del polígono
 
                 // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
                 // Ùltimo radio [m]
-                $r2 = $intersec[$azi][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+                $r2 = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
                 $time_calcula_vertices_interseccion = microtime(true);
                 [$p1, $p2] = calcula_vertices_interseccion(
                     $r2,
@@ -643,7 +602,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                 $last = 0; // marcamos que en esta intersección ya no hay cobertura del polígono
                 // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
                 // print "p1: " . json_encode($p1) . " p2: " . json_encode($p2) . PHP_EOL;
-                if ( $debug && $azi == 34 && $i == 5) {
+                if ( $debug && $azimuth == 34 && $i == 5) {
                     $p1_check = [43.08976905930698, 3.6356157745885453];
                     $p2_check = [43.07377059296113, 3.667011200629223];
                     print $p1_check[0] - $p1[0] . " " . $p1_check[1] - $p1[1] . PHP_EOL;
@@ -653,7 +612,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
             elseif ($last == 0) {   // Primera fila con cobertura del polígono
 
                 // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
-                $r1 = $intersec[$azi][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+                $r1 = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
                 $time_calcula_vertices_interseccion = microtime(true);
                 [$p4, $p3] = calcula_vertices_interseccion(
                     $r1,
@@ -670,17 +629,17 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
 
                 // print "p3: " . json_encode($p3) . " p4: " . json_encode($p4) . PHP_EOL;
                 
-                if ( $debug && $azi== 34 && $i == 4) {
+                if ( $debug && $azimuth== 34 && $i == 4) {
                     $p3_check = [42.89364390134427, 3.492870493185009];
                     $p4_check = [42.90740443622323, 3.4658423401029874];
                     print $p3_check[0] - $p3[0] . " " . $p3_check[1] - $p3[1] . PHP_EOL;
                     print $p4_check[0] - $p4[0] . " " . $p4_check[1] - $p4[1] . PHP_EOL;
                 }
                 // Aumento de resolución
-                // print "En azimut $azi, la distancia entre vertices es: " .(($r2 - $r1) / MILLA_NAUTICA_EN_METROS) . "NM" . PHP_EOL;
+                // print "En azimut $azimuth, la distancia entre vertices es: " .(($r2 - $r1) / MILLA_NAUTICA_EN_METROS) . "NM" . PHP_EOL;
                 if (($r2 - $r1) >= INTERSECTION_TOLERANCE_LIMIT_RAD) {   // Polígono demasiado largo
                     $n_subdivisiones = (int)floor(2 * ($r2 - $r1) / (INTERSECTION_TOLERANCE_LIMIT_M)) - 1;
-                    // print "Necesarias $n_subdivisiones subdivisiones en azimut $azi, distancia entre vertices es de " . round(($r2 - $r1)/MILLA_NAUTICA_EN_METROS,2) . " NM" . PHP_EOL;
+                    // print "Necesarias $n_subdivisiones subdivisiones en azimut $azimuth, distancia entre vertices es de " . round(($r2 - $r1)/MILLA_NAUTICA_EN_METROS,2) . " NM" . PHP_EOL;
                     // print "r2: " . $r2 . " r1: " . $r1 . PHP_EOL;
                     $poly = [$p1, $p2];
                     
@@ -707,7 +666,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                     }
                     $poly[] = $p3;
                     $poly[] = $p4;
-                    //$poly = ordenarVerticesHorario($poly); // no es necesario, los vértices ya se introducen ordenados
+                    // $poly = ordenarVerticesHorario($poly); // no es necesario, los vértices ya se introducen ordenados
                     // acabamos de copiar las soluciones del izquierdo que habíamos guardado, para
                     // cerrar el polígono. Es el equivalente a apuntarlos todos y ordenar los vértices
                     // en sentido horario (realmente anti-horario, pero da igual porque el algoritmo de 
@@ -831,15 +790,15 @@ function create_matriz_intersecciones(array &$radar, array &$matriz_obstaculos, 
 
     // Intersección entre nivel de vuelo (arco de circunferencia) y polilínea de screening para acimuth a
     $intersec = array();
-    for ($azi = 0; $azi < count($matriz_obstaculos); $azi++) {
+    for ($azimuth = 0; $azimuth < count($matriz_obstaculos); $azimuth++) {
         $count = 0;
-        $intersec[$azi] = array();
-        for ($obs = 0; $obs < count($matriz_obstaculos[$azi]) - 1; $obs++) {
+        $intersec[$azimuth] = array();
+        for ($obs = 0; $obs < count($matriz_obstaculos[$azimuth]) - 1; $obs++) {
 
-            $x1 = $matriz_obstaculos[$azi][$obs][0];
-            $y1 = $matriz_obstaculos[$azi][$obs][1];
-            $x2 = $matriz_obstaculos[$azi][$obs + 1][0];
-            $y2 = $matriz_obstaculos[$azi][$obs + 1][1];
+            $x1 = $matriz_obstaculos[$azimuth][$obs][0];
+            $y1 = $matriz_obstaculos[$azimuth][$obs][1];
+            $x2 = $matriz_obstaculos[$azimuth][$obs + 1][0];
+            $y2 = $matriz_obstaculos[$azimuth][$obs + 1][1];
 
             $dx = $x2 - $x1;
             $dy = $y2 - $y1;
@@ -856,8 +815,8 @@ function create_matriz_intersecciones(array &$radar, array &$matriz_obstaculos, 
 
             // Discriminante
             $D = $B * $B - 4 * $A * $C;
-            //print "$azi,$obs: " . json_encode($matriz_obstaculos[$azi][$obs]) . PHP_EOL;
-            //print "rowsX: $obs Azimut: $azi x1: $x1 y1: $y1 x2: $x2 y2: $y2" . PHP_EOL;
+            //print "$azimuth,$obs: " . json_encode($matriz_obstaculos[$azimuth][$obs]) . PHP_EOL;
+            //print "rowsX: $obs Azimut: $azimuth x1: $x1 y1: $y1 x2: $x2 y2: $y2" . PHP_EOL;
             //print "A: $A B: $B C: $C D: $D" . PHP_EOL;
             $epsilon = 1e-12 * max(1.0, abs($B), abs($C));
 
@@ -887,10 +846,10 @@ function create_matriz_intersecciones(array &$radar, array &$matriz_obstaculos, 
                         $dist_nm = ($radar['screening']['radioTerrestreAumentado'] * $alpha) / MILLA_NAUTICA_EN_METROS;
                         if ($dist_nm > $max_distancia_nm)
                             $max_distancia_nm = $dist_nm;
-                        $intersec[$azi][$count] = $dist_nm;
+                        $intersec[$azimuth][$count] = $dist_nm;
 
                         if ($debug)
-                            print "intersec count: $count obs: $obs azimut: $azi => dist_nm: $dist_nm" . PHP_EOL;
+                            print "intersec count: $count obs: $obs azimut: $azimuth => dist_nm: $dist_nm" . PHP_EOL;
 
                         $count++;
                     }
@@ -1297,6 +1256,7 @@ function midpoint(array $a, array $b): array
         ($a[1] + $b[1]) / 2  // lon
     ];
 }
+
 
 /**
  * Entrada:
