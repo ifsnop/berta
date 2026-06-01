@@ -9,8 +9,9 @@ const RADIO_TERRESTRE = 6371000.0;
 const MILLA_NAUTICA_EN_METROS = 1852.0; // metros equivalentes a 1 milla nautica
 const GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 const GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
-const ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
+const BERTA_ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
 const BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
+CONST BERTA_FEET_TO_METERS = 0.30480370641307;
 
 // TODO:
 // Probar a generar cono de silencio
@@ -375,7 +376,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
 {
 
     $hA = $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
-    $flm = $fl * 100 * FEET_TO_METERS; // fl en metros
+    $flm = $fl * 100 * BERTA_FEET_TO_METERS; // fl en metros
     logger(" D> Altitud del radar: " . round($hA) . "m Altitud de vuelo: " . round($flm) . "m / FL" . $nivelVuelo);
     // DISTINCIÓN DE CASOS 
     if ($flm >= $hA) { // CASO A (nivel de vuelo por encima de la posición del radar)
@@ -401,7 +402,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
 
         $listaContornosConos2 = false;
         if ($calculoCono) {
-            $radioConom = ($flm - $hA) * tan(deg2rad(ANGULO_CONO));
+            $radioConom = ($flm - $hA) * tan(deg2rad(BERTA_ANGULO_CONO));
             $radioCono = $radioConom / MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
             $distanciasConos = array_fill(0, count($distanciasAlcances), $radioCono);
             logger(" N> Radio del Cono: " . round($radioCono, 2) . "NM / " . round($radioConom, 2) . "m");
