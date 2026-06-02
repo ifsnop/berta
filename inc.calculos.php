@@ -321,8 +321,8 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                 if ( $debug && $azimuth == 34 && $i == 5) {
                     $p1_check = [43.08976905930698, 3.6356157745885453];
                     $p2_check = [43.07377059296113, 3.667011200629223];
-                    print $p1_check[0] - $p1[0] . " " . $p1_check[1] - $p1[1] . PHP_EOL;
-                    print $p2_check[0] - $p2[0] . " " . $p2_check[1] - $p2[1] . PHP_EOL;
+                    print ($p1_check[0] - $p1[0]) . " " . ($p1_check[1] - $p1[1]) . PHP_EOL;
+                    print ($p2_check[0] - $p2[0]) . " " . ($p2_check[1] - $p2[1]) . PHP_EOL;
                 }
             }
             elseif ($last == 0) {   // Primera fila con cobertura del polígono
@@ -348,8 +348,8 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                 if ( $debug && $azimuth== 34 && $i == 4) {
                     $p3_check = [42.89364390134427, 3.492870493185009];
                     $p4_check = [42.90740443622323, 3.4658423401029874];
-                    print $p3_check[0] - $p3[0] . " " . $p3_check[1] - $p3[1] . PHP_EOL;
-                    print $p4_check[0] - $p4[0] . " " . $p4_check[1] - $p4[1] . PHP_EOL;
+                    print ($p3_check[0] - $p3[0]) . " " . ($p3_check[1] - $p3[1]) . PHP_EOL;
+                    print ($p4_check[0] - $p4[0]) . " " . ($p4_check[1] - $p4[1]) . PHP_EOL;
                 }
                 // Aumento de resolución
                 // print "En azimut $azimuth, la distancia entre vertices es: " .(($r2 - $r1) / MILLA_NAUTICA_EN_METROS) . "NM" . PHP_EOL;
@@ -420,7 +420,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     //$p_mr1 = MR\Algorithm::union($p_mr1);
     
     $p = array();
-    for($i=0; $i<count($polygons) && $i<100; $i++) {
+    for($i=0; $i<count($polygons); $i++) {
         $p[] = MR\Polygon::create()->fillFromArray($polygons[$i]);
     }
     $p_mr1 = MR\Algorithm::union($p);
@@ -521,7 +521,7 @@ function create_matriz_obstaculos(array &$radar, float $flm)
             $xb = $r * sin($ang); // Coordenada horizontal del obstáculo
             $yb = $r * cos($ang); // Coordenada vertical del obstáculo
             if ($debug)
-                print "[" . $i + 1 . ",$azimut] alt: $alt, ang: $ang, r: $r => $xb,$yb" . PHP_EOL;
+                print "[" . ($i + 1) . ",$azimut] alt: $alt, ang: $ang, r: $r => $xb,$yb" . PHP_EOL;
 
             $matriz_obstaculos[$azimut][$i] = [$xb, $yb];
         }
@@ -642,7 +642,7 @@ function create_matriz_intersecciones(array &$radar, array &$matriz_obstaculos, 
 function calcula_vertices_interseccion(
     float $r,
     float $a1_rad,
-    float|bool $a2_rad,
+    $a2_rad,
     float $cos_lat90,
     float $sin_lat90,
     float $lat_rad,

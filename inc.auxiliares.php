@@ -283,3 +283,63 @@ function polarTriangleArea(float $tan1, float  $lng1, float  $tan2, float  $lng2
     $t = $tan1 * $tan2;
     return 2 * atan2($t * sin($deltaLng), 1 + $t * cos($deltaLng));
 }
+
+
+
+/**
+ * Calcula una estimación del tiempo restante de ejecución basado en el progreso.
+ *
+ * Utiliza variables estáticas internas para persistir el tiempo y el progreso de la 
+ * primera llamada. Para evitar fluctuaciones erráticas al inicio del proceso, requiere 
+ * un umbral mínimo de 0.5 segundos transcurridos y al menos un 1% (0.01) de progreso real 
+ * antes de comenzar a devolver estimaciones.
+ *
+ * @param float $progress Progreso actual del proceso, representado por un valor entre 0.0 y 1.0.
+ * * @return float|null Tiempo restante estimado en segundos. 
+ * Devuelve 0.0 si el progreso alcanzó o superó 1.0.
+ * Devuelve null si aún no hay datos suficientes para calcular la velocidad 
+ * o si el proceso parece haberse congelado.
+ */
+function obtenerTiempoRestante(float $progress): ?string
+{
+    static $startTime = null;
+    static $startProgress = null;
+    static $lastTime = null;
+
+    $currentTime = microtime(true);
+
+    // 1. Inicialización en la primera llamada
+    if ($startTime === null) {
+        $startTime = $currentTime;
+        $startProgress = $progress;
+        return null; // No hay datos suficientes todavía
+    }
+
+    $elapsedTime = $currentTime - $startTime;
+    $progressDelta = $progress - $startProgress;
+
+    // 2. Control de "Suficientes Datos"
+    // Esperamos a que pasen 0.5 segundos y un 1% de progreso para estabilizar la métrica
+    if ($elapsedTime < 0.5 || $progressDelta < 0.01) {
+        return 0.0; 
+    }
+
+    // 3. Si ya llegó al final (1 o más)
+    if ($progress >= 1.0) {
+        return 0.0;
+    }
+
+    // 4. Cálculo de velocidad (Progreso por segundo)
+    $speed = $progressDelta / $elapsedTime;
+
+    if ($speed <= 0) {
+        return $lastTime; // Evita división por cero si el proceso se congela
+    }
+
+    // 5. Calcular tiempo restante
+    $remainingProgress = 1.0 - $progress;
+
+    // 6. Guardamos el último tiempo "bueno" por si hay stales
+    $lastTime = $remainingProgress / $speed;
+    return $lastTime . " " . $elapsedTime;
+}
