@@ -184,7 +184,7 @@ function fromPolygons2KML4(array $multi_polygons, string $radarWithFL, string $r
 function creaKml3(array $listaContornos, array $sensors, array $rutas, string $nivelVuelo, string $altMode, array $appendToFilename = array(), string $coverageLevel = 'mono', bool $disableKmz = true)
 {
     // conversión a metros para usar en el kmz
-    $flm = round(((float)$nivelVuelo) * 100.0 * FEET_TO_METERS, 2);
+    $flm = round(((float)$nivelVuelo) * 100.0 * BERTA_FEET_TO_METERS, 2);
     // aseguramos el formato del nivel de vuelo
     $nivelVuelo = str_pad($nivelVuelo, 3, "0", STR_PAD_LEFT);
     $coverageLevelAppend = "-" . $coverageLevel;
@@ -584,7 +584,7 @@ function KML_get_placemarks($listaContornos, $radarName, $rutas, $nivelVuelo, $a
     debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
     logger(" D> Nivel de cobertura: $coverageLevel");
 
-    $altitude_meters = $nivelVuelo * 100.0 * FEET_TO_METERS;
+    $altitude_meters = $nivelVuelo * 100.0 * BERTA_FEET_TO_METERS;
     $rgb = KML_get_rgb_from_coverageLevel($coverageLevel);
 
     if (is_array($appendToFilename)) {

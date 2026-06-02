@@ -276,9 +276,10 @@ function computeSignedAreaP($path,  $radius) {
  * See http://books.google.com/books?id=3uBHAAAAIAAJ&pg=PA71
  * The arguments named "tan" are tan((pi/2 - latitude)/2).
  */
-function polarTriangleArea($tan1,  $lng1, $tan2, $lng2) {
+function polarTriangleArea(float $tan1, float  $lng1, float  $tan2, float  $lng2)
+{
     die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-        $deltaLng = $lng1 - $lng2;
-        $t = $tan1 * $tan2;
-        return 2 * atan2($t * sin($deltaLng), 1 + $t * cos($deltaLng));
+    $deltaLng = $lng1 - $lng2;
+    $t = $tan1 * $tan2;
+    return 2 * atan2($t * sin($deltaLng), 1 + $t * cos($deltaLng));
 }

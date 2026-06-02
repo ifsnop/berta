@@ -58,7 +58,7 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 	}
 
 	if ("Version 2" == trim($contenidoFichero[1])) {
-		logger(" V> Procesando fichero screening versión 2");
+		logger(" D> Procesando fichero screening versión 2");
 		$screening = array(
 			'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
 			'version' => (int) substr(trim($contenidoFichero[1]), DISTANCIA_A_VERSION),
@@ -76,7 +76,7 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 		);
 		$lineaActual = 11; // primera línea donde comienzan los AZIMUT
 	} else {
-		logger(" V> Procesando fichero screening versión 1");
+		logger(" D> Procesando fichero screening versión 1");
 		$screening = array(
 			'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
 			'k-factor' 	=> doubleval(substr(trim($contenidoFichero[1]), DISTANCIA_A_K_FACTOR)),
@@ -184,18 +184,20 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 	$screening['radioTerrestreAumentado'] = $screening['k-factor'] * RADIO_TERRESTRE;
 	//    }
 
+	// tenemos tres alcances posibles: el que viene definido en el screening, el definido en el .rdb o uno forzado por línea de comandos
+	// vamos a descartar siempre el que viene en el screening, y usaremos el que viene del .rdb
 	if ($forzarAlcance > 0) {
 		// utiliza el alcance que pasamos a la función
-		$radar['range'] = $forzarAlcance * MILLA_NAUTICA_EN_METROS;
+		$radar['range'] = $forzarAlcance;
 		logger(" I> Se ha forzado un alcance de " . ($radar['range'] / MILLA_NAUTICA_EN_METROS) .
 			"NM / " . $radar['range'] . "m");
 	} else {
-		// utiliza el alcance definido en el fichero de screening
-		$radar['range'] = $screening['range'] * MILLA_NAUTICA_EN_METROS;
-		logger(" I> El alcance definido en el fichero de terreno es de " . ($radar['range'] / MILLA_NAUTICA_EN_METROS) .
-			"NM / " . $radar['range'] . "m");
+		// utiliza el alcance definido en el .rdb para un radar secundario
+		$radar['range'] = $radar['secondaryMaximumRange'];
+		logger(" I> El alcance definido en el fichero del radar es {$radar['range']}NM / " .
+			$radar['range'] * MILLA_NAUTICA_EN_METROS . "m");
 	}
-
+	$screening['range'] = $radar['range'];
 	$radar['screening_file'] = $radar['screening'];
 	$radar['screening'] = $screening;
 
