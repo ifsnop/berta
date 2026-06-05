@@ -307,7 +307,12 @@ function normalizePolygonsForKML(array $polygons): array
     }
 
     // ordenar grandes primero
-    usort($items, fn($a, $b) => $b['area'] <=> $a['area']);
+    // usort($items, fn($a, $b) => $b['area'] <=> $a['area']);
+
+    usort($items, function ($a, $b) {
+	return $b['area'] <=> $a['area'];
+    });
+
 
     $n = count($items);
 

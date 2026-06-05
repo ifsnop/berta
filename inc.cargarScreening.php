@@ -206,6 +206,6 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
         logger(" I> Detectado PSR, ajustando nombre, REVISAR porque ahora screening|site no se usa"); exit(-1);
         $radar['screening']['site'] = $radar['screening']['site'] . "_PSR";
     }
-*/
+    */
 	return $radar;
 }

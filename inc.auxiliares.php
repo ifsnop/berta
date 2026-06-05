@@ -39,7 +39,7 @@ function altitudeModetoString($altitudeMode)
  * @param callable $compute  Función que calcula y devuelve el valor
  * @return mixed             Valor cacheado o recién calculado
  */
-function getCached(array &$cache, string $key, callable $compute): mixed
+function getCached(array &$cache, string $key, callable $compute)
 {
     if (!isset($cache[$key])) {
         $cache[$key] = $compute();
