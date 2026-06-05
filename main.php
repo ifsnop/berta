@@ -24,6 +24,7 @@ require_once('inc.cargarCoordenadas.php');
 require_once('inc.auxiliares.php');
 require_once('inc.calculos.php');
 require_once('inc.guardar.php');
+require_once('EtaEstimator.php');
 require_once('vendor/autoload.php');
 
 $config = array(

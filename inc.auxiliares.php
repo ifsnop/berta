@@ -283,3 +283,4 @@ function polarTriangleArea(float $tan1, float  $lng1, float  $tan2, float  $lng2
     $t = $tan1 * $tan2;
     return 2 * atan2($t * sin($deltaLng), 1 + $t * cos($deltaLng));
 }
+

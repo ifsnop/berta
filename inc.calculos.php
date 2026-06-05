@@ -88,14 +88,14 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
     // FL, da lugar a errores al calcular la intersección ya que
     // línea y circunferencia son tangentes.
     $intersec = create_matriz_intersecciones($radar, $matriz_obstaculos, $W, $max_distancia_nm);
-    
+
     $lat_rad = $radar['lat_rad'];
     $lon_rad = $radar['lon_rad'];
     $lat90_rad = M_PI_2 - $lat_rad;  // Ángulo complementario en radianes
     $cos_lat90 = cos($lat90_rad);
     $sin_lat90 = sin($lat90_rad);
     $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
-    
+
     $polygons = array();
 
     $count_intersec = count($intersec);
@@ -171,7 +171,7 @@ function create_muro(array &$radar, float $xa, float $ya, float $xb, float $yb, 
 /*
  * CASO B
  * Funcion que calcula las coberturas cuando el nivel de vuelo FL, esta por debajo del radar
- * 
+ *
  * @param array $radar (ENTRADA / SALIDA)
  * @param float $flm nivel de vuelo en metros (ENTRADA)
  * @return array malla[i][j] = array(lat,lon,cobertura)
@@ -215,12 +215,11 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
 
     [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $malla;
 
-    
       // Código de depuración (imprime la esquina sup izq de la malla en 3x3)
       //for($i=0;$i<3; $i++) { for($j=0; $j<3; $j++) {
       //print $malla_lat_lon[$i][$j][0] . " " . $malla_lat_lon[$i][$j][1] . "    ";
       //} print PHP_EOL; }
-    
+
     logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
         "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
 
@@ -344,7 +343,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                 // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
 
                 // print "p3: " . json_encode($p3) . " p4: " . json_encode($p4) . PHP_EOL;
-                
+
                 if ( $debug && $azimuth== 34 && $i == 4) {
                     $p3_check = [42.89364390134427, 3.492870493185009];
                     $p4_check = [42.90740443622323, 3.4658423401029874];
@@ -358,7 +357,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                     // print "Necesarias $n_subdivisiones subdivisiones en azimut $azimuth, distancia entre vertices es de " . round(($r2 - $r1)/MILLA_NAUTICA_EN_METROS,2) . " NM" . PHP_EOL;
                     // print "r2: " . $r2 . " r1: " . $r1 . PHP_EOL;
                     $poly = [$p1, $p2];
-                    
+
                     // Subdivisiones
                     $subdivisiones = array();
                     for ($s = 1; $s <= $n_subdivisiones; $s++) {
@@ -405,8 +404,6 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
             }
         }
     }
-    
-
 
     logger("[100%]" . PHP_EOL, false);
     logger(" I> Tiempo total generación malla: " . round(microtime(true) - $start_time, 3) . "s");
@@ -418,9 +415,9 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     //print json_encode($polygons) . PHP_EOL; exit(1);
     //$p_mr1 = MR\Polygon::create()->fillFromArray($polygons);
     //$p_mr1 = MR\Algorithm::union($p_mr1);
-    
+
     $p = array();
-    for($i=0; $i<count($polygons) && $i<100; $i++) {
+    for($i=0; $i<count($polygons) && $i>=0; $i++) {
         $p[] = MR\Polygon::create()->fillFromArray($polygons[$i]);
     }
     $p_mr1 = MR\Algorithm::union($p);
@@ -436,11 +433,12 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
         $p_mr1 = MR\Algorithm::unionSegments($p_mr1, $p_mr2);
         if ( $i % 10 == 0 || $i == $total) {
             print " " . round($i/$total*100) . "% " . convertBytes(memory_get_usage(false)) . " / " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
-        }   
+        }
     }
     $p = MR\Algorithm::polygon($p_mr1);
     $result = normalizePolygonsForKML($p->getArray());
     */
+    logger(" D> creando KMZ");
     creaKml3(
                     $result,
                     array("prueba"),
@@ -516,7 +514,7 @@ function create_matriz_obstaculos(array &$radar, float $flm)
                 // en este caso lo añadimos en lugar del actual.
                 break;
             }
-  
+
             $r = $radar['screening']['radioTerrestreAumentado'] + $alt; // Radio del obstáculo
             $xb = $r * sin($ang); // Coordenada horizontal del obstáculo
             $yb = $r * cos($ang); // Coordenada vertical del obstáculo
@@ -541,7 +539,7 @@ function create_matriz_obstaculos(array &$radar, float $flm)
             }
         }
     }
-    
+
     return $matriz_obstaculos;
 }
 
