@@ -121,6 +121,10 @@ function programaPrincipal(array $config)
                 break;
             case 'radar-data':
             case 'd':
+                if ( is_array($value) ) {
+                    logger(" E> Solo se puede especificar un path para la base de datos de radares");
+                    exit(-1);
+                }
                 $config['radar-data'] = $value;
                 break;
             case 'radar-list':
