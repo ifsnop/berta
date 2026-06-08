@@ -500,6 +500,9 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     $time_union = microtime(true);
     $mr_polygons = array();
     foreach($polygons as $polygon) {
+        //print json_encode([$polygon]) . PHP_EOL;
+        //$normalized = MR\GJTools::geojsonToArray([$polygon]);
+        //print json_encode($normalized) . PHP_EOL;
         $mr_polygons[] = MR\Polygon::create()->fillFromArray($polygon);
     }
     $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
