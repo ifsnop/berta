@@ -151,7 +151,6 @@ function polarToLatLon(
     return [$latDestino, $lonDestino];
 }
 
-
 /**
  * CASO A
  * Funcion que calcula las distancias a las que hay cobertura y los angulos de apantallamiento cuando el FL esta por encima del radar
@@ -492,7 +491,12 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     logger(" I> Tiempo en calcula_vertices_interseccion: " . round($time_calcula_vertices_interseccion_total,3) . "s");
     logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
         "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
-    logger(" V> Número de polígonos para la unión: " . count($polygons));
+    $n_polygons = count($polygons);
+    logger(" V> Número de polígonos para la unión: " . $n_polygons);
+    if ( $n_polygons == 0) {
+        logger(" D> No hay polígonos de cobertura, se devuelve un polígono vacío");
+        return array();
+    }
     $time_union = microtime(true);
     $mr_polygons = array();
     foreach($polygons as $polygon) {
