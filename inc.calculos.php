@@ -62,70 +62,95 @@ function calculaAnguloMaximaCobertura($radar, $flm){
     return $anguloMaxCob;
 }
 
-function calculaCoordenadasCono(array &$radar, float $radioCono): array
+/**
+ * Calcula las coordenadas del polígono que representa el cono de silencio de un radar.
+ *
+ * El cono de silencio es la zona circular sobre la vertical del radar donde
+ * no llega el haz de emisión. Se aproxima como un polígono de tantos vértices
+ * como azimuths totales tiene configurado el radar.
+ *
+ * @param array $radar    Datos del radar. Se esperan las claves:
+ *                         - 'lat_rad'   float  Latitud del radar en radianes.
+ *                         - 'lon'       float  Longitud del radar en grados.
+ *                         - 'screening' array  Con la clave 'totalAzimuths' (int).
+ * @param float $radioCono Radio del cono en millas náuticas.
+ *
+ * @return array Polígono envuelto en un array externo: [ [ [lat, lon], ... ] ]
+ */
+function calculaCoordenadasCono(array $radar, float $radioCono): array
 {
-
     $polygon = [];
 
-    $latitudComplementaria = M_PI_2 - $radar['lat_rad'];
-    $latComp = array(
-        'cos' => cos($latitudComplementaria),
-        'sin' => sin($latitudComplementaria),
-    );
+    // Precalculamos el seno y coseno de la colatitud (90° - latitud) del radar,
+    // ya que son constantes para todos los azimuths.
+    $colatitud = M_PI_2 - $radar['lat_rad'];
+    $cosColatitud = cos($colatitud);
+    $sinColatitud = sin($colatitud);
 
-    $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
-    for ($i = 0; $i < 360; $i += $azimuth_step) {
-        $res = transformaFromPolarToLatLon($radar, $radioCono, $i, $latComp);
-        $polygon[] = [$res['lat'], $res['lon']];
+    // Paso angular entre vértices del polígono, en grados.
+    $azimuthStep = 360.0 / $radar['screening']['totalAzimuths'];
+
+    for ($azimuth = 0.0; $azimuth < 360.0; $azimuth += $azimuthStep) {
+        $polygon[] = polarToLatLon($radar['lon'], $radioCono, $azimuth, $cosColatitud, $sinColatitud);
     }
 
     return [$polygon];
 }
 
 /**
- * Transforma de coordenadas polares a latitud longitud en grados
- * @param array $radar información sobre el radar
- * @param float $rho distancia
- * @param float $theta ángulo
- * @param array $latComp seno y coseno de la latitud complementaria, en radianes.
+ * Convierte una posición en coordenadas polares (distancia + azimuth) relativa
+ * a un punto de referencia en la superficie terrestre a latitud/longitud en grados.
  *
+ * Usa la fórmula de trigonometría esférica sobre el triángulo formado por
+ * el polo norte, el punto de referencia (el radar) y el punto destino.
+ *
+ * @param float $lonRadar      Longitud del radar en grados.
+ * @param float $rho           Distancia al punto destino en millas náuticas.
+ * @param float $azimuth       Ángulo desde el norte, en grados (0–360°).
+ * @param float $cosColatitud  cos(π/2 − latRadar), precalculado por el llamador.
+ * @param float $sinColatitud  sin(π/2 − latRadar), precalculado por el llamador.
+ *
+ * @return array Par [latitud, longitud] del punto destino, en grados.
  */
-function transformaFromPolarToLatLon($radar, $rho, $theta, $latComp): array
-{
+function polarToLatLon(
+    float $lonRadar,
+    float $rho,
+    float $azimuth,
+    float $cosColatitud,
+    float $sinColatitud
+): array {
+    // Ángulo central subtendido por la distancia $rho sobre la esfera terrestre.
+    $anguloCentral = $rho * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE;
 
-    $ret = array();
+    // Colatitud del punto destino mediante la regla del coseno esférico.
+    // cos(c) = cos(a)·cos(b) + sin(a)·sin(b)·cos(C)
+    // donde 'a' es la colatitud del radar, 'b' el ángulo central y 'C' el azimuth.
+    $colatitudDestino = acos(
+        $cosColatitud * cos($anguloCentral) +
+        $sinColatitud * sin($anguloCentral) * cos(deg2rad($azimuth))
+    );
 
-    // CALCULO LATITUD
-    $anguloCentral = ($rho * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
-    $r_rad = acos(
-        $latComp['cos'] * cos($anguloCentral) +
-            $latComp['sin'] * sin($anguloCentral) * cos(deg2rad($theta))
-    ); // tenemos r en radianes
-    $r_deg = rad2deg($r_rad);
+    // Latitud del destino: lat = 90° − colatitud
+    $latDestino = 90.0 - rad2deg($colatitudDestino);
 
-    // CALCULO LONGITUD
-    $numerador = cos($anguloCentral) - $latComp['cos'] * cos($r_rad);
-    $denominador = $latComp['sin'] * sin($r_rad);
+    // Diferencia de longitud mediante la segunda regla del coseno esférico.
+    // cos(b) = cos(a)·cos(c) + sin(a)·sin(c)·cos(B)  →  despejamos cos(B)
+    $numerador   = cos($anguloCentral) - $cosColatitud * cos($colatitudDestino);
+    $denominador = $sinColatitud * sin($colatitudDestino);
 
-    if ($numerador > $denominador) {
-        $offsetLongitud = 0;
-    } else {
-        $offsetLongitud = rad2deg(acos($numerador / $denominador));
-    }
+    // Si el denominador es cero o el cociente supera 1 (polo), el offset es 0.
+    $offsetLon = ($denominador == 0.0 || $numerador >= $denominador)
+        ? 0.0
+        : rad2deg(acos($numerador / $denominador));
 
-    // asignacion de valores a la estructura de datos
-    // si el ángulo actuale es menor de 180, se le suma el offset.
-    // si es mayor de 180, se le resta el offset
-    if ($theta < 180) {
-        $ret['lon'] = $radar['lon'] + $offsetLongitud;
-    } else {
-        $ret['lon'] = $radar['lon'] - $offsetLongitud;
-    }
+    // El offset de longitud se suma (Este) para azimuths < 180° y se resta (Oeste) para el resto.
+    $lonDestino = ($azimuth < 180.0)
+        ? $lonRadar + $offsetLon
+        : $lonRadar - $offsetLon;
 
-    $ret['lat'] = 90 - $r_deg;
-
-    return $ret;
+    return [$latDestino, $lonDestino];
 }
+
 
 /**
  * CASO A
@@ -470,7 +495,6 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     logger(" V> Número de polígonos para la unión: " . count($polygons));
     $time_union = microtime(true);
     $mr_polygons = array();
-    $n_polygons = count($polygons);
     foreach($polygons as $polygon) {
         $mr_polygons[] = MR\Polygon::create()->fillFromArray($polygon);
     }
