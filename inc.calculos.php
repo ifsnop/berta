@@ -62,6 +62,71 @@ function calculaAnguloMaximaCobertura($radar, $flm){
     return $anguloMaxCob;
 }
 
+function calculaCoordenadasCono(array &$radar, float $radioCono): array
+{
+
+    $polygon = [];
+
+    $latitudComplementaria = M_PI_2 - $radar['lat_rad'];
+    $latComp = array(
+        'cos' => cos($latitudComplementaria),
+        'sin' => sin($latitudComplementaria),
+    );
+
+    $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
+    for ($i = 0; $i < 360; $i += $azimuth_step) {
+        $res = transformaFromPolarToLatLon($radar, $radioCono, $i, $latComp);
+        $polygon[] = [$res['lat'], $res['lon']];
+    }
+
+    return [$polygon];
+}
+
+/**
+ * Transforma de coordenadas polares a latitud longitud en grados
+ * @param array $radar información sobre el radar
+ * @param float $rho distancia
+ * @param float $theta ángulo
+ * @param array $latComp seno y coseno de la latitud complementaria, en radianes.
+ *
+ */
+function transformaFromPolarToLatLon($radar, $rho, $theta, $latComp): array
+{
+
+    $ret = array();
+
+    // CALCULO LATITUD
+    $anguloCentral = ($rho * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE);
+    $r_rad = acos(
+        $latComp['cos'] * cos($anguloCentral) +
+            $latComp['sin'] * sin($anguloCentral) * cos(deg2rad($theta))
+    ); // tenemos r en radianes
+    $r_deg = rad2deg($r_rad);
+
+    // CALCULO LONGITUD
+    $numerador = cos($anguloCentral) - $latComp['cos'] * cos($r_rad);
+    $denominador = $latComp['sin'] * sin($r_rad);
+
+    if ($numerador > $denominador) {
+        $offsetLongitud = 0;
+    } else {
+        $offsetLongitud = rad2deg(acos($numerador / $denominador));
+    }
+
+    // asignacion de valores a la estructura de datos
+    // si el ángulo actuale es menor de 180, se le suma el offset.
+    // si es mayor de 180, se le resta el offset
+    if ($theta < 180) {
+        $ret['lon'] = $radar['lon'] + $offsetLongitud;
+    } else {
+        $ret['lon'] = $radar['lon'] - $offsetLongitud;
+    }
+
+    $ret['lat'] = 90 - $r_deg;
+
+    return $ret;
+}
+
 /**
  * CASO A
  * Funcion que calcula las distancias a las que hay cobertura y los angulos de apantallamiento cuando el FL esta por encima del radar
@@ -107,15 +172,13 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
         $p = array(); // Esquina del polígono
         $r = 0; // Radio de las esquina del polígono
         $count_intersec_azi = count($intersec[$azimuth]) - 1;
-        // print "AZI :$azimuth azimut_step: $azimuth_step a:" . $azimuth * $azimuth_step - ($azimuth_step / 2) . " intersec_count: $count_intersec_azi b:" . $azimuth * $azimuth_step + ($azimuth_step / 2) . PHP_EOL;
 
         for ($i = $count_intersec_azi; $i >= 0; $i--) {
-            print $azimuth . " " . $i . PHP_EOL;
             $r = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
             [$p] = calcula_vertices_interseccion(
                 $r,
                 $a_rad,
-                false,
+                null,
                 $cos_lat90,
                 $sin_lat90,
                 $lat_rad,
@@ -227,7 +290,8 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
      * POLÍGONO DE COBERTURA
      *******************************/
 
-    $malla_lat_lon = create_poligonos_cobertura($radar, $intersec, $malla);
+    $polygons = create_poligonos_cobertura($radar, $intersec, $malla);
+    return $polygons;
 
     // for($i=0; $i<count($malla_lat_lon); $i++) {
     //    for($j=0;$j<count($malla_lat_lon[$i]); $j++) {
@@ -235,12 +299,8 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     //    }
     //    print PHP_EOL;
     // }
-
-    $segments = marchingSquares($malla_lat_lon);
-    $polygons = buildPolygonsFromSegments($segments);
-
-    return $polygons;
-
+    // $segments = marchingSquares($malla_lat_lon);
+    // $polygons = buildPolygonsFromSegments($segments);
 }
 
 /**
@@ -290,7 +350,6 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
         // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
         $a1_rad = deg2rad( $azimuth_real - ($azimuth_step / 2) );  // Primer ángulo [rad]
         $a2_rad = deg2rad( $azimuth_real + ($azimuth_step / 2) );  // Segundo ángulo [rad]
-        // print "a1_rad: $a1_rad a1_deg:" . rad2deg($a1_rad) . "º a2_rad: $a2_rad a2_deg:" . rad2deg($a2_rad) . PHP_EOL;
 
         // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
         $p1 = $p2 = $p3 = $p4 = array(); // Esquinas del polígono
@@ -351,11 +410,8 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                     print ($p4_check[0] - $p4[0]) . " " . ($p4_check[1] - $p4[1]) . PHP_EOL;
                 }
                 // Aumento de resolución
-                // print "En azimut $azimuth, la distancia entre vertices es: " .(($r2 - $r1) / MILLA_NAUTICA_EN_METROS) . "NM" . PHP_EOL;
                 if (($r2 - $r1) >= BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD) {   // Polígono demasiado largo
                     $n_subdivisiones = (int)floor(2 * ($r2 - $r1) / (BERTA_INTERSECTION_TOLERANCE_LIMIT_M)) - 1;
-                    // print "Necesarias $n_subdivisiones subdivisiones en azimut $azimuth, distancia entre vertices es de " . round(($r2 - $r1)/MILLA_NAUTICA_EN_METROS,2) . " NM" . PHP_EOL;
-                    // print "r2: " . $r2 . " r1: " . $r1 . PHP_EOL;
                     $poly = [$p1, $p2];
 
                     // Subdivisiones
@@ -397,9 +453,9 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                 }
                 $polygons[] = $poly;
                 // Se hallan los puntos del mallado contenidos en el polígono
-                $timer_malla_coverage = microtime(true);
-                set_malla_coverage($malla_lat_lon, $poly, $resolucion_malla, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw);
-                $time_malla_coverage_total += microtime(true) - $timer_malla_coverage;
+                // $timer_malla_coverage = microtime(true);
+                // set_malla_coverage($malla_lat_lon, $poly, $resolucion_malla, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw);
+                // $time_malla_coverage_total += microtime(true) - $timer_malla_coverage;
                 $last = 1;
             }
         }
@@ -407,64 +463,20 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
 
     logger("[100%]" . PHP_EOL, false);
     logger(" I> Tiempo total generación malla: " . round(microtime(true) - $start_time, 3) . "s");
-    logger(" I> Tiempo en set_malla_coverage: " . round($time_malla_coverage_total,3) . "s");
+    // logger(" I> Tiempo en set_malla_coverage: " . round($time_malla_coverage_total,3) . "s");
     logger(" I> Tiempo en calcula_vertices_interseccion: " . round($time_calcula_vertices_interseccion_total,3) . "s");
     logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
         "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
-
-    //print json_encode($polygons) . PHP_EOL; exit(1);
-    //$p_mr1 = MR\Polygon::create()->fillFromArray($polygons);
-    //$p_mr1 = MR\Algorithm::union($p_mr1);
-
-    $p = array();
-    for($i=0; $i<count($polygons) && $i>=0; $i++) {
-        $p[] = MR\Polygon::create()->fillFromArray($polygons[$i]);
+    logger(" V> Número de polígonos para la unión: " . count($polygons));
+    $time_union = microtime(true);
+    $mr_polygons = array();
+    $n_polygons = count($polygons);
+    foreach($polygons as $polygon) {
+        $mr_polygons[] = MR\Polygon::create()->fillFromArray($polygon);
     }
-    $p_mr1 = MR\Algorithm::union($p);
-    $result = normalizePolygonsForKML($p_mr1->getArray());
-    /*
-    $p_mr1 = MR\Polygon::create()->fillFromArray(array_shift($polygons));
-    $p_mr1 = MR\Algorithm::segments($p_mr1);
-    $i=0;
-    $total = count($polygons); print "calculando suma de $total poligonos" . PHP_EOL;
-    foreach($polygons as $p) {
-        $i++;
-        $p_mr2 = MR\Polygon::create()->fillFromArray($p);
-        $p_mr1 = MR\Algorithm::unionSegments($p_mr1, $p_mr2);
-        if ( $i % 10 == 0 || $i == $total) {
-            print " " . round($i/$total*100) . "% " . convertBytes(memory_get_usage(false)) . " / " . convertBytes(memory_get_peak_usage(false)) . PHP_EOL;
-        }
-    }
-    $p = MR\Algorithm::polygon($p_mr1);
-    $result = normalizePolygonsForKML($p->getArray());
-    */
-    logger(" D> creando KMZ");
-    creaKml3(
-                    $result,
-                    array("prueba"),
-                    array("./"),
-                    "021",
-                    $altMode = "clampToGround",
-                    $appendToFilename = array(),
-                    $coverageLevel = 'mono',
-                    true
-                );
-    exit(-1);
-    /*
-    //$mp_normalized = MR\GJTools::geojsonToArray($mp);
-    $shifted_australia = displaceMultiPolygon($australia, -0.5);
-    // print json_encode($shifted_mp) . PHP_EOL; exit(1);
-    $shifted_polygon_australia = MR\Polygon::create()->fillFromArray($shifted_australia);
-
-    #print "original #" . $pa->numPoints . PHP_EOL;
-    #print "displaced #" . $shifted_pa->numPoints . PHP_EOL;
-
-    $result = MR\Algorithm::xoring($polygon_australia, $shifted_polygon_australia); // devuelve un class Polygon
-    */
-
-
-    return $malla_lat_lon;
-
+    $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
+    logger(" I> Tiempo en union: " . round(microtime(true) - $time_union,3) . "s");
+    return $p_mr1->getArray();
 }
 
 /*
@@ -642,7 +654,7 @@ function create_matriz_intersecciones(array &$radar, array &$matriz_obstaculos, 
 function calcula_vertices_interseccion(
     float $r,
     float $a1_rad,
-    $a2_rad,
+    ?float $a2_rad,
     float $cos_lat90,
     float $sin_lat90,
     float $lat_rad,
@@ -697,7 +709,7 @@ function calcula_vertices_interseccion(
 
     $p1 = [rad2deg($asin_lat1_rad), rad2deg($lon1_d)];
 
-    if ($a2_rad !== false) {
+    if ( !is_null($a2_rad) ) {
         $a2_rad  = round($a2_rad, 2);
         [$cos_a2, $sin_a2] = getCached($a1a2_cache, (string) $a2_rad, function () use ($a2_rad) {
             return [
@@ -738,6 +750,7 @@ function calcula_vertices_interseccion(
  */ 
 function set_malla_coverage(array &$malla_lat_lon, array &$poly, float $paso_de_malla, int $num_rows, int $num_cols, float $lat_nw, float $lon_nw)
 {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     // Bounding box del polígono en coordenadas
     $minLat = INF;  $maxLat = -INF;
     $minLon = INF;  $maxLon = -INF;

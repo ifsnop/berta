@@ -27,6 +27,8 @@ require_once('inc.guardar.php');
 require_once('EtaEstimator.php');
 require_once('vendor/autoload.php');
 
+use Ifsnop\MartinezRueda as MR;
+
 $config = array(
     'sensores' => array(),
     /*
@@ -383,35 +385,23 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
     if ($flm >= $hA) { // CASO A (nivel de vuelo por encima de la posición del radar)
         // inicio para calculo por encima con método vectorial
         // se devuelve para cada azimut, la distancia más lejana
-        // $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
         $polygons = calculosFLencimaRadar2($radar, $flm);
-        $result = normalizePolygonsForKML($polygons);
-        /*
-        $distanciasAlcances = calculosFLencimaRadar($radar, $flm);
-
-        $newRange = obtieneMaxAnguloConCoberturaA($distanciasAlcances);
-        $radar['screening']['range'] = round($newRange);
-        $radar['range'] = round($newRange);
-        $listaContornos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasAlcances);
-        // ya sabemos que la lista exterior de alcances va a estar
-        // CW y tenemos que invertirla (porque se calcula siguiendo los azimut de 0 a 360ª)
-        // y la interior igual.
-        // para un kml deberíamos tener:
-        // exterior rings: counter-clockwise CCW
-        // interior rings (holes): clockwise direction CW
-        // todo eso se hará en normalizePolygonsForKML
-
-        $listaContornosConos2 = false;
+        
         if ($calculoCono) {
             $radioConom = ($flm - $hA) * tan(deg2rad(BERTA_ANGULO_CONO));
             $radioCono = $radioConom / MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
-            $distanciasConos = array_fill(0, count($distanciasAlcances), $radioCono);
             logger(" N> Radio del Cono: " . round($radioCono, 2) . "NM / " . round($radioConom, 2) . "m");
-            $listaContornosConos2 = calculaCoordenadasGeograficasA($radar, $flm, $distanciasConos);
+
+            $polygonCono = calculaCoordenadasCono($radar, $radioCono);
+            // print json_encode($polygonCono) . PHP_EOL; exit(1);
+            $mr_polygon_exterior = MR\Polygon::create()->fillFromArray($polygons);
+            $mr_polygon_cono = MR\Polygon::create()->fillFromArray($polygonCono);
+            $mr_polygon_result = MR\Algorithm::difference($mr_polygon_exterior, $mr_polygon_cono); 
+            $polygons = $mr_polygon_result->getArray();
         }
 
-        $result = normalizePolygonsForKML(array_merge(array($listaContornos2), array($listaContornosConos2)));
-        */
+        $result = normalizePolygonsForKML($polygons);
+
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
         if ($calculoCono) {
@@ -425,7 +415,6 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
             logger(" I> No existe cobertura para el sensor {$radar['radar']} a FL{$nivelVuelo}");
             return false;
         }
-
         $result = normalizePolygonsForKML($polygons);
     }
 
