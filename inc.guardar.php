@@ -236,10 +236,7 @@ function creaKml3(array $listaContornos, array $sensors, array $rutas, string $n
 
     $radarWithFL = implode(",", $sensors) . 
         $coverageLevelAppend . "-FL" . $nivelVuelo . $appendStr;
-    // else {
-    //    $radarWithFL = $radarName . "-FL" . $nivelVuelo . $appendToFilename;
-    //}
-
+    
     if (false) {
         print "nivelVuelo: " . $nivelVuelo . PHP_EOL;
         print "radarWithFL: " . $radarWithFL . PHP_EOL;
@@ -285,13 +282,12 @@ function creaKml3(array $listaContornos, array $sensors, array $rutas, string $n
  * - Nivel 1 = agujero
  * - Nivel 2 = nuevo exterior
  */
-
 function normalizePolygonsForKML(array $polygons): array
 {
     $items = [];
 
     foreach ($polygons as $poly) {
-        if ( !is_array($poly)) continue;
+        if (!is_array($poly)) continue;
         if (count($poly) < 4) continue;
 
         if (!isClosed($poly)) {
@@ -310,9 +306,8 @@ function normalizePolygonsForKML(array $polygons): array
     // usort($items, fn($a, $b) => $b['area'] <=> $a['area']);
 
     usort($items, function ($a, $b) {
-	return $b['area'] <=> $a['area'];
+        return $b['area'] <=> $a['area'];
     });
-
 
     $n = count($items);
 
@@ -322,7 +317,7 @@ function normalizePolygonsForKML(array $polygons): array
         $pt = interiorPoint($items[$i]['poly']);
 
         for ($j = 0; $j < $i; $j++) {
-    
+
             if (pointInPolygon($pt[0], $pt[1], $items[$j]['poly'], count($items[$j]['poly']))) {
                 $items[$i]['parent'] = $j;
                 break;
@@ -351,14 +346,13 @@ function normalizePolygonsForKML(array $polygons): array
         if ($item['depth'] % 2 === 0) {
 
             $outer = ensureCCW($item['poly']);
-/*
+            /*
             $result[$idx] = [
                 'outer' => $outer,
                 'inners' => []
             ];
 */
-          $result[$idx] = [ $outer ];
-
+            $result[$idx] = [$outer];
         }
     }
 
@@ -375,7 +369,7 @@ function normalizePolygonsForKML(array $polygons): array
             }
 
             if ($p !== null && isset($result[$p])) {
-//                $result[$p]['inners'][] = ensureCW($item['poly']);
+                // $result[$p]['inners'][] = ensureCW($item['poly']);
                 $result[$p][] = ensureCW($item['poly']);
             }
         }
@@ -497,8 +491,8 @@ function writeKMZ(string $fileName, string $radarWithFL, string $content, bool $
     logger(" V> Guardando fichero {$fileName}.kmz");
 
     $zip = new ZipArchive();
-    $res = $zip->open($fileName . ".kmz",            ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE);
-    if ( ! $res ) {
+    $res = $zip->open($fileName . ".kmz", ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE);
+    if (! $res) {
         logger(" E> No se puede crear el fichero {$fileName}.kmz");
         exit(-1);
     }
@@ -539,7 +533,7 @@ function crearCarpetaResultados($ruta)
  */
 function KML_get_rgb_from_coverageLevel($coverageLevel)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     switch ($coverageLevel) {
         case "unica":
             $rgb = "7d00ff00";
@@ -581,7 +575,7 @@ function KML_get_rgb_from_coverageLevel($coverageLevel)
  */
 function KML_get_placemarks($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $appendToFilename = "", $coverageLevel = 'mono', $disableKmz = true)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);    
     logger(" D> Nivel de cobertura: $coverageLevel");
 
     $altitude_meters = $nivelVuelo * 100.0 * BERTA_FEET_TO_METERS;
@@ -661,7 +655,7 @@ function KML_get_placemarks($listaContornos, $radarName, $rutas, $nivelVuelo, $a
  */
 function KML_format_placemarks($name, $polygon, $inside, $rgb)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);    
     // polygon es una lista de puntos que determinan un polígono
     $outer_coordinates = "";
     foreach ($polygon as $points) {
@@ -709,7 +703,7 @@ $inner_coordinates
  */
 function KML_create_from_placemarks($coverages_per_levels, $padded_FL, $file_name)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);            
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);            
     $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
     $kml_styles = "";
     foreach ($coverage_levels as $level) {
@@ -783,7 +777,7 @@ function KML_create_from_placemarks($coverages_per_levels, $padded_FL, $file_nam
  */
 function KML_placemarks_in_Folders($radarWithFL, $polygons, $rgb, $altMode)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);    
     /*
 //    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
 //        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -855,8 +849,7 @@ function KML_placemarks_in_Folders($radarWithFL, $polygons, $rgb, $altMode)
  */
 function fromPolygons2KML_One_Folder_Per_Content($polygons, $radarWithFL, $rgb, $altMode)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
-    die("CODIGO EN SUPERVISION FUNCION NO SOPORTADA UNSUPPORTED");
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     /*
 //    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
 //        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -923,7 +916,7 @@ function fromPolygons2KML_One_Folder_Per_Content($polygons, $radarWithFL, $rgb, 
  */
 function generateMatlabFiles($radar, $rutaResultados)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     $rutaTerrenos = $rutaResultados . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
     $rutaCoordenadas = $rutaResultados . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
 

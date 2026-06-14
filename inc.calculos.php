@@ -754,7 +754,7 @@ function calcula_vertices_interseccion(
  */ 
 function set_malla_coverage(array &$malla_lat_lon, array &$poly, float $paso_de_malla, int $num_rows, int $num_cols, float $lat_nw, float $lon_nw)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     // Bounding box del polígono en coordenadas
     $minLat = INF;  $maxLat = -INF;
     $minLon = INF;  $maxLon = -INF;
@@ -797,7 +797,7 @@ function set_malla_coverage(array &$malla_lat_lon, array &$poly, float $paso_de_
  */
 function create_malla(array $radar, float $max_distancia_nm, int $precision_malla, float $resolucion_malla, bool $force = false)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     $lat_rad = $radar['lat_rad'];
     // $lon_rad = $radar['lon_rad'];
     $lat_deg = $radar['lat_deg'];
@@ -922,7 +922,7 @@ function perpendicular_distance(array $pt, array $line) {
  */ 
 function marchingSquares(array $grid): array
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     $rows = count($grid);
     if ($rows < 2) return [];
 
@@ -1013,7 +1013,7 @@ function marchingSquares(array $grid): array
     */  
 function midpoint(array $a, array $b): array
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     return [
         ($a[0] + $b[0]) / 2, // lat
         ($a[1] + $b[1]) / 2  // lon
@@ -1040,7 +1040,7 @@ function midpoint(array $a, array $b): array
 
 function buildPolygonsFromSegments(array $segments, int $precision = 8): array
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     $adj = [];
 
     foreach ($segments as $seg) {
@@ -1082,7 +1082,7 @@ function buildPolygonsFromSegments(array $segments, int $precision = 8): array
 
 function tracePolygon(array $adj, string $startKey, string $nextKey, array &$visitedEdges): array
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     $polygon = [];
     $prev = $startKey;
     $curr = $nextKey;
@@ -1130,12 +1130,12 @@ function tracePolygon(array $adj, string $startKey, string $nextKey, array &$vis
 
 function pointKey(array $p, int $precision = 8): string
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     return round($p[0], $precision) . ',' . round($p[1], $precision);
 }
 
 function edgeKey(string $a, string $b): string
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     return strcmp($a, $b) < 0 ? "$a|$b" : "$b|$a";
 }
