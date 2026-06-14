@@ -164,8 +164,6 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
     // hay dos calculos de alpha_max, simplemente el angulo que salga al dividir entre radioterrestre aumentado (que serán radianes)
     // o bien calcular la distancia teniendo en cuenta el nivel de vuelo y que la distancia es oblicua. así que saldrán menos 
     // radianes que el método anterior.
-
-    // me da igual cual de los dos, si funciona ya ajustamos al bueno.
     $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
     $matriz_obstaculos = create_matriz_obstaculos($radar , $flm);
     $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
@@ -284,6 +282,10 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
     /*******************************
      * MALLA DE COBERTURA
      ******************************/
+    // Este paso ha quedado obsoleto. Desde que unimos los polígonos usando martinez-rueda, ya no es necesario
+    // crear la malla de cobertura. Antes se preguntaban que celdas de la malla caían dentro de los polígonos, y
+    // se rellenaban rasterizando los polígonos en la malla.Se mantiene el código comentado por
+    // si se quiere volver a usar en el futuro.
     /*
      * esta configuración (precision = 2, resolucion = 0.01
      * produce una malla de 395x529
@@ -291,30 +293,26 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
      * 43.73 -0.2    43.73 -0.19    43.73 -0.18    
      * 43.72 -0.2    43.72 -0.19    43.72 -0.18  
      */
-    $precision_malla = 2;
-    $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
-    $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla);
-    if ( 0 == count($malla) ) {
-        $precision_malla++;
-        $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
-        $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla, true);
-    }
+    // $precision_malla = 2;
+    // $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
+    // $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla);
+    // if ( 0 == count($malla) ) {
+    //     $precision_malla++;
+    //     $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
+    //     $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla, true);
+    // }
 
-    [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $malla;
-
-      // Código de depuración (imprime la esquina sup izq de la malla en 3x3)
-      //for($i=0;$i<3; $i++) { for($j=0; $j<3; $j++) {
-      //print $malla_lat_lon[$i][$j][0] . " " . $malla_lat_lon[$i][$j][1] . "    ";
-      //} print PHP_EOL; }
-
-    logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
-        "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+    // [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $malla;
+    // Código de depuración (imprime la esquina sup izq de la malla en 3x3)
+    // for($i=0;$i<3; $i++) { for($j=0; $j<3; $j++) {
+    //    print $malla_lat_lon[$i][$j][0] . " " . $malla_lat_lon[$i][$j][1] . "    ";
+    // } print PHP_EOL; }
 
     /*******************************
      * POLÍGONO DE COBERTURA
      *******************************/
 
-    $polygons = create_poligonos_cobertura($radar, $intersec, $malla);
+    $polygons = create_poligonos_cobertura($radar, $intersec/*, $malla*/);
     return $polygons;
 
     // for($i=0; $i<count($malla_lat_lon); $i++) {
@@ -334,11 +332,11 @@ function calculosFLdebajoRadar2(array &$radar, float $flm) {
  * de PREDICT es configurable.
  * @param array $radar parámetros de radar
  * @param array $intersec lista de intersecciones para cada azimut
- * @param array $malla malla inicializada a 0's del tamaño de la cobertura
+ * //param array $malla malla inicializada a 0's del tamaño de la cobertura (desde que unimos con martinz rueda, no se usa la malla)
  *
  * @return array malla de cobertura (malla_lat_lon)
  */
-function create_poligonos_cobertura(array &$radar, array &$intersec, array &$malla) {
+function create_poligonos_cobertura(array &$radar, array &$intersec/* , array &$malla */) {
     // Cada celda es un polígono de 4 esquinas (sector anular)
     // Se comprueba qué puntos de la malla están contenidos en cada polígono
     // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
@@ -349,7 +347,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     $time_malla_coverage_total = 0;
     $time_calcula_vertices_interseccion_total = 0;
 
-    [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw, $resolucion_malla] = $malla;
+    // [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw, $resolucion_malla] = $malla;
 
     $polygons = array();
 
@@ -398,14 +396,6 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                 );
                 $time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
                 $last = 0; // marcamos que en esta intersección ya no hay cobertura del polígono
-                // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
-                // print "p1: " . json_encode($p1) . " p2: " . json_encode($p2) . PHP_EOL;
-                if ( $debug && $azimuth == 34 && $i == 5) {
-                    $p1_check = [43.08976905930698, 3.6356157745885453];
-                    $p2_check = [43.07377059296113, 3.667011200629223];
-                    print ($p1_check[0] - $p1[0]) . " " . ($p1_check[1] - $p1[1]) . PHP_EOL;
-                    print ($p2_check[0] - $p2[0]) . " " . ($p2_check[1] - $p2[1]) . PHP_EOL;
-                }
             }
             elseif ($last == 0) {   // Primera fila con cobertura del polígono
 
@@ -423,16 +413,6 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
                 );
                 $time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
 
-                // print "ts: " . (microtime(true) - $start_time)*1000 . PHP_EOL;
-
-                // print "p3: " . json_encode($p3) . " p4: " . json_encode($p4) . PHP_EOL;
-
-                if ( $debug && $azimuth== 34 && $i == 4) {
-                    $p3_check = [42.89364390134427, 3.492870493185009];
-                    $p4_check = [42.90740443622323, 3.4658423401029874];
-                    print ($p3_check[0] - $p3[0]) . " " . ($p3_check[1] - $p3[1]) . PHP_EOL;
-                    print ($p4_check[0] - $p4[0]) . " " . ($p4_check[1] - $p4[1]) . PHP_EOL;
-                }
                 // Aumento de resolución
                 if (($r2 - $r1) >= BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD) {   // Polígono demasiado largo
                     $n_subdivisiones = (int)floor(2 * ($r2 - $r1) / (BERTA_INTERSECTION_TOLERANCE_LIMIT_M)) - 1;
@@ -486,10 +466,10 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     }
 
     logger("[100%]" . PHP_EOL, false);
-    logger(" I> Tiempo total generación malla: " . round(microtime(true) - $start_time, 3) . "s");
+    logger(" D> Tiempo total generación malla: " . round(microtime(true) - $start_time, 3) . "s");
     // logger(" I> Tiempo en set_malla_coverage: " . round($time_malla_coverage_total,3) . "s");
-    logger(" I> Tiempo en calcula_vertices_interseccion: " . round($time_calcula_vertices_interseccion_total,3) . "s");
-    logger(" V> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+    logger(" D> Tiempo en calcula_vertices_interseccion: " . round($time_calcula_vertices_interseccion_total,3) . "s");
+    logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
         "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
     $n_polygons = count($polygons);
     logger(" V> Número de polígonos para la unión: " . $n_polygons);
@@ -500,13 +480,12 @@ function create_poligonos_cobertura(array &$radar, array &$intersec, array &$mal
     $time_union = microtime(true);
     $mr_polygons = array();
     foreach($polygons as $polygon) {
-        //print json_encode([$polygon]) . PHP_EOL;
-        //$normalized = MR\GJTools::geojsonToArray([$polygon]);
-        //print json_encode($normalized) . PHP_EOL;
         $mr_polygons[] = MR\Polygon::create()->fillFromArray($polygon);
     }
     $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
-    logger(" I> Tiempo en union: " . round(microtime(true) - $time_union,3) . "s");
+    logger(" D> Tiempo en union: " . round(microtime(true) - $time_union,3) . "s");
+    logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+        "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
     return $p_mr1->getArray();
 }
 
@@ -531,12 +510,6 @@ function create_matriz_obstaculos(array &$radar, float $flm)
          round($alpha_max*$radar['screening']['radioTerrestreAumentado']/MILLA_NAUTICA_EN_METROS,3) .  "NM");
     // línea de rango máximo
     $m = tan(pi() / 2 - $alpha_max); // pi()/2 = 90º en radianes
-
-    /*
-    logger(" D> Range in screening: {$radar['screening']['range']}NM " .
-        "lat: {$radar['lat']}º lon: {$radar['lon']}º " .
-        "num az: {$radar['screening']['totalAzimuths']}");
-    */
 
     $matriz_obstaculos = []; // la estructura es [numero de azimuth][numero de obstaculo]
     foreach ($radar['screening']['listaAzimuths'] as $azimut => $listaObstaculos) {
@@ -824,6 +797,7 @@ function set_malla_coverage(array &$malla_lat_lon, array &$poly, float $paso_de_
  */
 function create_malla(array $radar, float $max_distancia_nm, int $precision_malla, float $resolucion_malla, bool $force = false)
 {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     $lat_rad = $radar['lat_rad'];
     // $lon_rad = $radar['lon_rad'];
     $lat_deg = $radar['lat_deg'];
@@ -948,6 +922,7 @@ function perpendicular_distance(array $pt, array $line) {
  */ 
 function marchingSquares(array $grid): array
 {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     $rows = count($grid);
     if ($rows < 2) return [];
 
@@ -1038,6 +1013,7 @@ function marchingSquares(array $grid): array
     */  
 function midpoint(array $a, array $b): array
 {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     return [
         ($a[0] + $b[0]) / 2, // lat
         ($a[1] + $b[1]) / 2  // lon
@@ -1064,6 +1040,7 @@ function midpoint(array $a, array $b): array
 
 function buildPolygonsFromSegments(array $segments, int $precision = 8): array
 {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     $adj = [];
 
     foreach ($segments as $seg) {
@@ -1105,6 +1082,7 @@ function buildPolygonsFromSegments(array $segments, int $precision = 8): array
 
 function tracePolygon(array $adj, string $startKey, string $nextKey, array &$visitedEdges): array
 {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     $polygon = [];
     $prev = $startKey;
     $curr = $nextKey;
@@ -1152,10 +1130,12 @@ function tracePolygon(array $adj, string $startKey, string $nextKey, array &$vis
 
 function pointKey(array $p, int $precision = 8): string
 {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     return round($p[0], $precision) . ',' . round($p[1], $precision);
 }
 
 function edgeKey(string $a, string $b): string
 {
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
     return strcmp($a, $b) < 0 ? "$a|$b" : "$b|$a";
 }
