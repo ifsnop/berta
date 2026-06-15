@@ -153,7 +153,6 @@ function multicobertura(array &$config, array &$coberturas, string $nivelVuelo, 
 		);
 	}
 
-	exit(0);
 	$vsr = array(); // variaciones sin repetición
 	$vsr_count = 0;
 	for ($i = 1; $i <= count($radares); $i++) {
@@ -172,7 +171,7 @@ function multicobertura(array &$config, array &$coberturas, string $nivelVuelo, 
 
 	// logger(" D> count radares_suma_cache: " . implode(',', array_keys($radares_suma_cache)));
 	// logger(" D> count radares_interseccion_cache: " . implode(',', array_keys($radares_interseccion_cache)));
-
+	exit(0);
 	// ejecución
 	$count = 0;
 	foreach ($vsr as $numero_solape => $grupo_solape) {
@@ -397,87 +396,99 @@ function multicobertura(array &$config, array &$coberturas, string $nivelVuelo, 
 	return true;
 }
 
+/**
+ * Función que genera la cache de intersecciones y sumas de radares, para poder calcular
+ * la cobertura multiradar de forma más eficiente.
+ * @param array $vsr array de variaciones sin repetición
+ * @param int $vsr_count número total de combinaciones
+ * @param array $coverageName array asociativo de nombres de cobertura (mono, doble, triple..)
+ * @param array $mr_polygons array de polígonos Martinez-Rueda por radar
+ * @param array &$radares_interseccion_cache array de cache de intersecciones (referencia)
+ * @param array &$radares_suma_cache array de cache de sumas (referencia)
+ * @return bool true si se ha generado la cache correctamente, false si no.
+ * 
+ */
+function populate_cache(array $vsr, int $vsr_count, array $coverageName, array $mr_polygons, array &$radares_interseccion_cache, array &$radares_suma_cache)
+{
+	$radares_interseccion_cache = array();
+	$radares_suma_cache = array();
 
-function populate_cache($vsr, $vsr_count, $coverageName, $mr_polygons, &$radares_interseccion_cache, &$radares_suma_cache) {
-    $radares_interseccion_cache = array();
-    $radares_suma_cache = array();
+	$count = 0;
+	$debug = false;
+	foreach ($vsr as $numero_solape => $grupo_solape) {
+		if ($numero_solape >= count($coverageName)) {
+			$coverageName_fixed = "de más de {$numero_solape}";
+		} else {
+			$coverageName_fixed = $coverageName[$numero_solape];
+		}
+		logger(" N> == Calculando cache para cobertura $coverageName_fixed");
 
-    $count = 0;
-    $debug = false;
-    foreach($vsr as $numero_solape => $grupo_solape) {
-	if ( $numero_solape >= count($coverageName) ) {
-	    $coverageName_fixed = "de más de {$numero_solape}";
-	} else {
-	    $coverageName_fixed = $coverageName[$numero_solape];
+		foreach ($grupo_solape as $grupo_radares) {
+			logger("$count/$vsr_count ", false);
+			$count++;
+
+			$count_grupo_radares = count($grupo_radares);
+			$nombre_grupo_radares_suma = implode('+', $grupo_radares);
+			$nombre_grupo_radares_interseccion = implode('^', $grupo_radares);
+
+			// cacheamos en funcion de cuantos radares haya.
+			// si es solo uno, es directo
+			// REVISAR DESDE AQUI
+			if ($count_grupo_radares == 1) {
+				$result_interseccion = clone $mr_polygons[$grupo_radares[0]];
+				$result_suma = clone $mr_polygons[$grupo_radares[0]];
+				// si son dos radares, hay que coger los dos (serán los dos primeros)
+			} else if ($count_grupo_radares == 2) { // estos nunca estarán en caché
+				// PRIMERO CACHEAMOS LA INTERSECCION
+				$mr_algorithm = new \MartinezRueda\Algorithm();
+				$subject = clone $mr_polygons[$grupo_radares[0]];
+				$clipping = clone $mr_polygons[$grupo_radares[1]];
+				$result_interseccion = $mr_algorithm->getIntersection($subject, $clipping);
+
+				// LUEGO CACHEAMOS LA SUMA
+				$mr_algorithm = new \MartinezRueda\Algorithm();
+				$subject = clone $mr_polygons[$grupo_radares[0]];
+				$clipping = clone $mr_polygons[$grupo_radares[1]];
+				$result_suma = $mr_algorithm->getUnion($subject, $clipping);
+			} else { // 3 o más
+				// los anteriores ya están en la caché, sólo hay que calcular la suma/intersección con el nuevo
+				// se cogen todos los radares menos el último y se generan dos listas, subgrupo y el resto.
+				$subgrupo_radares = array_slice(
+					$grupo_radares,
+					0,
+					$count_grupo_radares - 1
+				);
+				// nombre del último radar, para la intersección
+				$ultimo_radar = $grupo_radares[$count_grupo_radares - 1]; // resto
+				$nombre_subgrupo_radares_interseccion = implode('^', $subgrupo_radares);
+				$nombre_subgrupo_radares_suma = implode('+', $subgrupo_radares);
+
+				$subject = clone $radares_interseccion_cache[$nombre_subgrupo_radares_interseccion];
+				if ($debug)
+					logger(" D> retrieve interseccion_cache r: $nombre_subgrupo_radares_interseccion md5: " . md5(serialize($subject)));
+				$clipping = clone $mr_polygons[$ultimo_radar];
+				$mr_algorithm = new \MartinezRueda\Algorithm();
+				$result_interseccion = $mr_algorithm->getIntersection($subject, $clipping);
+				if ($debug)
+					logger(" D> store interseccion_cache r: $nombre_grupo_radares_interseccion md5: " . md5(serialize($result_interseccion)));
+
+				$subject = clone $radares_suma_cache[$nombre_subgrupo_radares_suma];
+				if ($debug)
+					logger(" D> retrieve suma_cache r: $nombre_subgrupo_radares_suma md5: " . md5(serialize($subject)));
+				$clipping = clone $mr_polygons[$ultimo_radar];
+				$mr_algorithm = new \MartinezRueda\Algorithm();
+				$result_suma = $mr_algorithm->getUnion($subject, $clipping);
+				if ($debug)
+					logger(" D> store suma_cache r: $nombre_grupo_radares_suma md5: " . md5(serialize($result_suma)));
+			}
+
+			$radares_interseccion_cache[$nombre_grupo_radares_interseccion] = $result_interseccion;
+			$radares_suma_cache[$nombre_grupo_radares_suma] = $result_suma;
+		}
+		logger(PHP_EOL, false);
 	}
-	logger(" N> == Calculando cache para cobertura $coverageName_fixed");
 
-	foreach($grupo_solape as $grupo_radares) {
-	    logger( "$count/$vsr_count ", false);
-	    $count++;
-
-	    $count_grupo_radares = count($grupo_radares);
-	    $nombre_grupo_radares_suma = implode('+', $grupo_radares);
-	    $nombre_grupo_radares_interseccion = implode('^', $grupo_radares);
-
-	    // cacheamos en funcion de cuantos radares haya.
-	    // si es solo uno, es directo
-	    if ( $count_grupo_radares == 1 ) {
-		$result_interseccion = clone $mr_polygons[$grupo_radares[0]];
-		$result_suma = clone $mr_polygons[$grupo_radares[0]];
-	    // si son dos radares, hay que coger los dos (serán los dos primeros)
-	    } else if ( $count_grupo_radares == 2 ) { // estos nunca estarán en caché
-		// PRIMERO CACHEAMOS LA INTERSECCION
-		$mr_algorithm = new \MartinezRueda\Algorithm();
-		$subject = clone $mr_polygons[$grupo_radares[0]];
-		$clipping = clone $mr_polygons[$grupo_radares[1]];
-		$result_interseccion = $mr_algorithm->getIntersection( $subject, $clipping );
-
-		// LUEGO CACHEAMOS LA SUMA
-		$mr_algorithm = new \MartinezRueda\Algorithm();
-		$subject = clone $mr_polygons[$grupo_radares[0]];
-		$clipping = clone $mr_polygons[$grupo_radares[1]];
-		$result_suma = $mr_algorithm->getUnion( $subject, $clipping );
-
-	    } else { // 3 o más
-		// los anteriores ya están en la caché, sólo hay que calcular la suma/intersección con el nuevo
-		// se cogen todos los radares menos el último y se generan dos listas, subgrupo y el resto.
-		$subgrupo_radares = array_slice($grupo_radares,
-		    0,
-		    $count_grupo_radares - 1
-		);
-		// nombre del último radar, para la intersección
-		$ultimo_radar = $grupo_radares[$count_grupo_radares - 1]; // resto
-		$nombre_subgrupo_radares_interseccion = implode('^', $subgrupo_radares);
-		$nombre_subgrupo_radares_suma = implode('+', $subgrupo_radares);
-
-		$subject = clone $radares_interseccion_cache[$nombre_subgrupo_radares_interseccion];
-		if ( $debug )
-		    logger(" D> retrieve interseccion_cache r: $nombre_subgrupo_radares_interseccion md5: " . md5(serialize($subject)));
-		$clipping = clone $mr_polygons[$ultimo_radar];
-		$mr_algorithm = new \MartinezRueda\Algorithm();
-		$result_interseccion = $mr_algorithm->getIntersection( $subject, $clipping );
-		if ( $debug )
-		    logger(" D> store interseccion_cache r: $nombre_grupo_radares_interseccion md5: " . md5(serialize($result_interseccion)));
-
-		$subject = clone $radares_suma_cache[$nombre_subgrupo_radares_suma];
-		if ( $debug )
-		    logger(" D> retrieve suma_cache r: $nombre_subgrupo_radares_suma md5: " . md5(serialize($subject)));
-		$clipping = clone $mr_polygons[$ultimo_radar];
-		$mr_algorithm = new \MartinezRueda\Algorithm();
-		$result_suma = $mr_algorithm->getUnion( $subject, $clipping );
-		if ( $debug )
-		    logger(" D> store suma_cache r: $nombre_grupo_radares_suma md5: " . md5(serialize($result_suma)));
-	    }
-
-	    $radares_interseccion_cache[$nombre_grupo_radares_interseccion] = $result_interseccion;
-	    $radares_suma_cache[$nombre_grupo_radares_suma] = $result_suma;
-	}
-	logger(PHP_EOL, false);
-
-    }
-
-    return true;
+	return true;
 }
 
 
