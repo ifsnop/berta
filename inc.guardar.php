@@ -89,7 +89,7 @@ function fromPolygons2KML4(array $multi_polygons_classified, string $radarWithFL
 
 function checkCoverageLevels($coverageLevel) {
     $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
-    if ( !isset($coverageLevel, $coverage_levels) ) {
+    if ( !in_array($coverageLevel, $coverage_levels) ) {
         debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     }
     return true;

@@ -217,22 +217,13 @@ function multicobertura(array &$config, array &$coberturas, int $fl, array $ruta
 			logger(" D> POLYCUENTA0:" . $result_resta->numPoints . " NIVEL{$numero_solape}");
 			$mr_polygons[$numero_solape][$nombre_grupo_radares_interseccion . "-" . $nombre_grupo_radares_suma] = $result_resta;
 			//echo json_encode($result_resta->getArray());exit(0);
-
-			$result_arr2 = $result_resta->getArray();
-			$placemarks = KML_get_placemarks(
-				$result_arr2,
-				$grupo_radares,
-				$rutas,
-				$nivelVuelo,
-				$altMode,
-				$appendToFilename = "",
-				$coverageLevel = $coverageNames[$numero_solape]
-			);
+			$normalized = normalizePolygonsForKML($result_resta->getArray());
+			$kml = normalized2KML($normalized, $coverageNames[$numero_solape] , $grupo_radares, $fl);
 
 			// guardamos el kml para luego juntarlo en uno global, que contenga todos los niveles de cobertura
 			// y todos los radares
-			if (false !== $placemarks) {
-				$coverages_per_level_KML[$numero_solape][$nombre_grupo_radares] = $placemarks;
+			if (false !== $kml) {
+				$coverages_per_level_KML[$numero_solape][$nombre_grupo_radares] = $kml;
 			}
 		}
 		exit(0);
@@ -378,7 +369,7 @@ function multicobertura(array &$config, array &$coberturas, int $fl, array $ruta
  * @return bool true si se ha generado la cache correctamente, false si no.
  * 
  */
-function populate_cache(array $vsr, int $vsr_count, array $coverageName, array $mr_polygons, array &$radares_interseccion_cache, array &$radares_suma_cache)
+function populate_cache(array $vsr, int $vsr_count, array $coverageNames, array $mr_polygons, array &$radares_interseccion_cache, array &$radares_suma_cache)
 {
 	$radares_interseccion_cache = array();
 	$radares_suma_cache = array();
@@ -386,10 +377,10 @@ function populate_cache(array $vsr, int $vsr_count, array $coverageName, array $
 	$count = 1;
 	$debug = false;
 	foreach ($vsr as $numero_solape => $grupo_solape) {
-		if ($numero_solape >= count($coverageName)) {
+		if ($numero_solape >= count($coverageNames)) {
 			$coverageName_fixed = "de más de {$numero_solape}";
 		} else {
-			$coverageName_fixed = $coverageName[$numero_solape];
+			$coverageName_fixed = $coverageNames[$numero_solape];
 		}
 		logger(" N> == Calculando cache para cobertura $coverageName_fixed"); // mono, doble, triple, etc...
 
