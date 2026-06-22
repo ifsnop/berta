@@ -175,7 +175,7 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
     // FL, da lugar a errores al calcular la intersección ya que
     // línea y circunferencia son tangentes.
     $intersec = create_matriz_intersecciones($radar, $matriz_obstaculos, $W, $max_distancia_nm);
-
+    
     $lat_rad = $radar['lat_rad'];
     $lon_rad = $radar['lon_rad'];
     $lat90_rad = M_PI_2 - $lat_rad;  // Ángulo complementario en radianes
@@ -189,14 +189,14 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
     for ($azimuth = 0; $azimuth < $count_intersec; $azimuth++) {
         $azimuth_real = $azimuth * $azimuth_step;
         $a_rad = deg2rad($azimuth_real); //* $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
-
+        
         // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
         $p = array(); // Esquina del polígono
         $r = 0; // Radio de las esquina del polígono
         $count_intersec_azi = count($intersec[$azimuth]) - 1;
-
+        // print "azimuth: {$azimuth} azimuth_real: {$azimuth_real} a_rad: {$a_rad} count_intersec_azi: {$count_intersec_azi}" . PHP_EOL;
         for ($i = $count_intersec_azi; $i >= 0; $i--) {
-            $r = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+            $r = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS; // Último radio [m]
             [$p] = calcula_vertices_interseccion(
                 $r,
                 $a_rad,
@@ -207,6 +207,7 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
                 $lon_rad
             );
             $polygons[] = $p;
+            // print json_encode($p) . PHP_EOL;
         }
     }
     return [$polygons];
@@ -665,13 +666,19 @@ function calcula_vertices_interseccion(
     float $lon_rad
 ) {
 
-    static $alpha_cache = [];
+    $debug = false;
+
+    // static $alpha_cache = [];
     static $a1a2_cache = [];
+    static $called = 0;
 
-    $r = round($r, 0);
-
+    // $r = round($r, 0);
     $a1_rad  = round($a1_rad, 2);
 
+    if ( $debug )
+        print "r: {$r} a1_rad: {$a1_rad}" . PHP_EOL;
+/*
+    // este cache apenas tiene uso y si redondeamos r, hayy coberturas s con problemas  (monflorite para fl45 falla si redondeamos r a 0)
     [$cos_alpha, $sin_alpha] = getCached($alpha_cache, (string)$r, function () use ($r) {
         $alpha = $r / RADIO_TERRESTRE;
         return [
@@ -679,6 +686,14 @@ function calcula_vertices_interseccion(
             sin($alpha),
         ];
     });
+*/
+
+    $alpha = $r / RADIO_TERRESTRE;
+    $cos_alpha = cos($alpha);
+    $sin_alpha = sin($alpha);
+    
+    if ( $debug )
+        print "cos_alpha: {$cos_alpha} sin_alpha: {$sin_alpha}" . PHP_EOL;
 
     [$cos_a1, $sin_a1] = getCached($a1a2_cache, (string) $a1_rad, function () use ($a1_rad) {
         return [
@@ -686,6 +701,9 @@ function calcula_vertices_interseccion(
             sin($a1_rad),
         ];
     });
+
+    if ( $debug )
+        print "cos_a1: {$cos_a1} sin_a1: {$sin_a1}" . PHP_EOL;
 
     $cos_lat90xcos_alpha2 = $cos_lat90 * $cos_alpha;
     $sin_lat90xsin_alpha2 = $sin_lat90 * $sin_alpha;
@@ -738,8 +756,15 @@ function calcula_vertices_interseccion(
         $asin_lat2_rad -= BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $sin_a2;
         $lon2_d += BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $cos_a2;
         $p2 = [rad2deg($asin_lat2_rad), rad2deg($lon2_d)];
+
+        if ( $debug ) 
+            print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
+
         return [$p1, $p2];
     }
+
+    if ( $debug )
+        print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
 
     return [$p1];
 }

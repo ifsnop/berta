@@ -283,7 +283,7 @@ function programaPrincipal(array $config)
 
                     if ($fecha_modificado_cache >= $infoCoral[$sensor]['fecha_modificado']) {
                         $cache = file_get_contents($cache_file);
-                        if (false !== $cache) {
+                        if ( (false !== $cache) && (0 != strlen($cache))) {
                             $coberturas[$sensor]['polygons'] = json_decode($cache, $assoc = true);
                             logger(" V> Leyendo caché del fichero >{$cache_file}<");
                             if (false === $coberturas[$sensor]['polygons']) {
@@ -349,19 +349,16 @@ function programaPrincipal(array $config)
                     'por_nivel' =>  $config['path']['resultados_mono'] . $nivelVuelo . DIRECTORY_SEPARATOR,
                     'por_sensor' => $config['path']['resultados_mono'] . $sensor . DIRECTORY_SEPARATOR,
                 );
-                $coberturas[$sensor]['kmz'] = normalizePolygonsForKML($coberturas[$sensor]['polygons']);
-                creaKml3(
-                    $coberturas[$sensor]['kmz'],
-                    array($sensor),
+                $coberturas[$sensor]['normalized'] = normalizePolygonsForKML($coberturas[$sensor]['polygons']);
+                $coberturas[$sensor]['kml'] = normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
+                
+                creaKml4(
+                    $coberturas[$sensor]['kml'],
                     $rutas,
                     $nivelVuelo,
-                    $altMode = "clampToGround",
-                    $appendToFilename = array(),
-                    $coverageLevel = 'mono',
-                    $config['disable-kmz']
+                    [$sensor]
                 );
             }
-
             logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
                 "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
         }
@@ -395,6 +392,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
     if ($flm >= $hA) { // CASO A (nivel de vuelo por encima de la posición del radar)
         // inicio para calculo por encima con método vectorial
         // se devuelve para cada azimut, la distancia más lejana
+        logger(" D> calculosFLencimaRadar2");
         $polygons = calculosFLencimaRadar2($radar, $flm);
         
         if ($calculoCono) {
