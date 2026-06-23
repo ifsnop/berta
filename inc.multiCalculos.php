@@ -108,6 +108,7 @@ function multicobertura(array &$config, array &$coberturas, int $fl, array $ruta
 
 	$radares = $ret['radares'];
 	$mr_polygons = $ret['mr_polygons'];
+	logger(" D> Polígonos de radares cacheados: " . implode(',', (array_keys($mr_polygons))));
 
 	$flm = round($fl * 100.0 * BERTA_FEET_TO_METERS, 2);
     $flWithPad = str_pad((string) $fl, 3, "0", STR_PAD_LEFT);
@@ -145,24 +146,25 @@ function multicobertura(array &$config, array &$coberturas, int $fl, array $ruta
 	logger(" D> count radares_interseccion_cache: " . implode(',', array_keys($radares_interseccion_cache)));
 
 	// ejecución
-	$count = 0;
-	foreach ($vsr as $numero_solape => $grupo_solape) {
+	$count = 1;
+	foreach ($vsr as $numero_solape => $grupo_solape) { // numero_solape = 1, 2, 3...
+		// $grupo_solape en la primera iteración serán los radares individuales
 		if ($numero_solape >= count($coverageNames)) {
 			$coverageNames_fixed = "de más de {$numero_solape}";
 		} else {
 			$coverageNames_fixed = $coverageNames[$numero_solape];
 		}
-
 		logger(" N> == Calculando cobertura $coverageNames_fixed"); // mono, doble, triple, etc...
 		$coverages_per_level_KML[$numero_solape] = array();
 		$mr_polygons[$numero_solape] = array();
-		print_r($grupo_solape);
 		
-		foreach ($grupo_solape as $grupo_radares) {
+		foreach ($grupo_solape as $grupo_radares) { // primera iteración, radares individuales
 
 			logger(" V> $count/$vsr_count");
 			$count++;
 
+			// extraemos los radares que van a intervenir en esta iteración
+			// mono cobertura del primer radar es el primer radar menos todos los demás
 			$count_grupo_radares = count($grupo_radares);
 			$nombre_grupo_radares = implode(',', $grupo_radares);
 			$nombre_grupo_radares_interseccion = implode('^', $grupo_radares);
@@ -170,30 +172,29 @@ function multicobertura(array &$config, array &$coberturas, int $fl, array $ruta
 			$count_grupo_radares_suma = count($grupo_radares_suma);
 			$nombre_grupo_radares_suma = implode('+', $grupo_radares_suma);
 
-			if (true) { // $debug )
-				logger(" V> =======================");
-				logger(" V> Intersección: $nombre_grupo_radares_interseccion");
-				logger(" V> Suma: $nombre_grupo_radares_suma");
-			}
-
-			// bucle principal, aquí tendríamos que calcular todas las coberturas.
 			/** @var MR\Polygon $result_interseccion */
+			if ( !isset($radares_interseccion_cache[$nombre_grupo_radares_interseccion]) ) {
+				logger(" N> Intersección no existe, no hay resultado. Se buscó {$nombre_grupo_radares_interseccion}");
+				continue;
+			}
 			$result_interseccion =  $radares_interseccion_cache[$nombre_grupo_radares_interseccion];
+			logger(" V> Intersección: $nombre_grupo_radares_interseccion Polygon_count: " . ($result_interseccion !== false ? $result_interseccion->numPoints : 0));
 			if (0 == $result_interseccion->numPoints) {
-				logger(" V> Intersección vacia, no hay resultado");
+				logger(" N> Intersección vacia, no hay resultado. Se buscó: {$nombre_grupo_radares_interseccion}");
 				continue;
 			}
 
-			logger(" D> Polígonos en interseccion: " . ($result_interseccion !== false ? $result_interseccion->numPoints : 0));
-
 			/** @var MR\Polygon|bool $result_suma */
 			$result_suma = false;
-			if (!isset($radares_suma_cache[$nombre_grupo_radares_suma])) {
-				logger(" D> Polígonos en suma: false");
-			} else {
+			if (isset($radares_suma_cache[$nombre_grupo_radares_suma])) {
 				$result_suma = $radares_suma_cache[$nombre_grupo_radares_suma];
-				logger(" D> Polígonos en suma: " . ($result_suma !== false ? $result_suma->numPoints : 0));
+				logger(" D> Suma: $nombre_grupo_radares_suma Polygon_count: " . ($result_suma !== false ? $result_suma->numPoints : 0));
+			} else {
+				logger(" D> Suma no existe, no hay resultado. Se buscó: {$nombre_grupo_radares_suma}");
+				// pero no es un error
 			}
+
+			// ahora calculamos la diferencia de intersección - suma (para sacar la cobertura sólo del tipo $numero_solape)
 			$timer_difference = microtime(true);
 			/** @var MR\Polygon|bool $result_resta */
 			$result_resta = false;
@@ -214,19 +215,23 @@ function multicobertura(array &$config, array &$coberturas, int $fl, array $ruta
 			
 			// en mr_polygons guardamos para cada nivel de cobertura (mono, doble, triple) todos los polígonos que forman
 			// ese nivel
-			logger(" D> POLYCUENTA0:" . $result_resta->numPoints . " NIVEL{$numero_solape}");
+			logger(" D> Polígono resultante:" . $result_resta->numPoints . " {$coverageNames_fixed}");
 			$mr_polygons[$numero_solape][$nombre_grupo_radares_interseccion . "-" . $nombre_grupo_radares_suma] = $result_resta;
-			//echo json_encode($result_resta->getArray());exit(0);
 			$normalized = normalizePolygonsForKML($result_resta->getArray());
 			$kml = normalized2KML($normalized, $coverageNames[$numero_solape] , $grupo_radares, $fl);
-
+			logger(" D> Calculada: {$coverageNames_fixed} {$nombre_grupo_radares} => {$nombre_grupo_radares_interseccion} - ( {$nombre_grupo_radares_suma} )");
 			// guardamos el kml para luego juntarlo en uno global, que contenga todos los niveles de cobertura
 			// y todos los radares
 			if (false !== $kml) {
 				$coverages_per_level_KML[$numero_solape][$nombre_grupo_radares] = $kml;
+				// print json_encode(array_keys($coverages_per_level_KML[$numero_solape])) . PHP_EOL;
+				// print_r($coverages_per_level_KML[$numero_solape][$nombre_grupo_radares]);
 			}
 		}
-		exit(0);
+		
+		// aquí se calcula la cobertura unica de este nivel (una total por mono, doble, triple) podríamos no utilizarla
+		// y de momento generar ya los folders con el contenido.
+
 		/*
 		// generar aquí la cobertura suma usando todo lo contenido en $mr_polygons[$numero_solape];
 		// no acaba de funcionar bien, hay coberturas que no se suman
@@ -344,8 +349,29 @@ function multicobertura(array &$config, array &$coberturas, int $fl, array $ruta
 		*/
 	}
 
+	// Estructura para meter los kml de los polígonos en carpetas
+	/*
+	<Folder>
+		<name>Carpeta sin título</name>
+		<open>1</open>
+		<Placemark>
+			<name>Línea de medida</name>
+			<styleUrl>#inline</styleUrl>
+			<LineString>
+				<tessellate>1</tessellate>
+				<coordinates>
+					-1.481390979352614,40.18070450543358,2014.93172611603 1.102616491258408,37.51228781817466,-4190.136407117736 
+				</coordinates>
+			</LineString>
+		</Placemark>
+		<atom:link rel="app" href="https://www.google.com/earth/about/versions/#earth-pro" title="Google Earth Pro 7.3.7.1155"></atom:link>
+	</Folder>
+	*/
+
 	exit(0);
 
+	// aquí encarpetar en estructura de folders!
+	
 	// genera el kml suma de todos los kml guardados
 	KML_create_from_placemarks($coverages_per_level_KML, $nivelVuelo, $nivelVuelo);
 
@@ -360,9 +386,12 @@ function multicobertura(array &$config, array &$coberturas, int $fl, array $ruta
 /**
  * Función que genera la cache de intersecciones y sumas de radares, para poder calcular
  * la cobertura multiradar de forma más eficiente.
+ * 
+ * No se puede optimizar usando las funciones de unionMany y DifferenceMany porque
+ * necesitamos guardar todos los resultados intermedios, dado que los usaremos más adelante
  * @param array $vsr array de variaciones sin repetición
  * @param int $vsr_count número total de combinaciones
- * @param array $coverageName array asociativo de nombres de cobertura (mono, doble, triple..)
+ * @param array $coverageNames array asociativo de nombres de cobertura (mono, doble, triple..)
  * @param array $mr_polygons array de polígonos Martinez-Rueda por radar
  * @param array &$radares_interseccion_cache array de cache de intersecciones (referencia)
  * @param array &$radares_suma_cache array de cache de sumas (referencia)
@@ -387,21 +416,19 @@ function populate_cache(array $vsr, int $vsr_count, array $coverageNames, array 
 		foreach ($grupo_solape as $grupo_radares) {
 			logger("$count/$vsr_count ", false);
 			$count++;
-
+			// print json_encode($grupo_radares) . " ";
 			$count_grupo_radares = count($grupo_radares);
 			$nombre_grupo_radares_suma = implode('+', $grupo_radares);
 			$nombre_grupo_radares_interseccion = implode('^', $grupo_radares);
 
 			// cacheamos en funcion de cuantos radares haya.
 			// si es solo uno, es directo
-			// REVISAR DESDE AQUI
 			if ($count_grupo_radares == 1) {
 				$result_interseccion = $mr_polygons[$grupo_radares[0]];
 				$result_suma = $mr_polygons[$grupo_radares[0]];
 				// si son dos radares, hay que coger los dos (serán los dos primeros)
 			} else if ($count_grupo_radares == 2) { // estos nunca estarán en caché
 				// PRIMERO CACHEAMOS LA INTERSECCION
-				
 				$subject = $mr_polygons[$grupo_radares[0]];
 				$clipping = $mr_polygons[$grupo_radares[1]];
 				$result_interseccion = MR\Algorithm::intersect($subject, $clipping);
@@ -437,8 +464,10 @@ function populate_cache(array $vsr, int $vsr_count, array $coverageNames, array 
 				if ($debug)
 					logger(" D> store suma_cache: $nombre_grupo_radares_suma md5: " . md5(serialize($result_suma)));
 			}
-			logger($nombre_grupo_radares_interseccion . " ", false);
-			logger($nombre_grupo_radares_suma . " ", false);
+			if ( $debug ) {
+				logger("radares para interseccion: " . $nombre_grupo_radares_interseccion . " ", false);
+				logger("radares para suma: " . $nombre_grupo_radares_suma . " ", false);
+			}
 
 			$radares_interseccion_cache[$nombre_grupo_radares_interseccion] = $result_interseccion;
 			$radares_suma_cache[$nombre_grupo_radares_suma] = $result_suma;
