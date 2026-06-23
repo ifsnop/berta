@@ -1,226 +1,188 @@
 <?php
 
-const PERMISOS = 0775;
-
+const BERTA_PERMISOS = 0775;
 
 /*
  * Genera un KML a partir de una definición de poligonos. Cada polígono
  * puede tener huecos, definidos en los subarrays "innners". Función para
  * parsear directamente la salida de normalizePolygonsForKML.
- * @param array $polygons
+ * @param array $multi_polygons_classified
  * @param string $radarWithFL
- * @param string $rgb
- * @param string $altMode
+ * @param string $altMode "clampToGround|clampToSeaFloor|RelativeToGround|absolute" (ENTRADA)
  * @param float $fl
  * @return string kml
  */
-function fromPolygons2KML3(array $polygons, string $radarWithFL, string $rgb, string $altMode, float $fl)
+function fromPolygons2KML4(array $multi_polygons_classified, string $radarWithFL, string $altMode, float $fl)
 {
+    $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
 
-    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
-        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
-        <Document>
-        <name>' . $radarWithFL . '</name>
-        <Style id="transGreenPoly">
-            <LineStyle><width>1.5</width></LineStyle>
-            <PolyStyle><color>' . $rgb . '</color></PolyStyle>
-	</Style>
-	<Placemark>
-	    <name>' .  $radarWithFL . '</name>
-	    <styleUrl>#transGreenPoly</styleUrl>
-	    <MultiGeometry>';
+    $kml_styles = "";
+    foreach ($coverage_levels as $level) {
+        $rgb = KML_get_rgb_from_coverageLevel($level);
+        $kml_styles .=              "  <Style id=\"transparentPoly-{$level}\">" .
+                          PHP_EOL . "    <LineStyle><width>1.5</width></LineStyle>" .
+                          PHP_EOL . "    <PolyStyle><color>{$rgb}</color></PolyStyle>" .
+                          PHP_EOL . "  </Style>" . PHP_EOL;
+    }
 
-    $kmlPolygonHeader = PHP_EOL .
-        '                <Polygon>
-		<extrude>1</extrude>
-		<altitudeMode>' . $altMode . '</altitudeMode>
-		<outerBoundaryIs><LinearRing><coordinates>' . PHP_EOL;
-    $kmlPolygonFooter_1 = PHP_EOL .
-        '                </coordinates></LinearRing></outerBoundaryIs>';
+    $kmlHeader =                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
+                          PHP_EOL . "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:gx=\"http://www.google.com/kml/ext/2.2\" xmlns:kml=\"http://www.opengis.net/kml/2.2\" xmlns:atom=\"http://www.w3.org/2005/Atom\">" .
+                          PHP_EOL . "<Document>" .
+                          PHP_EOL . "  <name>BERTA</name>" .
+                          PHP_EOL . "{$kml_styles}";
+  
 
-    $kmlPolygonFooter_2 = '                </Polygon>';
+    $kmlPolygonHeader =   PHP_EOL . "      <Polygon>" .
+                          PHP_EOL . "        <extrude>1</extrude>" .
+                          PHP_EOL . "        <altitudeMode>{$altMode}</altitudeMode>" .
+                          PHP_EOL . "        <outerBoundaryIs><LinearRing><coordinates>" . PHP_EOL;
+    $kmlPolygonFooter_1 = PHP_EOL . "        </coordinates></LinearRing></outerBoundaryIs>";
+    $kmlInnerHeader =     PHP_EOL . "        <innerBoundaryIs><LinearRing><coordinates>" . PHP_EOL;
+    $kmlInnerFooter =     PHP_EOL . "        </coordinates></LinearRing></innerBoundaryIs>";
+    $kmlPolygonFooter_2 = PHP_EOL . "      </Polygon>";
 
-    $kmlInnerHeader = '                <innerBoundaryIs><LinearRing><coordinates>';
-    $kmlInnerFooter = '                </coordinates></LinearRing></innerBoundaryIs>' . PHP_EOL;
+    $kmlPlacemarkFooter = PHP_EOL . "    </MultiGeometry>" . 
+                          PHP_EOL . "    </Placemark>";
 
-    $kmlFooter = PHP_EOL .
-        '            </MultiGeometry>
-        </Placemark>
-        </Document></kml>';
+    $kmlFooter =          PHP_EOL . "</Document>" .
+                          PHP_EOL . "</kml>";
+
+    // DIVIDIR ESTA FUNCION PARA PODER LLAMARLA DESDE MULICOBERTURA
 
     $kml = $kmlHeader;
-    foreach ($polygons as &$polygon) {
+    foreach ($multi_polygons_classified as $level => $multi_polygons) {
+        print $level . PHP_EOL;
+        // print json_encode($multi_polygons);
+        $outer = true;
+        $kmlPlacemark =    PHP_EOL . "  <Placemark>" .
+                           PHP_EOL . "    <name>{$radarWithFL}</name>" .
+                           PHP_EOL . "    <styleUrl>#transparentPoly-{$level}</styleUrl>" .
+                           PHP_EOL . "    <MultiGeometry>";
+        $kml .= $kmlPlacemark;
         $kmlOuter = "";
-        //if ( 10000 < count($polygon['polygon']) ) {
-        // $count = count($polygon['outer']);
-        //    print "DEBUG current/refined vertex count => " . count($polygon['polygon']) . "/";
-        if ( !isset( $polygon['outer']) ) {
-            throw new InvalidArgumentException("Polygon doesn't have outer definition, error with polygon");
-        }
-        $polygon['outer'] = ramer_douglas_peucker($polygon['outer'], 0.0000000001);
-        // $new_count = count($polygon['outer']);
-        //if ( $count != $new_count ) {
-        //    logger(" V> current/refined vertex cound => $count/$new_count");
-        //    print count($polygon['polygon']) . PHP_EOL;
-        //}
-        foreach ($polygon['outer'] as &$p) {
-            $kmlOuter .= $p[1] . "," . $p[0] . "," . $fl . " ";
-        }
-        $kml .= $kmlPolygonHeader . $kmlOuter . $kmlPolygonFooter_1 . PHP_EOL;
-        if (isset($polygon['inners'])) {
-            foreach ($polygon['inners'] as &$polygons_inside) {
-                $kmlInner = "";
-                foreach ($polygons_inside as &$p_inside) {
-                    $kmlInner .=  $p_inside[1] . "," . $p_inside[0] . "," . $fl . " ";
-                }
-                if ("" != $kmlInner) {
-                    $kml .= $kmlInnerHeader . PHP_EOL . $kmlInner . PHP_EOL . $kmlInnerFooter;
+        foreach ($multi_polygons as $polygons) {
+            foreach ($polygons as $polygon) {
+                if ($outer) {
+                    $polygon = ramer_douglas_peucker($polygon, 0.0000000001);
+                    $outer = false;
+                    foreach ($polygon as $p) {
+                        $kmlOuter .= $p[1] . "," . $p[0] . "," . $fl . " ";
+                    }
+                    $kml .= $kmlPolygonHeader . $kmlOuter . $kmlPolygonFooter_1;
+                } else {
+                    // aquí se ejecutan el resto de polígonos que seran agujeros del primero
+                    $kmlInner = "";
+                    foreach ($polygon as &$p_inside) {
+                        $kmlInner .=  $p_inside[1] . "," . $p_inside[0] . "," . $fl . " ";
+                    }
+                    if ("" != $kmlInner) {
+                        $kml .= $kmlInnerHeader . $kmlInner . $kmlInnerFooter;
+                    }
                 }
             }
         }
         $kml .= $kmlPolygonFooter_2;
     }
-    $kml .= $kmlFooter;
+    $kml .= $kmlPlacemarkFooter . $kmlFooter;
     return $kml;
 }
 
-/*
- * Genera un KML a partir de una definición de poligonos. Cada polígono
- * puede tener huecos, definidos en los subarrays "innners". Función para
- * parsear directamente la salida de normalizePolygonsForKML.
- * @param array $multi_polygons
- * @param string $radarWithFL
- * @param string $rgb
- * @param string $altMode
- * @param float $fl
- * @return string kml
+function checkCoverageLevels($coverageLevel) {
+    $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
+    if ( !in_array($coverageLevel, $coverage_levels) ) {
+        debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
+    }
+    return true;
+}
+
+/**
+ * 
+ * @param string $altMode "clampToGround|clampToSeaFloor|RelativeToGround|absolute" (ENTRADA)
  */
-function fromPolygons2KML4(array $multi_polygons, string $radarWithFL, string $rgb, string $altMode, float $fl)
+function normalized2KML(array $multi_polygons, string $coverageLevel, array $sensors, int $fl, string $altMode = "clampToGround")
 {
+    checkCoverageLevels($coverageLevel);
+    $flm = round($fl * 100.0 * BERTA_FEET_TO_METERS, 2);
+    $flWithPad = str_pad((string) $fl, 3, "0", STR_PAD_LEFT);
+    $radarWithFl = implode(',', $sensors) . "-" . $flWithPad;
 
-    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
-        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
-        <Document>
-        <name>' . $radarWithFL . '</name>
-        <Style id="transGreenPoly">
-            <LineStyle><width>1.5</width></LineStyle>
-            <PolyStyle><color>' . $rgb . '</color></PolyStyle>
-	</Style>
-	<Placemark>
-	    <name>' .  $radarWithFL . '</name>
-	    <styleUrl>#transGreenPoly</styleUrl>
-	    <MultiGeometry>';
+    $kmlPolygonHeader =   PHP_EOL . "      <Polygon>" .
+        PHP_EOL . "        <extrude>1</extrude>" .
+        PHP_EOL . "        <altitudeMode>{$altMode}</altitudeMode>" .
+        PHP_EOL . "        <outerBoundaryIs><LinearRing><coordinates>" . PHP_EOL;
+    $kmlPolygonFooter_1 = PHP_EOL . "        </coordinates></LinearRing></outerBoundaryIs>";
+    $kmlInnerHeader =     PHP_EOL . "        <innerBoundaryIs><LinearRing><coordinates>" . PHP_EOL;
+    $kmlInnerFooter =     PHP_EOL . "        </coordinates></LinearRing></innerBoundaryIs>";
+    $kmlPolygonFooter_2 = PHP_EOL . "      </Polygon>";
 
-    $kmlPolygonHeader = PHP_EOL .
-        '                <Polygon>
-		<extrude>1</extrude>
-		<altitudeMode>' . $altMode . '</altitudeMode>
-		<outerBoundaryIs><LinearRing><coordinates>' . PHP_EOL;
-    $kmlPolygonFooter_1 = PHP_EOL .
-        '                </coordinates></LinearRing></outerBoundaryIs>';
+    $kmlPlacemarkFooter = PHP_EOL . "    </MultiGeometry>" .
+        PHP_EOL . "    </Placemark>";
 
-    $kmlPolygonFooter_2 = '                </Polygon>';
+    $kml = "";
 
-    $kmlInnerHeader = '                <innerBoundaryIs><LinearRing><coordinates>';
-    $kmlInnerFooter = '                </coordinates></LinearRing></innerBoundaryIs>' . PHP_EOL;
-
-    $kmlFooter = PHP_EOL .
-        '            </MultiGeometry>
-        </Placemark>
-        </Document></kml>';
-
-    $kml = $kmlHeader;
+    $outer = true;
+    $kmlPlacemark =    PHP_EOL . "  <Placemark>" .
+        PHP_EOL . "    <name>{$radarWithFl}</name>" .
+        PHP_EOL . "    <styleUrl>#transparentPoly-{$coverageLevel}</styleUrl>" .
+        PHP_EOL . "    <MultiGeometry>";
+    $kml .= $kmlPlacemark;
+    $kmlOuter = "";
     foreach ($multi_polygons as $polygons) {
-        $outer = true;
-        $kmlOuter = "";
         foreach ($polygons as $polygon) {
             if ($outer) {
                 $polygon = ramer_douglas_peucker($polygon, 0.0000000001);
                 $outer = false;
                 foreach ($polygon as $p) {
-                    $kmlOuter .= $p[1] . "," . $p[0] . "," . $fl . " ";
+                    $kmlOuter .= $p[1] . "," . $p[0] . "," . $flm . " ";
                 }
-                $kml .= $kmlPolygonHeader . $kmlOuter . $kmlPolygonFooter_1 . PHP_EOL;
+                $kml .= $kmlPolygonHeader . $kmlOuter . $kmlPolygonFooter_1;
             } else {
                 // aquí se ejecutan el resto de polígonos que seran agujeros del primero
                 $kmlInner = "";
                 foreach ($polygon as &$p_inside) {
-                    $kmlInner .=  $p_inside[1] . "," . $p_inside[0] . "," . $fl . " ";
+                    $kmlInner .=  $p_inside[1] . "," . $p_inside[0] . "," . $flm . " ";
                 }
                 if ("" != $kmlInner) {
-                    $kml .= $kmlInnerHeader . PHP_EOL . $kmlInner . PHP_EOL . $kmlInnerFooter;
+                    $kml .= $kmlInnerHeader . $kmlInner . $kmlInnerFooter;
                 }
             }
         }
         $kml .= $kmlPolygonFooter_2;
     }
-    $kml .= $kmlFooter;
+    $kml .= $kmlPlacemarkFooter;
     return $kml;
 }
 
 
-
 /**
- * Funcion para crear el fichero kml con los resultados del calculo de la cobertura del radar (CASO B: fl por debajo del radar)
+ * Funcion para crear el fichero kml con los resultados del calculo de la cobertura del radar
  *
- * @param array $listaContornos con el nuevo formato de poligonos(ENTRADA)
+ * @param array $multi_polygons_classified con el nuevo formato de poligonos, donde level indica si es mono, doble, triple... (ENTRADA)
  * Entrada:
+ * [ level => 
  * [
  *   [
  *     [... CCW ...], // outer
-       [... CW ...], // inner
+ *     [... CW ...], // inner
  *          ...
  *   ],
  *   ...
  * ]
- * @param array $sensors Radares que se han utilizado para esta cobertura (ENTRADA)
+ * ]
  * @param array $rutas Paths donde guardar el fichero generado (ENTRADA)
  * @param string $nivelVuelo Nivel de vuelo usado para el cálculo
- * @param string $altMode Si el KML está pegado al suelo "clampToGround|clampToSeaFloor" o la altura es relativa "RelativeToGround" o absoluta "absolute" (ENTRADA)
+ * @param string $altMode "clampToGround|clampToSeaFloor|RelativeToGround|absolute" (ENTRADA)
  * @param array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
  * @param bool $disableKmz Disable generation of compressed kml (kmz) files
  * @return bool
  */
-function creaKml3(array $listaContornos, array $sensors, array $rutas, string $nivelVuelo, string $altMode, array $appendToFilename = array(), string $coverageLevel = 'mono', bool $disableKmz = true)
+function creaKml3(array $multi_polygons_classified, array $rutas, string $nivelVuelo, string $altMode, array $appendToFilename = array(), string $coverageLevel = 'mono', bool $disableKmz = true)
 {
     // conversión a metros para usar en el kmz
     $flm = round(((float)$nivelVuelo) * 100.0 * BERTA_FEET_TO_METERS, 2);
     // aseguramos el formato del nivel de vuelo
     $nivelVuelo = str_pad($nivelVuelo, 3, "0", STR_PAD_LEFT);
     $coverageLevelAppend = "-" . $coverageLevel;
-
-    switch ($coverageLevel) {
-        case "unica":
-            $rgb = "7d00ff00";
-            $coverageLevelAppend = "";
-            break;         // igual que mono
-        case "mono":
-            $rgb = "7d00ff00";
-            $coverageLevelAppend = "";
-            break;
-        // case "mono": $rgb = "e6ff9724"; break;          // Rascal
-        case "doble":
-            $rgb = "7dff0000";
-            break;
-        // case "doble": $rgb = "e63559a5"; break;         // Rascal
-        case "triple":
-            $rgb = "7dffff00";
-            break;
-        // case "triple": $rgb = "e69977de"; break;        // Rascal
-        case "cuadruple":
-            $rgb = "7d0000ff";
-            break;
-        // case "cuadruple": $rgb = "e67bf600"; break;     // Rascal
-        case "quintuple":
-            $rgb = "7dff00ff";
-            break;
-        case "sextuple":
-            $rgb = "7d00ffff";
-            break;
-        default:
-            $rgb = "7d00ffff";
-            break;
-    }
 
     logger(" D> Nivel de cobertura: $coverageLevel");
 
@@ -233,25 +195,21 @@ function creaKml3(array $listaContornos, array $sensors, array $rutas, string $n
 
     }
 
-
     $radarWithFL = implode(",", $sensors) . 
         $coverageLevelAppend . "-FL" . $nivelVuelo . $appendStr;
-    // else {
-    //    $radarWithFL = $radarName . "-FL" . $nivelVuelo . $appendToFilename;
-    //}
-
+   
     if (false) {
         print "nivelVuelo: " . $nivelVuelo . PHP_EOL;
         print "radarWithFL: " . $radarWithFL . PHP_EOL;
         print "ruta: " . print_r($rutas, true) . PHP_EOL;
     }
 
-    if (0 == count($listaContornos)) {
+    if (0 == count($multi_polygons_classified)) {
         logger(" E> No se genera fichero kmz para FL $nivelVuelo porque no hay cobertura");
         return false;
     }
 
-    $kmlContent = fromPolygons2KML4($listaContornos, $radarWithFL, $rgb, $altMode, $flm);
+    $kmlContent = fromPolygons2KML4($multi_polygons_classified, $radarWithFL, $altMode, $flm);
 
     foreach ($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
         crearCarpetaResultados($val);
@@ -259,6 +217,59 @@ function creaKml3(array $listaContornos, array $sensors, array $rutas, string $n
     }
     return true;
 }
+
+/**
+ * Funcion para crear el fichero kml con los resultados del calculo de la cobertura del radar
+ *
+ * @param array $rutas Paths donde guardar el fichero generado (ENTRADA)
+ * @param array $appendToFilename Información a añadir al final del nombre del fichero (ENTRADA)
+ * @param bool $disableKmz Disable generation of compressed kml (kmz) files
+ * @return bool
+ */
+function creaKml4(string $kml, array $rutas, string $nivelVuelo, array $sensors, array $appendToFilename = array(), bool $disableKmz = true)
+{
+    $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
+    $kml_styles = "";
+    foreach ($coverage_levels as $level) {
+        $rgb = KML_get_rgb_from_coverageLevel($level);
+        $kml_styles .=              "  <Style id=\"transparentPoly-{$level}\">" .
+                          PHP_EOL . "    <LineStyle><width>1.5</width></LineStyle>" .
+                          PHP_EOL . "    <PolyStyle><color>{$rgb}</color></PolyStyle>" .
+                          PHP_EOL . "  </Style>" . PHP_EOL;
+    }
+
+    $kmlHeader =                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
+                          PHP_EOL . "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:gx=\"http://www.google.com/kml/ext/2.2\" xmlns:kml=\"http://www.opengis.net/kml/2.2\" xmlns:atom=\"http://www.w3.org/2005/Atom\">" .
+                          PHP_EOL . "<Document>" .
+                          PHP_EOL . "  <name>BERTA</name>" .
+                          PHP_EOL . "{$kml_styles}";
+
+    $kmlFooter =          PHP_EOL . "</Document>" .
+                          PHP_EOL . "</kml>";
+
+    // $coverageLevelAppend = "-" . $coverageLevel;
+
+    if ( count($appendToFilename) > 1 ) {
+        $appendStr = "-" . implode("_", $appendToFilename);
+    } else if ( count($appendToFilename) == 1 ) {
+        $appendStr = $appendToFilename[0];
+    } else {
+        $appendStr = "";
+
+    }
+
+    $radarWithFL = implode(",", $sensors) . 
+        "-FL" . $nivelVuelo . $appendStr;
+   
+    $kmlContent = $kmlHeader . $kml . $kmlFooter;
+
+    foreach ($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
+        crearCarpetaResultados($val);
+        writeKMZ($val . $radarWithFL/* . $appendToFilename*/, $radarWithFL, $kmlContent, $disableKmz);
+    }
+    return true;
+}
+
 
 
 /**
@@ -285,13 +296,12 @@ function creaKml3(array $listaContornos, array $sensors, array $rutas, string $n
  * - Nivel 1 = agujero
  * - Nivel 2 = nuevo exterior
  */
-
 function normalizePolygonsForKML(array $polygons): array
 {
     $items = [];
 
     foreach ($polygons as $poly) {
-        if ( !is_array($poly)) continue;
+        if (!is_array($poly)) continue;
         if (count($poly) < 4) continue;
 
         if (!isClosed($poly)) {
@@ -310,9 +320,8 @@ function normalizePolygonsForKML(array $polygons): array
     // usort($items, fn($a, $b) => $b['area'] <=> $a['area']);
 
     usort($items, function ($a, $b) {
-	return $b['area'] <=> $a['area'];
+        return $b['area'] <=> $a['area'];
     });
-
 
     $n = count($items);
 
@@ -322,7 +331,7 @@ function normalizePolygonsForKML(array $polygons): array
         $pt = interiorPoint($items[$i]['poly']);
 
         for ($j = 0; $j < $i; $j++) {
-    
+
             if (pointInPolygon($pt[0], $pt[1], $items[$j]['poly'], count($items[$j]['poly']))) {
                 $items[$i]['parent'] = $j;
                 break;
@@ -351,14 +360,13 @@ function normalizePolygonsForKML(array $polygons): array
         if ($item['depth'] % 2 === 0) {
 
             $outer = ensureCCW($item['poly']);
-/*
+            /*
             $result[$idx] = [
                 'outer' => $outer,
                 'inners' => []
             ];
-*/
-          $result[$idx] = [ $outer ];
-
+            */
+            $result[$idx] = [$outer];
         }
     }
 
@@ -375,7 +383,7 @@ function normalizePolygonsForKML(array $polygons): array
             }
 
             if ($p !== null && isset($result[$p])) {
-//                $result[$p]['inners'][] = ensureCW($item['poly']);
+                // $result[$p]['inners'][] = ensureCW($item['poly']);
                 $result[$p][] = ensureCW($item['poly']);
             }
         }
@@ -497,8 +505,8 @@ function writeKMZ(string $fileName, string $radarWithFL, string $content, bool $
     logger(" V> Guardando fichero {$fileName}.kmz");
 
     $zip = new ZipArchive();
-    $res = $zip->open($fileName . ".kmz",            ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE);
-    if ( ! $res ) {
+    $res = $zip->open($fileName . ".kmz", ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE);
+    if (! $res) {
         logger(" E> No se puede crear el fichero {$fileName}.kmz");
         exit(-1);
     }
@@ -521,7 +529,7 @@ function crearCarpetaResultados($ruta)
         logger(" V> Creando carpeta >{$ruta}<");
         //clearstatcache();
         //$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
-        if (mkdir($ruta, PERMISOS, true)) {
+        if (mkdir($ruta, BERTA_PERMISOS, true)) {
             logger(" V> Carpeta >{$ruta}< creada correctamente");
             return true;
         } else {
@@ -535,17 +543,18 @@ function crearCarpetaResultados($ruta)
 }
 
 /*
- * Helper de KML_get_placemarks para multicobertura
+ * Helper de creaKML
  */
-function KML_get_rgb_from_coverageLevel($coverageLevel)
+function KML_get_rgb_from_coverageLevel(string $coverageLevel, string &$coverageLevelAppend = ""): string
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
     switch ($coverageLevel) {
         case "unica":
             $rgb = "7d00ff00";
+            $coverageLevelAppend = "";
             break;         // igual que mono
         case "mono":
             $rgb = "7d00ff00";
+            $coverageLevelAppend = "";
             break;
         // case "mono": $rgb = "e6ff9724"; break;          // Rascal
         case "doble":
@@ -567,8 +576,9 @@ function KML_get_rgb_from_coverageLevel($coverageLevel)
             $rgb = "7d00ffff";
             break;
         default:
-            $rgb = "7d00ffff";
-            break;
+            debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
+            // $rgb = "7d00ffff";
+            // break;
     }
 
     return $rgb;
@@ -581,7 +591,7 @@ function KML_get_rgb_from_coverageLevel($coverageLevel)
  */
 function KML_get_placemarks($listaContornos, $radarName, $rutas, $nivelVuelo, $altMode, $appendToFilename = "", $coverageLevel = 'mono', $disableKmz = true)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);    
     logger(" D> Nivel de cobertura: $coverageLevel");
 
     $altitude_meters = $nivelVuelo * 100.0 * BERTA_FEET_TO_METERS;
@@ -661,7 +671,7 @@ function KML_get_placemarks($listaContornos, $radarName, $rutas, $nivelVuelo, $a
  */
 function KML_format_placemarks($name, $polygon, $inside, $rgb)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);    
     // polygon es una lista de puntos que determinan un polígono
     $outer_coordinates = "";
     foreach ($polygon as $points) {
@@ -709,7 +719,7 @@ $inner_coordinates
  */
 function KML_create_from_placemarks($coverages_per_levels, $padded_FL, $file_name)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);            
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);            
     $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
     $kml_styles = "";
     foreach ($coverage_levels as $level) {
@@ -783,7 +793,7 @@ function KML_create_from_placemarks($coverages_per_levels, $padded_FL, $file_nam
  */
 function KML_placemarks_in_Folders($radarWithFL, $polygons, $rgb, $altMode)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);    
     /*
 //    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
 //        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -855,8 +865,7 @@ function KML_placemarks_in_Folders($radarWithFL, $polygons, $rgb, $altMode)
  */
 function fromPolygons2KML_One_Folder_Per_Content($polygons, $radarWithFL, $rgb, $altMode)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
-    die("CODIGO EN SUPERVISION FUNCION NO SOPORTADA UNSUPPORTED");
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     /*
 //    $kmlHeader = '<?xml version="1.0" encoding="UTF-8"?>
 //        <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -923,7 +932,7 @@ function fromPolygons2KML_One_Folder_Per_Content($polygons, $radarWithFL, $rgb, 
  */
 function generateMatlabFiles($radar, $rutaResultados)
 {
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);    
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     $rutaTerrenos = $rutaResultados . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
     $rutaCoordenadas = $rutaResultados . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
 

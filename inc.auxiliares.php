@@ -8,7 +8,7 @@
  */
 function altitudeModetoString($altitudeMode)
 {
-    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
+    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
 
     $modo = "";
     switch ($altitudeMode) {

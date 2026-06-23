@@ -149,7 +149,7 @@ function programaPrincipal(array $config)
             case 'max-range':
             case 'm':
                 $config['max-range'] = doubleval($value);
-                logger(" I> Alcance forzado a $value NM");
+                logger(" I> Alcance forzado a {$config['max-range']}NM");
                 $config['force'] = true; // forzar alcance implica ignorar caché y forzar recálculo
                 logger(" I> Modo *forzado* activado");
                 break;
@@ -190,7 +190,7 @@ function programaPrincipal(array $config)
                 $config['mode']['multiradar_unica'] = true;
                 logger(" I> Modo *multiradar con cobertura única* activado");
                 break;
-            /*
+    /*
             case 'rascal':
                 $calculosMode['rascal'] = true;
                 print "INFO calculo *multiradar al estilo rascal* activado" . PHP_EOL;
@@ -204,7 +204,7 @@ function programaPrincipal(array $config)
                 $calculosMode['parcial'] = true;
                 print "INFO calculo *multiradar por radares y tipo (mono,doble,triple...)* activado" . PHP_EOL;
                 break;
-*/
+    */
             case 'f':
             case 'force':
                 $config['force'] = true;
@@ -231,9 +231,10 @@ function programaPrincipal(array $config)
     $rutaResultados = "." . DIRECTORY_SEPARATOR . "RESULTADOS" . DIRECTORY_SEPARATOR;
     $poligono = false;
     $altMode = altitudeModetoString($altitudeMode = 0);
-*/
+    */
     if (!class_exists('ZipArchive')) {
         logger(" I> La clase ZipArchive no está instalda, generación de KMZ desactivada");
+        $config['disable-kmz'] = true;
     }
     $timer = microtime(true);
     logger(" D> Leyendo información de radares de >" . $config['radar-data'] . "<");
@@ -258,14 +259,19 @@ function programaPrincipal(array $config)
         }
     }
 
-    // print_r($config);
+    if ( !file_exists( $config['path']['cache'] ) && !is_dir( $config['path']['cache'] ) ) {
+        logger(" I> Creando carpeta de caché >" . $config['path']['cache'] . "<");
+        @mkdir($config['path']['cache'], 0755, true);
+    } 
+
+
     $coberturas = array(); // array con las coberturas
     for ($fl = $config['fl']['min']; $fl <= $config['fl']['max']; $fl += $config['fl']['step']) {
         $nivelVuelo = str_pad((string)$fl, 3, "0", STR_PAD_LEFT);
         logger(" V> Generando nivel de vuelo {$fl}00ft");
         foreach ($config['sensores'] as $sensor) {
             logger(" V> Generando sensor {$sensor}");
-            $coberturas[$sensor]['contornos'] = false;
+            $coberturas[$sensor]['polygons'] = false;
             $cache_file = $config['path']['cache'] . $sensor . DIRECTORY_SEPARATOR . "{$sensor}-FL{$nivelVuelo}.json";
             logger(" D> Evaluando si leer de la caché {$cache_file}");
             if (false === $config['force']) {
@@ -277,10 +283,10 @@ function programaPrincipal(array $config)
 
                     if ($fecha_modificado_cache >= $infoCoral[$sensor]['fecha_modificado']) {
                         $cache = file_get_contents($cache_file);
-                        if (false !== $cache) {
-                            $coberturas[$sensor]['contornos'] = json_decode($cache, $assoc = true);
+                        if ( (false !== $cache) && (0 != strlen($cache))) {
+                            $coberturas[$sensor]['polygons'] = json_decode($cache, $assoc = true);
                             logger(" V> Leyendo caché del fichero >{$cache_file}<");
-                            if (false === $coberturas[$sensor]['contornos']) {
+                            if (false === $coberturas[$sensor]['polygons']) {
                                 logger(" D> La caché no contenía datos, no hay cobertura en FL{$nivelVuelo} para {$sensor}");
                                 continue;
                             }
@@ -301,7 +307,7 @@ function programaPrincipal(array $config)
             }
 
             // como no había nada en la caché, hay que calcularlo todo
-            if (false === $coberturas[$sensor]['contornos']) {
+            if (false === $coberturas[$sensor]['polygons']) {
                 $timer = microtime(true);
                 logger(" D> Leyendo información del terreno de {$sensor}");
                 // ¿tenemos datos del terreno cargados? vamos a cargarlos una sola vez
@@ -320,16 +326,16 @@ function programaPrincipal(array $config)
                     }
                 }
 
-                $coberturas[$sensor]['contornos'] = calculosFL($coberturas[$sensor]['terreno'], $fl, $nivelVuelo, $config['cone']);
+                $coberturas[$sensor]['polygons'] = calculosFL($coberturas[$sensor]['terreno'], $fl, $nivelVuelo, $config['cone']);
 
-                if (false === $config['max-range']) {
+                if (-1 == $config['max-range']) {
                     logger(" V> Guardando caché para el sensor >{$sensor}< en >{$cache_file}<");
                     crearCarpetaResultados($config['path']['cache'] . $sensor);
-                    file_put_contents($cache_file, json_encode($coberturas[$sensor]['contornos']));
+                    file_put_contents($cache_file, json_encode($coberturas[$sensor]['polygons']));
                 }
                 // contornos es false cuando no existe contorno. Eso sucede cuando hemos pedido un
                 // nivel de vuelo que está muy bajo.
-                if (false === $coberturas[$sensor]['contornos']) {
+                if (false === $coberturas[$sensor]['polygons']) {
                     logger(" N> No se han generado contornos para el sensor >{$sensor}<");
                     continue;
                 }
@@ -343,19 +349,16 @@ function programaPrincipal(array $config)
                     'por_nivel' =>  $config['path']['resultados_mono'] . $nivelVuelo . DIRECTORY_SEPARATOR,
                     'por_sensor' => $config['path']['resultados_mono'] . $sensor . DIRECTORY_SEPARATOR,
                 );
-
-                creaKml3(
-                    $coberturas[$sensor]['contornos'],
-                    array($sensor),
+                $coberturas[$sensor]['normalized'] = normalizePolygonsForKML($coberturas[$sensor]['polygons']);
+                $coberturas[$sensor]['kml'] = normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
+                
+                creaKml4(
+                    $coberturas[$sensor]['kml'],
                     $rutas,
                     $nivelVuelo,
-                    $altMode = "clampToGround",
-                    $appendToFilename = array(),
-                    $coverageLevel = 'mono',
-                    $config['disable-kmz']
+                    [$sensor]
                 );
             }
-
             logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
                 "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
         }
@@ -364,14 +367,14 @@ function programaPrincipal(array $config)
 
         // included here because it uses php >=8
         require_once('inc.multiCalculos.php');
-
 	    crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
-	    multicobertura(
-		$coberturas,
-		$nivelVuelo,
-		array($config['path']['resultados_multi'] . $nivelVuelo . DIRECTORY_SEPARATOR),
-		altitudeModetoString($altitudeMode = 0),
-		$config['mode']
+        multicobertura(
+            $config,
+		    $coberturas,
+		    $nivelVuelo,
+		    array($config['path']['resultados_multi'] . $nivelVuelo . DIRECTORY_SEPARATOR),
+		    $altMode = "clampToGround",
+		    $config['mode']
 	    );
 	}
     }
@@ -389,6 +392,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
     if ($flm >= $hA) { // CASO A (nivel de vuelo por encima de la posición del radar)
         // inicio para calculo por encima con método vectorial
         // se devuelve para cada azimut, la distancia más lejana
+        logger(" D> calculosFLencimaRadar2");
         $polygons = calculosFLencimaRadar2($radar, $flm);
         
         if ($calculoCono) {
@@ -404,7 +408,8 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
             $polygons = $mr_polygon_result->getArray();
         }
 
-        $result = normalizePolygonsForKML($polygons);
+        // $result = normalizePolygonsForKML($polygons);
+
 
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
@@ -419,8 +424,8 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
             logger(" I> No existe cobertura para el sensor {$radar['radar']} a FL{$nivelVuelo}");
             return false;
         }
-        $result = normalizePolygonsForKML($polygons);
+        // $result = normalizePolygonsForKML($polygons);
     }
 
-    return $result;
+    return $polygons; // $result;
 }
