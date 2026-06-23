@@ -4,6 +4,6 @@
         "shipmonk/dead-code-detector": "^1.1"
     },
     "require" : {
-        "ifsnop/martinez-rueda-php": "dev-speed"
+        "ifsnop/martinez-rueda-php": "^2.0"
     }
 }
