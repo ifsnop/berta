@@ -121,7 +121,7 @@ function programaPrincipal(array $config)
                 break;
             case 'radar-data':
             case 'd':
-                if ( is_array($value) ) {
+                if (is_array($value)) {
                     logger(" E> Solo se puede especificar un path para la base de datos de radares");
                     exit(-1);
                 }
@@ -135,7 +135,7 @@ function programaPrincipal(array $config)
                     $config['sensores'] = explode(" ", trim($value));
                     foreach ($config['sensores'] as $sensor) {
                         if ("" == $sensor)
-                                continue;
+                            continue;
                         $config['sensores'][$i++] = strtolower($sensor);
                     }
                 } // else coje la lista completa por defecto
@@ -190,7 +190,7 @@ function programaPrincipal(array $config)
                 $config['mode']['multiradar_unica'] = true;
                 logger(" I> Modo *multiradar con cobertura única* activado");
                 break;
-    /*
+            /*
             case 'rascal':
                 $calculosMode['rascal'] = true;
                 print "INFO calculo *multiradar al estilo rascal* activado" . PHP_EOL;
@@ -259,11 +259,10 @@ function programaPrincipal(array $config)
         }
     }
 
-    if ( !file_exists( $config['path']['cache'] ) && !is_dir( $config['path']['cache'] ) ) {
+    if (!file_exists($config['path']['cache']) && !is_dir($config['path']['cache'])) {
         logger(" I> Creando carpeta de caché >" . $config['path']['cache'] . "<");
         @mkdir($config['path']['cache'], 0755, true);
-    } 
-
+    }
 
     $coberturas = array(); // array con las coberturas
     for ($fl = $config['fl']['min']; $fl <= $config['fl']['max']; $fl += $config['fl']['step']) {
@@ -283,7 +282,7 @@ function programaPrincipal(array $config)
 
                     if ($fecha_modificado_cache >= $infoCoral[$sensor]['fecha_modificado']) {
                         $cache = file_get_contents($cache_file);
-                        if ( (false !== $cache) && (0 != strlen($cache))) {
+                        if ((false !== $cache) && (0 != strlen($cache))) {
                             $coberturas[$sensor]['polygons'] = json_decode($cache, $assoc = true);
                             logger(" V> Leyendo caché del fichero >{$cache_file}<");
                             if (false === $coberturas[$sensor]['polygons']) {
@@ -311,7 +310,7 @@ function programaPrincipal(array $config)
                 $timer = microtime(true);
                 logger(" D> Leyendo información del terreno de {$sensor}");
                 // ¿tenemos datos del terreno cargados? vamos a cargarlos una sola vez
-                if ( !isset($coberturas[$sensor]['terreno']) ) {
+                if (!isset($coberturas[$sensor]['terreno'])) {
                     $coberturas[$sensor]['terreno'] = cargarDatosTerreno($infoCoral[$sensor], $config['max-range']); /*  !== -1 ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange']); */
                     if (false !== strpos($sensor, "-psr")) {
                         logger(" V> Detectado PSR, ajustando alcance");
@@ -351,7 +350,7 @@ function programaPrincipal(array $config)
                 );
                 $coberturas[$sensor]['normalized'] = normalizePolygonsForKML($coberturas[$sensor]['polygons']);
                 $coberturas[$sensor]['kml'] = normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
-                
+
                 creaKml4(
                     $coberturas[$sensor]['kml'],
                     $rutas,
@@ -362,24 +361,29 @@ function programaPrincipal(array $config)
             logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
                 "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
         }
-	if ( (isset($config['mode']['multiradar']) && $config['mode']['multiradar'] === true ) ||
-	    (isset($config['mode']['multiradar_unica']) && $config['mode']['multiradar_unica'] === true) ) {
+        if ((isset($config['mode']['multiradar']) && $config['mode']['multiradar'] === true) ||
+            (isset($config['mode']['multiradar_unica']) && $config['mode']['multiradar_unica'] === true)
+        ) {
 
-        // included here because it uses php >=8
-        require_once('inc.multiCalculos.php');
-	    crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
-        multicobertura(
-            $config,
-		    $coberturas,
-		    $nivelVuelo,
-		    array($config['path']['resultados_multi'] . $nivelVuelo . DIRECTORY_SEPARATOR),
-		    $altMode = "clampToGround",
-		    $config['mode']
-	    );
-	}
+            // included here because it uses php >=8
+            require_once('inc.multiCalculos.php');
+            crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
+            // @param array $rutas donde se genera el archivo(ENTRADA)
+            // @param string $altMode si lo queres absolute o relative(ENTRADA)
+            // array($config['path']['resultados_multi'] . $nivelVuelo . DIRECTORY_SEPARATOR)
+            // $altMode = "clampToGround"
+            $kml = multicobertura(
+                $coberturas,
+                $nivelVuelo,
+                $config['mode']
+            );
+            $kml = KML_generate_full_kml($kml);
+            crearCarpetaResultados("MULTI/");
+            KMZ_write("MULTI/prueba", $nivelVuelo, $kml, $modo = 'multi');
+
+        }
     }
     exit(0);
-
 }
 
 function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCono = false)
