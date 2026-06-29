@@ -1,5 +1,4 @@
 <?php
-
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('memory_limit', '5G');
@@ -12,6 +11,7 @@ const GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 const BERTA_ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
 const BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
 CONST BERTA_FEET_TO_METERS = 0.30480370641307;
+const BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION = 0.000001;
 
 // TODO:
 // Probar a generar cono de silencio
@@ -28,6 +28,15 @@ require_once('EtaEstimator.php');
 require_once('vendor/autoload.php');
 
 use Ifsnop\MartinezRueda as MR;
+
+/*
+	$mr_polygons  = unserialize(file_get_contents("entrada.json"));
+    $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
+
+	print "MD5: " . md5(serialize($mr_polygons)) . " " . md5(json_encode($p_mr1->getArray())) . PHP_EOL;
+    exit(0);
+
+*/
 
 $config = array(
     'sensores' => array(),
@@ -86,6 +95,20 @@ function printHelp()
 
 function programaPrincipal(array $config)
 {
+
+/*
+$poly = [
+    [[4,4], [5,4], [5,5],[4,5],[4,4]],
+    [[0,0], [0,10], [10,10], [10,0], [0,0]], 
+    
+    ];
+
+$nor = normalizePolygonsForKML($poly);
+$kml = normalized2KML($nor, "mono", ['alcolea'], 40);
+$kml2 = KML_generate_full_kml($kml);
+print_r($kml2);
+exit(0);
+*/
 
     $shortopts  = "r:"; // radar name
     $shortopts .= "m:"; // max range in NM
@@ -377,7 +400,7 @@ function programaPrincipal(array $config)
                 $nivelVuelo,
                 $config['mode']
             );
-            $kml = KML_generate_full_kml($kml);
+            $kml = KML_generate_full_kml($kml, $nivelVuelo);
             crearCarpetaResultados("MULTI/");
             KMZ_write("MULTI/prueba", $nivelVuelo, $kml, $modo = 'multi');
 
@@ -405,15 +428,11 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
             logger(" N> Radio del Cono: " . round($radioCono, 2) . "NM / " . round($radioConom, 2) . "m");
 
             $polygonCono = calculaCoordenadasCono($radar, $radioCono);
-            // print json_encode($polygonCono) . PHP_EOL; exit(1);
             $mr_polygon_exterior = MR\Polygon::create()->fillFromArray($polygons);
             $mr_polygon_cono = MR\Polygon::create()->fillFromArray($polygonCono);
             $mr_polygon_result = MR\Algorithm::difference($mr_polygon_exterior, $mr_polygon_cono); 
             $polygons = $mr_polygon_result->getArray();
         }
-
-        // $result = normalizePolygonsForKML($polygons);
-
 
     } else { // CASO B (nivel de vuelo por debajo de la posición del radar)
 
@@ -428,8 +447,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
             logger(" I> No existe cobertura para el sensor {$radar['radar']} a FL{$nivelVuelo}");
             return false;
         }
-        // $result = normalizePolygonsForKML($polygons);
     }
 
-    return $polygons; // $result;
+    return $polygons;
 }

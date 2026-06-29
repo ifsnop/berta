@@ -178,7 +178,7 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
     
     $lat_rad = $radar['lat_rad'];
     $lon_rad = $radar['lon_rad'];
-    $lat90_rad = M_PI_2 - $lat_rad;  // Ángulo complementario en radianes
+    $lat90_rad = M_PI_2 - $lat_rad; // Ángulo complementario en radianes
     $cos_lat90 = cos($lat90_rad);
     $sin_lat90 = sin($lat90_rad);
     $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
@@ -558,7 +558,6 @@ function create_matriz_obstaculos(array &$radar, float $flm)
             }
         }
     }
-
     return $matriz_obstaculos;
 }
 
@@ -668,7 +667,6 @@ function calcula_vertices_interseccion(
 
     $debug = false;
 
-    // static $alpha_cache = [];
     static $a1a2_cache = [];
     static $called = 0;
 
@@ -676,17 +674,8 @@ function calcula_vertices_interseccion(
     $a1_rad  = round($a1_rad, 2);
 
     if ( $debug )
-        print "r: {$r} a1_rad: {$a1_rad}" . PHP_EOL;
-/*
-    // este cache apenas tiene uso y si redondeamos r, hayy coberturas s con problemas  (monflorite para fl45 falla si redondeamos r a 0)
-    [$cos_alpha, $sin_alpha] = getCached($alpha_cache, (string)$r, function () use ($r) {
-        $alpha = $r / RADIO_TERRESTRE;
-        return [
-            cos($alpha),
-            sin($alpha),
-        ];
-    });
-*/
+        printf("INFO r: %.20f, a1_rad: %.20f, cos_lat90: %.20f, sin_lat90: %.20f, lat_rad: %.20f, lon_rad: %.20f" . PHP_EOL,
+            $r, $a1_rad, $cos_lat90, $sin_lat90, $lat_rad, $lon_rad);
 
     $alpha = $r / RADIO_TERRESTRE;
     $cos_alpha = cos($alpha);
@@ -702,6 +691,9 @@ function calcula_vertices_interseccion(
         ];
     });
 
+    $cos_a1 = cos($a1_rad);
+    $sin_a1 = sin($a1_rad);
+
     if ( $debug )
         print "cos_a1: {$cos_a1} sin_a1: {$sin_a1}" . PHP_EOL;
 
@@ -711,26 +703,39 @@ function calcula_vertices_interseccion(
     // Teorema del Coseno Esférico - Latitud
     $cos_lat1 = $cos_lat90xcos_alpha2 +
         $sin_lat90xsin_alpha2 * $cos_a1;
+    $cos_lat1 = max(-1.0, min(1.0, $cos_lat1)); // clamp
     $asin_lat1_rad = asin($cos_lat1);
     $lat1_rad = $asin_lat1_rad - $lat_rad;
 
     // Teorema del Coseno Esférico - Longitud (optimizada para no usar cos(asin_lat1_rad))
     $cos_par1 = cos($lat1_rad) * $cos_alpha +
         sin($lat1_rad) * $sin_alpha * $cos_a1;
-
+    $cos_par1 = max(-1.0, min(1.0, $cos_par1));  // clamp    
+    
     $cos_lat_abs1 = sqrt(1.0 - $cos_lat1 * $cos_lat1);
     $lon1_d = acos($cos_par1) / $cos_lat_abs1;
+ 
+    if ( $debug )
+        print "cos_lat_abs1: {$cos_lat_abs1} cos_par1: {$cos_par1} lon1_d: {$lon1_d}" . PHP_EOL;
 
     // Signo según sin(ángulo)
     $lon1_d = $lon_rad + (($sin_a1 >= 0) ? $lon1_d : -$lon1_d);
+
+    if ( $debug )
+        print "lon1_d: {$lon1_d}" . PHP_EOL;
 
     // Corrección al acimut (+ x metros para asegurar solape entre polígonos)
     // a1
     $asin_lat1_rad += BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $sin_a1;
     $lon1_d -= BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $cos_a1;
 
-    $p1 = [rad2deg($asin_lat1_rad), rad2deg($lon1_d)];
+    if ( $debug )
+        print "asin_lat1_rad: {$asin_lat1_rad} lon1_d: {$lon1_d}" . PHP_EOL;
 
+    $p1 = [rad2deg($asin_lat1_rad), rad2deg($lon1_d)];
+    
+    //print "INFO " . serialize($p1) . PHP_EOL; exit(0);
+    
     if ( !is_null($a2_rad) ) {
         $a2_rad  = round($a2_rad, 2);
         [$cos_a2, $sin_a2] = getCached($a1a2_cache, (string) $a2_rad, function () use ($a2_rad) {
@@ -741,11 +746,13 @@ function calcula_vertices_interseccion(
         });
         $cos_lat2 = $cos_lat90xcos_alpha2 +
             $sin_lat90xsin_alpha2 * $cos_a2;
+        $cos_lat2 = max(-1.0, min(1.0, $cos_lat2)); // clamp
         $asin_lat2_rad = asin($cos_lat2);
         $lat2_rad = $asin_lat2_rad - $lat_rad;
 
         $cos_par2 = cos($lat2_rad) * $cos_alpha +
             sin($lat2_rad) * $sin_alpha * $cos_a2;
+        $cos_par2 = max(-1.0, min(1.0, $cos_par2)); // clamp
 
         $cos_lat_abs2 = sqrt(1.0 - $cos_lat2 * $cos_lat2);
         $lon2_d = acos($cos_par2) / $cos_lat_abs2;

@@ -29,7 +29,8 @@ function init_polygons(array $coberturas)
 		$polygons = array();
 
 		foreach ($contornos_por_sensor['polygons'] as $indice => $polygon) {
-			$polygons[] = ramer_douglas_peucker($polygon, 0.000001);
+			$p = ramer_douglas_peucker($polygon, BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION);
+			$polygons[] = $p;
 		}
 		// print "RADAR:{$sensor} POLYCUENTA:" . count($contornos_por_sensor['polygons']) . PHP_EOL;
 		// print json_encode($contornos_por_sensor['polygons']) . PHP_EOL;
@@ -53,7 +54,6 @@ function create_unica(array $mr_polygons)
 {
 	$timer = microtime(true);
 	logger(" D> Generando cobertura única");
-
 	$p_mr1 = MR\Algorithm::unionMany($mr_polygons);
 	$normalized = normalizePolygonsForKML($p_mr1->getArray());
 	logger(" V> Finalizada cobertura única: " . round(microtime(true) - $timer, 3) . "s");
@@ -70,7 +70,7 @@ function create_unica(array $mr_polygons)
  * @param int $fl nivel de vuelo seleccionado (ENTRADA)
  * @param array $calculoMode array con los modos de cálculo seleccionados (ENTRADA)
  * 'mode' => array('monoradar' => true, 'multiradar' => false, 'multiradar_unica' => false, 'list' => false)
- * @return string kml con el resultado de los cálculos
+ * @return string kml completo con el resultado de los cálculos
  */
 function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
 {
@@ -113,19 +113,14 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
     $flWithPad = str_pad((string) $fl, 3, "0", STR_PAD_LEFT);
     $radarWithFl = implode(',', $radares) . "-" . $flWithPad;
 
+	logger(" I> Creando cobertura única/suma");
+	$normalized = create_unica($mr_polygons);
+	$kml = normalized2KML($normalized, 'unica', $radares, $fl);
+	$kml = KML_create_folder('unica', $kml);
+		
+	// si se selecciona única, sólo se genera la única y se vuelve.
 	if (isset($calculoMode['multiradar_unica']) && true === $calculoMode['multiradar_unica']) {
-		logger(" I> Creando cobertura única/suma");
-		$normalized = create_unica($mr_polygons);
-		$kml = normalized2KML($normalized, 'mono', $radares, $fl);
 		return $kml;
-		/*
-		creaKml4(
-			$kml,
-			$rutas, 
-			$flWithPad,
-			$radares,
-		);
-		*/
 	}
 
 	$vsr = array(); // variaciones sin repetición
@@ -228,8 +223,15 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
 				// print json_encode(array_keys($coverages_per_level_KML[$numero_solape])) . PHP_EOL;
 				// print_r($coverages_per_level_KML[$numero_solape][$nombre_grupo_radares]);
 			}
+			/*
+			if ( $numero_solape==3) {
+				print json_encode($normalized);
+				print $kml . PHP_EOL;
+				exit(0);
+			}
+			*/
 		}
-		
+
 		// aquí se calcula la cobertura unica de este nivel (una total por mono, doble, triple) podríamos no utilizarla
 		// y de momento generar ya los folders con el contenido.
 
@@ -370,14 +372,15 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
 	*/
 	$kml = "";
 	foreach ($coverages_per_level_KML as $numero_solape => $solapes) {
-		print $numero_solape . PHP_EOL;
 		$kml_per_level = ""; // para cada tipo (mono, doble, triple) guardamos todos los kml
 		foreach($solapes as $nombre_grupos_radares => $kml_group) {
 			print "\t" . $nombre_grupos_radares . PHP_EOL;
 			$kml_per_level .= $kml_group;
 		}
-		// luego los metemos en un folder
-		$kml .= KML_create_folder( (string) $numero_solape, $kml_per_level);
+		if ( !empty($kml_per_level) ) {
+			// luego los metemos en un folder
+			$kml .= KML_create_folder( (string) $numero_solape, $kml_per_level);
+		}
 	}
 
 	// writeKMZ !!!!
