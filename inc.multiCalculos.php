@@ -42,7 +42,7 @@ function init_polygons(array $coberturas)
 		logger(" E> No existen coberturas suficientes para seguir calculando (init_polygons)");
 		return false;
 	}
-	return array('radares' => $sensores, 'mr_polygons' => $mr_polygons);
+	return array('sensores' => $sensores, 'mr_polygons' => $mr_polygons);
 }
 
 /**
@@ -105,17 +105,17 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
 	if (false === $ret)
 		return false;
 
-	$radares = $ret['radares'];
+	$sensores = $ret['sensores'];
 	$mr_polygons = $ret['mr_polygons'];
 	logger(" D> Polígonos de radares cacheados: " . implode(',', (array_keys($mr_polygons))));
 
 	$flm = round($fl * 100.0 * BERTA_FEET_TO_METERS, 2);
     $flWithPad = str_pad((string) $fl, 3, "0", STR_PAD_LEFT);
-    $radarWithFl = implode(',', $radares) . "-" . $flWithPad;
+    $radarWithFl = implode(',', $sensores) . "-" . $flWithPad;
 
 	logger(" I> Creando cobertura única/suma");
 	$normalized = create_unica($mr_polygons);
-	$kml = normalized2KML($normalized, 'unica', $radares, $fl);
+	$kml = normalized2KML($normalized, 'unica', $sensores, $fl);
 	$kml = KML_create_folder('unica', $kml);
 		
 	// si se selecciona única, sólo se genera la única y se vuelve.
@@ -125,21 +125,21 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
 
 	$vsr = array(); // variaciones sin repetición
 	$vsr_count = 0;
-	for ($i = 1; $i <= count($radares); $i++) {
-		$combinations = new combinations($radares);
+	for ($i = 1; $i <= count($sensores); $i++) {
+		$combinations = new combinations($sensores);
 		$vsr[$i] = $combinations->getCombinations($i, false);
 		$vsr_count += count($vsr[$i]);
 	}
 	logger(" D> " . $vsr_count . " estructuras generadas en " . round(microtime(true) - $timer, 3) . " segundos");
 
-	$radares_interseccion_cache = array();
-	$radares_suma_cache = array();
+	$sensores_interseccion_cache = array();
+	$sensores_suma_cache = array();
 
 	// cacheo de intersecciones y sumas
-	$ret = populate_cache($vsr, $vsr_count, $mr_polygons, $radares_interseccion_cache, $radares_suma_cache);
+	$ret = populate_cache($vsr, $vsr_count, $mr_polygons, $sensores_interseccion_cache, $sensores_suma_cache);
 
-	logger(" D> count radares_suma_cache: " . implode(',', array_keys($radares_suma_cache)));
-	logger(" D> count radares_interseccion_cache: " . implode(',', array_keys($radares_interseccion_cache)));
+	logger(" D> count radares_suma_cache: " . implode(',', array_keys($sensores_suma_cache)));
+	logger(" D> count radares_interseccion_cache: " . implode(',', array_keys($sensores_interseccion_cache)));
 
 	// ejecución
 	$count = 1;
@@ -164,16 +164,16 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
 			$count_grupo_radares = count($grupo_radares);
 			$nombre_grupo_radares = implode(',', $grupo_radares);
 			$nombre_grupo_radares_interseccion = implode('^', $grupo_radares);
-			$grupo_radares_suma = array_values(array_diff($radares, $grupo_radares));
+			$grupo_radares_suma = array_values(array_diff($sensores, $grupo_radares));
 			$count_grupo_radares_suma = count($grupo_radares_suma);
 			$nombre_grupo_radares_suma = implode('+', $grupo_radares_suma);
 
 			/** @var MR\Polygon $result_interseccion */
-			if ( !isset($radares_interseccion_cache[$nombre_grupo_radares_interseccion]) ) {
+			if ( !isset($sensores_interseccion_cache[$nombre_grupo_radares_interseccion]) ) {
 				logger(" N> Intersección no existe, no hay resultado. Se buscó {$nombre_grupo_radares_interseccion}");
 				continue;
 			}
-			$result_interseccion =  $radares_interseccion_cache[$nombre_grupo_radares_interseccion];
+			$result_interseccion =  $sensores_interseccion_cache[$nombre_grupo_radares_interseccion];
 			logger(" V> Intersección: $nombre_grupo_radares_interseccion Polygon_count: " . ($result_interseccion !== false ? $result_interseccion->numPoints : 0));
 			if (0 == $result_interseccion->numPoints) {
 				logger(" N> Intersección vacia, no hay resultado. Se buscó: {$nombre_grupo_radares_interseccion}");
@@ -182,8 +182,8 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
 
 			/** @var MR\Polygon|bool $result_suma */
 			$result_suma = false;
-			if (isset($radares_suma_cache[$nombre_grupo_radares_suma])) {
-				$result_suma = $radares_suma_cache[$nombre_grupo_radares_suma];
+			if (isset($sensores_suma_cache[$nombre_grupo_radares_suma])) {
+				$result_suma = $sensores_suma_cache[$nombre_grupo_radares_suma];
 				logger(" D> Suma: $nombre_grupo_radares_suma Polygon_count: " . ($result_suma !== false ? $result_suma->numPoints : 0));
 			} else {
 				logger(" D> Suma no existe, no hay resultado. Se buscó: {$nombre_grupo_radares_suma}");
@@ -390,20 +390,6 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): string
 	logger(" V> Fin del cálculo de la cobertura multiradar, duración " . timer_unidades($timer_diff));
 		
 	return $kml;
-
-	exit(0);
-
-	// aquí encarpetar en estructura de folders!
-	
-	// genera el kml suma de todos los kml guardados
-	KML_create_from_placemarks($coverages_per_level_KML, $nivelVuelo, $nivelVuelo);
-
-	$timer_diff = microtime(true) - $timer; // string = date('Y/m/d H:i:s', round(microtime(true) - $timer_multiradar);
-	logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
-		"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
-
-	logger(" V> Fin del cálculo de la cobertura multiradar, duración " . timer_unidades($timer_diff));
-	return true;
 }
 
 /**

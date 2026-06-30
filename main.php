@@ -374,12 +374,11 @@ exit(0);
                 $coberturas[$sensor]['normalized'] = normalizePolygonsForKML($coberturas[$sensor]['polygons']);
                 $coberturas[$sensor]['kml'] = normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
 
-                creaKml4(
-                    $coberturas[$sensor]['kml'],
-                    $rutas,
-                    $nivelVuelo,
-                    [$sensor]
-                );
+                $kml = KML_generate_full_kml($coberturas[$sensor]['kml'], $nivelVuelo);
+                foreach ($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
+                    crearCarpetaResultados($val);
+                    KMZ_write($val . $sensor . "-FL" . $nivelVuelo, $kml, $modo = 'mono');
+                }
             }
             logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
                 "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
