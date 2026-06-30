@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 const BERTA_PERMISOS = 0775;
 
@@ -346,7 +347,7 @@ function pointInPolygon(float $y, float $x, array &$poly, int $n): bool
     return $inside;
 }
 
-function KMZ_write(string $fileName, string $radarWithFL, string $content, bool $disableKmz = false)
+function KML_write(string $fileName, string $radarWithFL, string $content, bool $disableKmz = false)
 {
 
     if (true === $disableKmz || !class_exists('ZipArchive')) {
