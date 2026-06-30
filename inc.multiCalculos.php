@@ -447,14 +447,14 @@ function populate_cache(array $vsr, int $vsr_count, array $mr_polygons, array &$
 					$count_grupo_sensores - 1
 				);
 				// nombre del último radar, para la intersección
-				$ultimo_radar = $grupo_sensores[$count_grupo_sensores - 1]; // resto
+				$ultimo_sensor = $grupo_sensores[$count_grupo_sensores - 1]; // resto
 				$nombre_subgrupo_sensores_interseccion = implode('^', $subgrupo_sensores);
 				$nombre_subgrupo_sensores_suma = implode('+', $subgrupo_sensores);
 
 				$subject = $sensores_interseccion_cache[$nombre_subgrupo_sensores_interseccion];
 				if ($debug)
 					logger(" D> retrieve interseccion_cache: $nombre_subgrupo_sensores_interseccion md5: " . md5(serialize($subject)));
-				$clipping = $mr_polygons[$ultimo_radar];
+				$clipping = $mr_polygons[$ultimo_sensor];
 				$result_interseccion = MR\Algorithm::intersect($subject, $clipping);
 				if ($debug)
 					logger(" D> store interseccion_cache: $nombre_grupo_sensores_interseccion md5: " . md5(serialize($result_interseccion)));
@@ -463,7 +463,7 @@ function populate_cache(array $vsr, int $vsr_count, array $mr_polygons, array &$
 				$subject = $sensores_suma_cache[$nombre_subgrupo_sensores_suma];
 				if ($debug)
 					logger(" D> retrieve suma_cache: $nombre_subgrupo_sensores_suma md5: " . md5(serialize($subject)));
-				$clipping = $mr_polygons[$ultimo_radar];
+				$clipping = $mr_polygons[$ultimo_sensor;
 				$result_suma = MR\Algorithm::union($subject, $clipping);
 				if ($debug)
 					logger(" D> store suma_cache: $nombre_grupo_sensores_suma md5: " . md5(serialize($result_suma)));
