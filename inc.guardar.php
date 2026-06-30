@@ -14,22 +14,11 @@ const BERTA_PERMISOS = 0775;
  */
 function fromPolygons2KML4(array $multi_polygons_classified, string $radarWithFL, string $altMode, float $fl)
 {
-    $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
-
-    $kml_styles = "";
-    foreach ($coverage_levels as $level) {
-        $rgb = KML_get_rgb_from_coverageLevel($level);
-        $kml_styles .=              "  <Style id=\"transparentPoly-{$level}\">" .
-                          PHP_EOL . "    <LineStyle><width>1.5</width></LineStyle>" .
-                          PHP_EOL . "    <PolyStyle><color>{$rgb}</color></PolyStyle>" .
-                          PHP_EOL . "  </Style>" . PHP_EOL;
-    }
-
     $kmlHeader =                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
                           PHP_EOL . "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:gx=\"http://www.google.com/kml/ext/2.2\" xmlns:kml=\"http://www.opengis.net/kml/2.2\" xmlns:atom=\"http://www.w3.org/2005/Atom\">" .
                           PHP_EOL . "<Document>" .
                           PHP_EOL . "  <name>BERTA</name>" .
-                          PHP_EOL . "{$kml_styles}";
+                          PHP_EOL . KML_generate_styles();
   
 
     $kmlPolygonHeader =   PHP_EOL . "      <Polygon>" .
@@ -54,7 +43,7 @@ function fromPolygons2KML4(array $multi_polygons_classified, string $radarWithFL
         print $level . PHP_EOL;
         // print json_encode($multi_polygons);
         $outer = true;
-        $kmlPlacemark =    PHP_EOL . "  <Placemark>" .
+        $kmlPlacemark =    "  <Placemark>" .
                            PHP_EOL . "    <name>{$radarWithFL}</name>" .
                            PHP_EOL . "    <styleUrl>#transparentPoly-{$level}</styleUrl>" .
                            PHP_EOL . "    <MultiGeometry>";
@@ -63,7 +52,7 @@ function fromPolygons2KML4(array $multi_polygons_classified, string $radarWithFL
         foreach ($multi_polygons as $polygons) {
             foreach ($polygons as $polygon) {
                 if ($outer) {
-                    $polygon = ramer_douglas_peucker($polygon, 0.0000000001);
+                    $polygon = ramer_douglas_peucker($polygon, BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION);
                     $outer = false;
                     foreach ($polygon as $p) {
                         $kmlOuter .= $p[1] . "," . $p[0] . "," . $fl . " ";
@@ -87,50 +76,109 @@ function fromPolygons2KML4(array $multi_polygons_classified, string $radarWithFL
     return $kml;
 }
 
-function checkCoverageLevels($coverageLevel) {
+/**
+ * Utiliza uno o varios placemark dentro de una o varias folders y completa el formato kml
+ * 
+ * @param string $kml contenido a insertar en un kml completo
+ * @param string $nivelVuelo nivel de vuelo en 100ft para añadir al nombre del kml
+ */
+function KML_generate_full_kml(string $kml, string $nivelVuelo = "") {
+
+    if ( !empty($nivelVuelo) )
+        $nivelVuelo = "-" . $nivelVuelo;
+
+    $kmlHeader =                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" .
+                          PHP_EOL . "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:gx=\"http://www.google.com/kml/ext/2.2\" xmlns:kml=\"http://www.opengis.net/kml/2.2\" xmlns:atom=\"http://www.w3.org/2005/Atom\">" .
+                          PHP_EOL . "<Document>" .
+                          PHP_EOL . "  <name>BERTA{$nivelVuelo}</name>" .
+                          PHP_EOL . KML_generate_styles();
+  
+    $kmlFooter =          "</Document>" .
+                          PHP_EOL . "</kml>" .
+                          PHP_EOL;
+
+
+    return $kmlHeader . $kml . $kmlFooter;
+}
+
+function KML_generate_styles()
+{
     $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
+    $kml_styles = "";
+    foreach ($coverage_levels as $level) {
+        $rgb = KML_get_rgb_from_coverageLevel($level);
+        $kml_styles .=              "  <Style id=\"transparentPoly-{$level}\">" .
+            PHP_EOL . "    <LineStyle><width>1.5</width></LineStyle>" .
+            PHP_EOL . "    <PolyStyle><color>{$rgb}</color></PolyStyle>" .
+            PHP_EOL . "  </Style>" . PHP_EOL;
+    }
+    return $kml_styles;
+}
+
+
+function KML_check_coverage_levels(string $coverageLevel) {
+    $coverage_levels = array(0 => "unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
     if ( !in_array($coverageLevel, $coverage_levels) ) {
         debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
     }
-    return true;
+    return true; 
 }
 
 /**
+ * Mete varios placemarks en una carpeta
  * 
+ * @param string $folder_name Nombre de la carpeta que se genera para el kml
+ * @param string $kml uno o más placemarks para meter en carpeta
+ */
+function KML_create_folder(string $folder_name, string $kml) {
+
+    $kmlFolder = "<Folder>" .
+        PHP_EOL . "  <name>{$folder_name}</name>" .
+        PHP_EOL . "  <open>0</open>" .
+        PHP_EOL . $kml .
+        PHP_EOL . "</Folder>" .
+        PHP_EOL;
+
+    return $kmlFolder;
+}
+
+/**
+ * Solo genera el KML necesario para un polígono
  * @param string $altMode "clampToGround|clampToSeaFloor|RelativeToGround|absolute" (ENTRADA)
  */
 function normalized2KML(array $multi_polygons, string $coverageLevel, array $sensors, int $fl, string $altMode = "clampToGround")
 {
-    checkCoverageLevels($coverageLevel);
+    KML_check_coverage_levels($coverageLevel);
     $flm = round($fl * 100.0 * BERTA_FEET_TO_METERS, 2);
     $flWithPad = str_pad((string) $fl, 3, "0", STR_PAD_LEFT);
     $radarWithFl = implode(',', $sensors) . "-" . $flWithPad;
+    $kml = "";
+
+    $kmlPlacemark =    "  <Placemark>" .
+        PHP_EOL . "    <name>{$radarWithFl}</name>" .
+        PHP_EOL . "    <styleUrl>#transparentPoly-{$coverageLevel}</styleUrl>" .
+        PHP_EOL . "    <MultiGeometry>";
 
     $kmlPolygonHeader =   PHP_EOL . "      <Polygon>" .
         PHP_EOL . "        <extrude>1</extrude>" .
         PHP_EOL . "        <altitudeMode>{$altMode}</altitudeMode>" .
         PHP_EOL . "        <outerBoundaryIs><LinearRing><coordinates>" . PHP_EOL;
+
     $kmlPolygonFooter_1 = PHP_EOL . "        </coordinates></LinearRing></outerBoundaryIs>";
     $kmlInnerHeader =     PHP_EOL . "        <innerBoundaryIs><LinearRing><coordinates>" . PHP_EOL;
     $kmlInnerFooter =     PHP_EOL . "        </coordinates></LinearRing></innerBoundaryIs>";
     $kmlPolygonFooter_2 = PHP_EOL . "      </Polygon>";
 
     $kmlPlacemarkFooter = PHP_EOL . "    </MultiGeometry>" .
-        PHP_EOL . "    </Placemark>";
+        PHP_EOL . "  </Placemark>";
 
-    $kml = "";
-
-    $outer = true;
-    $kmlPlacemark =    PHP_EOL . "  <Placemark>" .
-        PHP_EOL . "    <name>{$radarWithFl}</name>" .
-        PHP_EOL . "    <styleUrl>#transparentPoly-{$coverageLevel}</styleUrl>" .
-        PHP_EOL . "    <MultiGeometry>";
     $kml .= $kmlPlacemark;
-    $kmlOuter = "";
     foreach ($multi_polygons as $polygons) {
+        $outer = true;
+        $kmlOuter = "";
         foreach ($polygons as $polygon) {
             if ($outer) {
-                $polygon = ramer_douglas_peucker($polygon, 0.0000000001);
+                $polygon = ramer_douglas_peucker($polygon, BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION);
                 $outer = false;
                 foreach ($polygon as $p) {
                     $kmlOuter .= $p[1] . "," . $p[0] . "," . $flm . " ";
@@ -144,6 +192,8 @@ function normalized2KML(array $multi_polygons, string $coverageLevel, array $sen
                 }
                 if ("" != $kmlInner) {
                     $kml .= $kmlInnerHeader . $kmlInner . $kmlInnerFooter;
+                } else {
+                    die("NO PUEDE SER");
                 }
             }
         }
@@ -275,15 +325,15 @@ function creaKml4(string $kml, array $rutas, string $nivelVuelo, array $sensors,
 /**
  * Entrada:
  * $polygons = [
- *   [ ['lat'=>..,'lon'=>..], ... cerrado ],
+ *   [ [ lat, lon ], ... cerrado ],
  *   ...
  * ]
  *
  * Salida:
  * [
  *   [
- *     'outer' => [... CCW ...],
- *     'inners' => [
+ *     [... CCW ...], // 'outer' 
+ *     [ // 'inners'
  *          [... CW ...],
  *          ...
  *     ]
@@ -330,7 +380,8 @@ function normalizePolygonsForKML(array $polygons): array
 
         $pt = interiorPoint($items[$i]['poly']);
 
-        for ($j = 0; $j < $i; $j++) {
+        //for ($j = 0; $j < $i; $j++) {
+        for ($j = $i - 1; $j >= 0; $j--) {
 
             if (pointInPolygon($pt[0], $pt[1], $items[$j]['poly'], count($items[$j]['poly']))) {
                 $items[$i]['parent'] = $j;
@@ -406,11 +457,11 @@ function signedArea(array $poly): float
     $n = count($poly);
 
     for ($i = 0; $i < $n - 1; $i++) {
-        $x1 = $poly[$i][1];
-        $y1 = $poly[$i][0];
+        $x1 = $poly[$i][1]; // longitude
+        $y1 = $poly[$i][0]; // latitude
 
-        $x2 = $poly[$i + 1][1];
-        $y2 = $poly[$i + 1][0];
+        $x2 = $poly[$i + 1][1]; // longitude
+        $y2 = $poly[$i + 1][0]; // latitude
 
         $sum += ($x1 * $y2) - ($x2 * $y1);
     }
@@ -515,6 +566,36 @@ function writeKMZ(string $fileName, string $radarWithFL, string $content, bool $
 
     return;
 }
+
+function KMZ_write(string $fileName, string $radarWithFL, string $content, bool $disableKmz = false)
+{
+
+    if (true === $disableKmz || !class_exists('ZipArchive')) {
+        // generar kml y volver
+        logger(" V> Guardando fichero {$fileName}.kml");
+        if (false === ($ret = @file_put_contents("{$fileName}.kml", $content))) {
+            logger(" E> Problema al guardar {$fileName}.kml");
+            exit(-1);
+            //return false;
+        }
+
+        return true;
+    }
+    logger(" V> Guardando fichero {$fileName}.kmz");
+
+    $zip = new ZipArchive();
+    $res = $zip->open($fileName . ".kmz", ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE);
+    if (! $res) {
+        logger(" E> No se puede crear el fichero {$fileName}.kmz");
+        exit(-1);
+    }
+    $zip->addFromString($radarWithFL . ".kml", $content);
+    $zip->close();
+
+    return;
+}
+
+
 
 /**
  * Funcion para crear una carpeta con los resultados para cada radar
@@ -834,7 +915,7 @@ function KML_placemarks_in_Folders($radarWithFL, $polygons, $rgb, $altMode)
     $kml = $kmlFolder_Content;
     foreach ($polygons as &$polygon) {
         $kmlOuter = "";
-        //$polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
+        //$polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION);
         foreach ($polygon['polygon'] as &$p) {
             $kmlOuter .= $p[1] . "," . $p[0] . "," . $p[2] . " ";
         }
@@ -906,7 +987,7 @@ function fromPolygons2KML_One_Folder_Per_Content($polygons, $radarWithFL, $rgb, 
     $kml = $kmlFolder_Content;
     foreach ($polygons as &$polygon) {
         $kmlOuter = "";
-        //$polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], 0.0000000001);
+        //$polygon['polygon'] = ramer_douglas_peucker($polygon['polygon'], BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION);
         foreach ($polygon['polygon'] as &$p) {
             $kmlOuter .= $p[1] . "," . $p[0] . "," . $p[2] . " ";
         }
