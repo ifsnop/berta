@@ -89,6 +89,7 @@ The following contributor has helped make this project what it is today:
 - Pablo Pisonero
 - Berta Montes
 - Rubén Sanz
+- Javier Sanz
 - Arnau Gomar
 - Fernando Ballesteros
 - Jorge García
