@@ -85,6 +85,14 @@ This project is released as Open Source. See the LICENSE file for details.
 
 Contributions, bug reports and feature requests are welcome.
 
+The following contributor has helped make this project what it is today:
+- Pablo Pisonero
+- Berta Montes
+- Rubén Sanz
+- Arnau Gomar
+- Fernando Ballesteros
+- Jorge García
+
 Feel free to open an Issue or submit a Pull Request.
 
 ## Acknowledgements
