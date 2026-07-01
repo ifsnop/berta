@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 // distancias a las palabras indicadas en el fichero desde donde se va a leer la informacion del terreno
 CONST DISTANCIA_A_SITE = 5;

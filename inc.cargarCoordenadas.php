@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 /**
  * Utilizando la lógica del SASS-C, busca un fichero recording_details.par y

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('memory_limit', '5G');
@@ -374,12 +375,11 @@ exit(0);
                 $coberturas[$sensor]['normalized'] = normalizePolygonsForKML($coberturas[$sensor]['polygons']);
                 $coberturas[$sensor]['kml'] = normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
 
-                creaKml4(
-                    $coberturas[$sensor]['kml'],
-                    $rutas,
-                    $nivelVuelo,
-                    [$sensor]
-                );
+                $kml = KML_generate_full_kml($coberturas[$sensor]['kml'], $nivelVuelo);
+                foreach ($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
+                    crearCarpetaResultados($val);
+                    KML_write($val . $sensor . "-FL", $nivelVuelo, $kml, $config['disable-kmz']);
+                }
             }
             logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
                 "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
@@ -397,13 +397,12 @@ exit(0);
             // $altMode = "clampToGround"
             $kml = multicobertura(
                 $coberturas,
-                $nivelVuelo,
+                $fl,
                 $config['mode']
             );
             $kml = KML_generate_full_kml($kml, $nivelVuelo);
             crearCarpetaResultados("MULTI/");
-            KMZ_write("MULTI/prueba", $nivelVuelo, $kml, $modo = 'multi');
-
+            KML_write("MULTI/prueba", $nivelVuelo, $kml, $config['disable-kmz']);
         }
     }
     exit(0);
