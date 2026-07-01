@@ -463,7 +463,7 @@ function populate_cache(array $vsr, int $vsr_count, array $mr_polygons, array &$
 				$subject = $sensores_suma_cache[$nombre_subgrupo_sensores_suma];
 				if ($debug)
 					logger(" D> retrieve suma_cache: $nombre_subgrupo_sensores_suma md5: " . md5(serialize($subject)));
-				$clipping = $mr_polygons[$ultimo_sensor;
+				$clipping = $mr_polygons[$ultimo_sensor];
 				$result_suma = MR\Algorithm::union($subject, $clipping);
 				if ($debug)
 					logger(" D> store suma_cache: $nombre_grupo_sensores_suma md5: " . md5(serialize($result_suma)));
