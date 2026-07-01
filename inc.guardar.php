@@ -73,7 +73,7 @@ function KML_create_folder(string $folder_name, string $kml) {
  * Solo genera el KML necesario para un polígono
  * @param string $altMode "clampToGround|clampToSeaFloor|RelativeToGround|absolute" (ENTRADA)
  */
-function normalized2KML(array $multi_polygons, string $coverageLevel, array $sensors, int $fl, string $altMode = "clampToGround")
+function KML_normalized2KML(array $multi_polygons, string $coverageLevel, array $sensors, int $fl, string $altMode = "clampToGround")
 {
     KML_check_coverage_levels($coverageLevel);
     $flm = round($fl * 100.0 * BERTA_FEET_TO_METERS, 2);

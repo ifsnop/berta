@@ -116,7 +116,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 
 	logger(" I> Creando cobertura única/suma");
 	$normalized = create_unica($mr_polygons);
-	$kml = normalized2KML($normalized, 'unica', $sensores, $fl);
+	$kml = KML_normalized2KML($normalized, 'unica', $sensores, $fl);
 	$kml = KML_create_folder('unica', $kml);
 		
 	// si se selecciona única, sólo se genera la única y se vuelve.
@@ -215,7 +215,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 			logger(" D> Polígono resultante:" . $result_resta->numPoints . " nivel {$numero_solape}");
 			$mr_polygons[$numero_solape][$nombre_grupo_sensores_interseccion . "-" . $nombre_grupo_sensores_suma] = $result_resta;
 			$normalized = normalizePolygonsForKML($result_resta->getArray());
-			$kml = normalized2KML($normalized, $coverageNames[$numero_solape] , $grupo_sensores, $fl);
+			$kml = KML_normalized2KML($normalized, $coverageNames[$numero_solape] , $grupo_sensores, $fl);
 			logger(" D> Calculada: nivel {$numero_solape} {$nombre_grupo_sensores} => {$nombre_grupo_sensores_interseccion} - ( {$nombre_grupo_sensores_suma} )");
 			// guardamos el kml para luego juntarlo en uno global, que contenga todos los niveles de cobertura
 			// y todos los radares

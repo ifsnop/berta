@@ -105,7 +105,7 @@ $poly = [
     ];
 
 $nor = normalizePolygonsForKML($poly);
-$kml = normalized2KML($nor, "mono", ['alcolea'], 40);
+$kml = KML_normalized2KML($nor, "mono", ['alcolea'], 40);
 $kml2 = KML_generate_full_kml($kml);
 print_r($kml2);
 exit(0);
@@ -373,7 +373,7 @@ exit(0);
                     'por_sensor' => $config['path']['resultados_mono'] . $sensor . DIRECTORY_SEPARATOR,
                 );
                 $coberturas[$sensor]['normalized'] = normalizePolygonsForKML($coberturas[$sensor]['polygons']);
-                $coberturas[$sensor]['kml'] = normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
+                $coberturas[$sensor]['kml'] = KML_normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
 
                 $kml = KML_generate_full_kml($coberturas[$sensor]['kml'], $nivelVuelo);
                 foreach ($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea
@@ -400,6 +400,10 @@ exit(0);
                 $fl,
                 $config['mode']
             );
+            if ( false === $kml) {
+                logger(" N> No se han generado contornos para el nivel de vuelo >{$nivelVuelo}<");
+                continue;
+            }
             $kml = KML_generate_full_kml($kml, $nivelVuelo);
             crearCarpetaResultados("MULTI/");
             KML_write("MULTI/prueba", $nivelVuelo, $kml, $config['disable-kmz']);

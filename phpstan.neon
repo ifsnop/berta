@@ -9,5 +9,6 @@ parameters:
         - ./inc.auxiliares.php
         - ./inc.cargarCoordenadas.php
         - ./inc.guardar.php
+        - ./inc.multiCalculos.php
     excludePaths:
         - 'cache/*'
