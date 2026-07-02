@@ -75,7 +75,6 @@ function create_unica(array $mr_polygons)
  */
 function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|string
 {
-	$debug = false;
 	$timer = microtime(true);
 
 	if (!isset($coberturas) || count($coberturas) == 0) {
@@ -127,7 +126,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 	$vsr = array(); // variaciones sin repetición
 	$vsr_count = 0;
 	for ($i = 1; $i <= count($sensores); $i++) {
-		$combinations = new combinations($sensores);
+		$combinations = new Combinations($sensores);
 		$vsr[$i] = $combinations->getCombinations($i, false);
 		$vsr_count += count($vsr[$i]);
 	}
@@ -407,13 +406,14 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
  * @return bool true si se ha generado la cache correctamente, false si no.
  * 
  */
-function populate_cache(array $vsr, int $vsr_count, array $mr_polygons, array &$sensores_interseccion_cache, array &$sensores_suma_cache)
+function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &$sensores_interseccion_cache, array &$sensores_suma_cache)
 {
 	$sensores_interseccion_cache = array();
 	$sensores_suma_cache = array();
 
 	$count = 1;
 	$debug = false;
+
 	foreach ($vsr as $numero_solape => $grupo_solape) {
 		logger(" N> == Calculando cache para cobertura nivel {$numero_solape}"); // mono, doble, triple, etc...
 
@@ -422,8 +422,19 @@ function populate_cache(array $vsr, int $vsr_count, array $mr_polygons, array &$
 			$count++;
 			// print json_encode($grupo_radares) . " ";
 			$count_grupo_sensores = count($grupo_sensores);
+			// $grupo_sensores ya viene ordenado: clave canónica garantizada,
+            // dos grupos con los mismos sensores generan siempre la misma clave.
 			$nombre_grupo_sensores_suma = implode('+', $grupo_sensores);
 			$nombre_grupo_sensores_interseccion = implode('^', $grupo_sensores);
+
+			// Evita recalcular si este conjunto exacto ya salió en otra
+            // rama (otro nivel de solape, otro grupo) con el mismo resultado.
+            if (isset($sensores_interseccion_cache[$nombre_grupo_sensores_interseccion])
+                && isset($sensores_suma_cache[$nombre_grupo_sensores_suma])) {
+                if ($debug) logger(" D> hit directo de grupo completo: $nombre_grupo_sensores_interseccion");
+                continue;
+            }
+
 
 			// cacheamos en funcion de cuantos radares haya.
 			// si es solo uno, es directo
@@ -451,19 +462,17 @@ function populate_cache(array $vsr, int $vsr_count, array $mr_polygons, array &$
 				$nombre_subgrupo_sensores_interseccion = implode('^', $subgrupo_sensores);
 				$nombre_subgrupo_sensores_suma = implode('+', $subgrupo_sensores);
 
+				$clipping = $mr_polygons[$ultimo_sensor];
 				$subject = $sensores_interseccion_cache[$nombre_subgrupo_sensores_interseccion];
 				if ($debug)
 					logger(" D> retrieve interseccion_cache: $nombre_subgrupo_sensores_interseccion md5: " . md5(serialize($subject)));
-				$clipping = $mr_polygons[$ultimo_sensor];
 				$result_interseccion = MR\Algorithm::intersect($subject, $clipping);
 				if ($debug)
 					logger(" D> store interseccion_cache: $nombre_grupo_sensores_interseccion md5: " . md5(serialize($result_interseccion)));
 
-
 				$subject = $sensores_suma_cache[$nombre_subgrupo_sensores_suma];
 				if ($debug)
 					logger(" D> retrieve suma_cache: $nombre_subgrupo_sensores_suma md5: " . md5(serialize($subject)));
-				$clipping = $mr_polygons[$ultimo_sensor];
 				$result_suma = MR\Algorithm::union($subject, $clipping);
 				if ($debug)
 					logger(" D> store suma_cache: $nombre_grupo_sensores_suma md5: " . md5(serialize($result_suma)));
@@ -478,10 +487,12 @@ function populate_cache(array $vsr, int $vsr_count, array $mr_polygons, array &$
 		}
 		logger(PHP_EOL, false);
 	}
-	foreach(array_keys($sensores_interseccion_cache) as $k)
-		logger(" D> cache interseccion: $k");
-	foreach(array_keys($sensores_suma_cache) as $k)
-		logger(" D> cache suma: $k");
+	if ($debug) {
+		foreach (array_keys($sensores_interseccion_cache) as $k)
+			logger(" D> cache interseccion: $k");
+		foreach (array_keys($sensores_suma_cache) as $k)
+			logger(" D> cache suma: $k");
+	}
 	return true;
 }
 
