@@ -77,7 +77,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 {
 	$timer = microtime(true);
 
-	if (!isset($coberturas) || count($coberturas) == 0) {
+	if ( count($coberturas) < 2 ) {
 		logger(" E> No existen coberturas suficientes para seguir calculando (multicobertura)");
 		return false;
 	}
@@ -165,7 +165,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 			$nombre_grupo_sensores = implode(',', $grupo_sensores);
 			$nombre_grupo_sensores_interseccion = implode('^', $grupo_sensores);
 			$grupo_sensores_suma = array_values(array_diff($sensores, $grupo_sensores));
-			$count_grupo_sensores_suma = count($grupo_sensores_suma);
+			// $count_grupo_sensores_suma = count($grupo_sensores_suma);
 			$nombre_grupo_sensores_suma = implode('+', $grupo_sensores_suma);
 
 			/** @var MR\Polygon $result_interseccion */
@@ -197,6 +197,10 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 			if (false === $result_suma) {
 				$result_resta = $result_interseccion;
 			} else {
+				logger(" D> Calculando diferencia: {$nombre_grupo_sensores_interseccion} - {$nombre_grupo_sensores_suma}");
+				// $nombre_grupo_sensores_interseccion
+				// $nombre_grupo_sensores_suma
+				// CACHE AQUI
 				$result_resta = MR\Algorithm::difference(
 					$result_interseccion,
 					$result_suma
@@ -412,7 +416,7 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 	$sensores_suma_cache = array();
 
 	$count = 1;
-	$debug = false;
+	$debug = true;
 
 	foreach ($vsr as $numero_solape => $grupo_solape) {
 		logger(" N> == Calculando cache para cobertura nivel {$numero_solape}"); // mono, doble, triple, etc...
@@ -446,9 +450,10 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 				// PRIMERO CACHEAMOS LA INTERSECCION
 				$subject = $mr_polygons[$grupo_sensores[0]];
 				$clipping = $mr_polygons[$grupo_sensores[1]];
-				$result_interseccion = MR\Algorithm::intersect($subject, $clipping);
+				// CACHEAR AQUI!!!!!
+				$result_interseccion = cache_operation($subject, $clipping, $nombre_grupo_sensores_interseccion, 'intersect'); //MR\Algorithm::intersect($subject, $clipping);
 				// LUEGO CACHEAMOS LA SUMA
-				$result_suma = MR\Algorithm::union($subject, $clipping);
+				$result_suma = cache_operation($subject, $clipping, $nombre_grupo_sensores_suma, 'union'); //MR\Algorithm::union($subject, $clipping);
 			} else { // 3 o más
 				// los anteriores ya están en la caché, sólo hay que calcular la suma/intersección con el nuevo
 				// se cogen todos los radares menos el último y se generan dos listas, subgrupo y el resto.
@@ -465,17 +470,17 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 				$clipping = $mr_polygons[$ultimo_sensor];
 				$subject = $sensores_interseccion_cache[$nombre_subgrupo_sensores_interseccion];
 				if ($debug)
-					logger(" D> retrieve interseccion_cache: $nombre_subgrupo_sensores_interseccion md5: " . md5(serialize($subject)));
-				$result_interseccion = MR\Algorithm::intersect($subject, $clipping);
+					logger(" D> retrieved interseccion_cache: {$nombre_subgrupo_sensores_interseccion} md5: " . md5(serialize($subject)));
+				$result_interseccion = cache_operation($subject, $clipping, $nombre_grupo_sensores_interseccion, 'intersect');
 				if ($debug)
-					logger(" D> store interseccion_cache: $nombre_grupo_sensores_interseccion md5: " . md5(serialize($result_interseccion)));
+					logger(" D> stored interseccion_cache: $nombre_grupo_sensores_interseccion md5: " . md5(serialize($result_interseccion)));
 
 				$subject = $sensores_suma_cache[$nombre_subgrupo_sensores_suma];
 				if ($debug)
-					logger(" D> retrieve suma_cache: $nombre_subgrupo_sensores_suma md5: " . md5(serialize($subject)));
-				$result_suma = MR\Algorithm::union($subject, $clipping);
+					logger(" D> retrieved suma_cache: {$nombre_subgrupo_sensores_suma} md5: " . md5(serialize($subject)));
+				$result_suma = cache_operation($subject, $clipping, $nombre_grupo_sensores_suma, 'union');
 				if ($debug)
-					logger(" D> store suma_cache: $nombre_grupo_sensores_suma md5: " . md5(serialize($result_suma)));
+					logger(" D> stored suma_cache: $nombre_grupo_sensores_suma md5: " . md5(serialize($result_suma)));
 			}
 			if ( $debug ) {
 				logger("radares para interseccion: " . $nombre_grupo_sensores_interseccion . " ", false);
@@ -500,7 +505,7 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
  * Convierte una lista de coordenadas en polígonos ordenados (dentro/fuera),
  * eliminando los que sean muy pequeños y usando las funciones de conrec.
  */
-function genera_contornos($result_arr) {
+function genera_contornos(array $result_arr) {
 	debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
 
 	$listaContornos = array();
@@ -535,3 +540,25 @@ function genera_contornos($result_arr) {
 
     return $listaContornos;
 }
+
+function cache_operation(MR\Polygon $polygon1, MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation): MR\Polygon
+{
+	$filename = "cache" . DIRECTORY_SEPARATOR . sha1($nombre_grupo_sensores) . ".json";
+	if (is_file($filename)) {
+		logger(" D> Recuperando {$operation} de diskcache: {$nombre_grupo_sensores}");
+		$cached = unserialize(file_get_contents($filename),
+			['allowed_classes' => [Ifsnop\MartinezRueda\Polygon::class,Ifsnop\MartinezRueda\Point::class]]);
+		if (false !== $cached) {
+			logger(" D> Cache HIT!");
+			return $cached;
+		}
+	}
+
+	$result = MR\Algorithm::$operation($polygon1, $polygon2);
+	logger(" D> Cache MISS! Guardando {$operation} en diskcache: {$nombre_grupo_sensores}");
+	file_put_contents($filename, serialize($result));
+	return $result;
+
+}
+			
+
