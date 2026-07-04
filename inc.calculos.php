@@ -6,8 +6,8 @@ use Ifsnop\MartinezRueda as MR;
 // Más velocidad y menos precisión aumentando INTERSECTION_SUBDIVISION_LIMIT
 // Más precisión y menos velocidad disminuyendo INTERSECTION_SUBDIVISION_LIMIT
 const BERTA_INTERSECTION_TOLERANCE_LIMIT_NM = 20; // Tolerancia para asegurar solape entre azimuths (NM)
-const BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM / RADIO_TERRESTRE;
-const BERTA_INTERSECTION_TOLERANCE_LIMIT_M = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM * MILLA_NAUTICA_EN_METROS; // Distancia máxima entre subdivisiones entre vértices
+const BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM / BERTA_RADIO_TERRESTRE;
+const BERTA_INTERSECTION_TOLERANCE_LIMIT_M = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM * BERTA_MILLA_NAUTICA_EN_METROS; // Distancia máxima entre subdivisiones entre vértices
 const BERTA_MALLA_TOO_SMALL_CHECK = 22500; // Si la malla es menor que este número de celdas, se considera demasiado pequeña y se vuelve a intentar con más precisión
 
 /**
@@ -48,7 +48,7 @@ function calculaAnguloMaximaCobertura($radar, $flm){
     // vértices en el centro de la Tierra, el radar y el objetivo al flight level dado.
     // El ángulo resultante es la separación angular geocéntrica máxima alcanzable.
     $anguloMaxCob = acos(
-        (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range']*MILLA_NAUTICA_EN_METROS,2))
+        (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range'] * BERTA_MILLA_NAUTICA_EN_METROS,2))
         / (2 * $earthToRadar * $earthToFl)
     );
     if ( $debug ) {
@@ -121,7 +121,7 @@ function polarToLatLon(
     float $sinColatitud
 ): array {
     // Ángulo central subtendido por la distancia $rho sobre la esfera terrestre.
-    $anguloCentral = $rho * MILLA_NAUTICA_EN_METROS / RADIO_TERRESTRE;
+    $anguloCentral = $rho * BERTA_MILLA_NAUTICA_EN_METROS / BERTA_RADIO_TERRESTRE;
 
     // Colatitud del punto destino mediante la regla del coseno esférico.
     // cos(c) = cos(a)·cos(b) + sin(a)·sin(b)·cos(C)
@@ -385,7 +385,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec/* , array &$
 
                 // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
                 // Ùltimo radio [m]
-                $r2 = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+                $r2 = $intersec[$azimuth][$i] * BERTA_MILLA_NAUTICA_EN_METROS;             // Último radio [m]
                 $time_calcula_vertices_interseccion = microtime(true);
                 [$p1, $p2] = calcula_vertices_interseccion(
                     $r2,
@@ -402,7 +402,7 @@ function create_poligonos_cobertura(array &$radar, array &$intersec/* , array &$
             elseif ($last == 0) {   // Primera fila con cobertura del polígono
 
                 // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
-                $r1 = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+                $r1 = $intersec[$azimuth][$i] * BERTA_MILLA_NAUTICA_EN_METROS;             // Último radio [m]
                 $time_calcula_vertices_interseccion = microtime(true);
                 [$p4, $p3] = calcula_vertices_interseccion(
                     $r1,
@@ -503,13 +503,13 @@ function create_matriz_obstaculos(array &$radar, float $flm)
     $debug = false;
 
     // Ángulo central máximo según rango en millas (sin tener en cuenta el nivel de vuelo)
-    // $alpha_max = ($radar['screening']['range'] * MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
+    // $alpha_max = ($radar['screening']['range'] * BERTA_MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
 
     // este si tiene en cuenta el nivel de vuelo
     $alpha_max = calculaAnguloMaximaCobertura($radar, $flm);
     logger(" V> Ángulo central máximo según rango en fichero screening: " . round($alpha_max,3) . "rad / " .
          round(rad2deg($alpha_max),3) . "º / " .
-         round($alpha_max*$radar['screening']['radioTerrestreAumentado']/MILLA_NAUTICA_EN_METROS,3) .  "NM");
+         round($alpha_max*$radar['screening']['radioTerrestreAumentado']/BERTA_MILLA_NAUTICA_EN_METROS,3) .  "NM");
     // línea de rango máximo
     $m = tan(pi() / 2 - $alpha_max); // pi()/2 = 90º en radianes
 
@@ -628,7 +628,7 @@ function create_matriz_intersecciones(array &$radar, array &$matriz_obstaculos, 
 
                         // Distancia del radar a la intersección, un acimut por columna [nm]
                         $alpha = M_PI / 2 - atan2($yi, $xi);    // atan2() pone el ángulo 0º en x=1, y=0, en sentido antihorario
-                        $dist_nm = ($radar['screening']['radioTerrestreAumentado'] * $alpha) / MILLA_NAUTICA_EN_METROS;
+                        $dist_nm = ($radar['screening']['radioTerrestreAumentado'] * $alpha) / BERTA_MILLA_NAUTICA_EN_METROS;
                         if ($dist_nm > $max_distancia_nm)
                             $max_distancia_nm = $dist_nm;
                         $intersec[$azimuth][$count] = $dist_nm;
@@ -678,7 +678,7 @@ function calcula_vertices_interseccion(
         printf("INFO r: %.20f, a1_rad: %.20f, cos_lat90: %.20f, sin_lat90: %.20f, lat_rad: %.20f, lon_rad: %.20f" . PHP_EOL,
             $r, $a1_rad, $cos_lat90, $sin_lat90, $lat_rad, $lon_rad);
 
-    $alpha = $r / RADIO_TERRESTRE;
+    $alpha = $r / BERTA_RADIO_TERRESTRE;
     $cos_alpha = cos($alpha);
     $sin_alpha = sin($alpha);
     
@@ -775,104 +775,6 @@ function calcula_vertices_interseccion(
         print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
 
     return [$p1];
-}
-
-/*
- * Marca en la malla los puntos que están dentro del polígono
- * Se accede directamente a la malla sin necesidad de consultar las coordenadas,
- * dado que conocemos el salto de la malla, que [0][0] es la esquina superior noroeste
- * y que a mayor $i, la latitud decrece [99][99] será la esquina sureste.
- * int $num_rows numero de filas
- * int $num_cols número de columnas
- */ 
-function set_malla_coverage(array &$malla_lat_lon, array &$poly, float $paso_de_malla, int $num_rows, int $num_cols, float $lat_nw, float $lon_nw)
-{
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
-    // Bounding box del polígono en coordenadas
-    $minLat = INF;  $maxLat = -INF;
-    $minLon = INF;  $maxLon = -INF;
-    foreach ($poly as $p) {
-        if ($p[0] < $minLat) $minLat = $p[0];
-        if ($p[0] > $maxLat) $maxLat = $p[0];
-        if ($p[1] < $minLon) $minLon = $p[1];
-        if ($p[1] > $maxLon) $maxLon = $p[1];
-    }
-
-    // Convertir bounding box a índices, con margen de 1 celda por redondeo
-    $i_min = max(0,           (int) floor(($lat_nw - $maxLat) / $paso_de_malla));
-    $i_max = min($num_rows - 1, (int) ceil (($lat_nw - $minLat) / $paso_de_malla));
-    $j_min = max(0,           (int) floor(($minLon - $lon_nw) / $paso_de_malla));
-    $j_max = min($num_cols  - 1, (int) ceil (($maxLon - $lon_nw) / $paso_de_malla));
-
-    $count_poly = count($poly);
-
-    // Iterar solo sobre la subregión de la malla que intersecta el polígono
-    for ($i = $i_min; $i <= $i_max; $i++) {
-        $lat = $lat_nw - $i * $paso_de_malla;   // lat del punto sin leer el array
-        for ($j = $j_min; $j <= $j_max; $j++) {
-            $lon = $lon_nw + $j * $paso_de_malla;   // lon del punto sin leer el array
-            if (pointInPolygon($lat, $lon, $poly, $count_poly)) {
-                $malla_lat_lon[$i][$j][2] = 1;
-            }
-        }
-    }
-
-    return $malla_lat_lon;
-}
-
-/*
- * Genera la malla donde marcar la cobertura
- * arrray $radar datos para ubicar el centro de la malla en el radar
- * int $precision_malla Número de cifras decimales
- * float $resolucion_malla LSB del salto de una celda de la malla a la siguiente, depende de precision_malla
- * bool $force genera la matriz aunque tenga poca resolucion, pensado para cuando se aumenta la resolución y sigue siendo pequeña
- * return array Matriz con índices genéricos para anotar los obstáculos 
- */
-function create_malla(array $radar, float $max_distancia_nm, int $precision_malla, float $resolucion_malla, bool $force = false)
-{
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
-    $lat_rad = $radar['lat_rad'];
-    // $lon_rad = $radar['lon_rad'];
-    $lat_deg = $radar['lat_deg'];
-    $lon_deg = $radar['lon_deg'];
-    
-    logger(" D> Generando malla de cobertura con precision: {$precision_malla} y resolución: {$resolucion_malla}");
-    
-    $max_distancia_nm = round(ceil($max_distancia_nm), 0) + 1; // Redondear hacia arriba y sumar 1 NM de margen
-    logger(" V> Distancia Alcance Máximo Alineada: {$max_distancia_nm}NM / " . $max_distancia_nm * MILLA_NAUTICA_EN_METROS . "m");
-    $range_maximum = $max_distancia_nm * MILLA_NAUTICA_EN_METROS; // Rango máximo [m]
-    
-    $latitude_limit = rad2deg($range_maximum / RADIO_TERRESTRE); // Latitud límite desde el radar [º]
-    $longitude_limit = rad2deg($range_maximum / (RADIO_TERRESTRE * cos($lat_rad)));   // Longitud límite desde el radar [º]
-    //print "range_maximum: $range_maximum latitude_limit: $latitude_limit longitude_limit: $longitude_limit" . PHP_EOL;
-
-    $north = round(ceil(($lat_deg + $latitude_limit) / $resolucion_malla) * $resolucion_malla, $precision_malla); // Límite norte
-    $south = round(floor(($lat_deg - $latitude_limit) / $resolucion_malla) * $resolucion_malla, $precision_malla); // Límite sur
-    $west  = round(floor(($lon_deg - $longitude_limit) / $resolucion_malla) * $resolucion_malla, $precision_malla); // Límite oeste
-    $east  = round(ceil(($lon_deg + $longitude_limit) / $resolucion_malla) * $resolucion_malla, $precision_malla); // Límite este
-    logger(" V> Esquinas de la malla north: $north south: $south east: $east west: $west");
-
-    // Malla: rows = latitud, cols = longitud
-    $rows = intval(abs($north - $south) / $resolucion_malla) + 1;
-    $cols = intval(abs($east - $west) / $resolucion_malla) + 1;
-    logger(" D> Tamaño de la malla {$rows}x{$cols}");
-
-    // si la malla es demasiado pequeña, abortamos y volveremos a intentar con más precisión
-    if ( !$force && ($rows*$cols < BERTA_MALLA_TOO_SMALL_CHECK) )
-        return array();
-
-    $malla_lat_lon = array();
-    for ($i = 0; $i < $rows; $i++) {
-        for ($j = 0; $j < $cols; $j++) {
-            $malla_lat_lon[$i][$j] = [
-                $north - $i * $resolucion_malla,
-                $west  + $j * $resolucion_malla,
-                0,
-            ];
-        }
-    }
-
-    return array($malla_lat_lon, $rows, $cols, $north, $west, $resolucion_malla);
 }
 
 /*

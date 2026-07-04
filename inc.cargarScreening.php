@@ -180,9 +180,9 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 	logger(" I> Cargado contenido de >" . $radar['screening'] . "< en " . round(microtime(true) - $timer, 3) . "s");
 	// Camprobacion extra para algunos valores
 	//    if ($screening['k-factor'] <= 0) {
-	//        $screening['radioTerrestreAumentado'] = (4/3) * RADIO_TERRESTRE;
+	//        $screening['radioTerrestreAumentado'] = (4/3) * BERTA_RADIO_TERRESTRE;
 	//    } else {
-	$screening['radioTerrestreAumentado'] = $screening['k-factor'] * RADIO_TERRESTRE;
+	$screening['radioTerrestreAumentado'] = $screening['k-factor'] * BERTA_RADIO_TERRESTRE;
 	//    }
 
 	// tenemos tres alcances posibles: el que viene definido en el screening, el definido en el .rdb o uno forzado por línea de comandos
@@ -190,13 +190,13 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 	if ($forzarAlcance > 0) {
 		// utiliza el alcance que pasamos a la función
 		$radar['range'] = $forzarAlcance;
-		logger(" I> Se ha forzado un alcance de " . ($radar['range'] / MILLA_NAUTICA_EN_METROS) .
+		logger(" I> Se ha forzado un alcance de " . ($radar['range'] / BERTA_MILLA_NAUTICA_EN_METROS) .
 			"NM / " . $radar['range'] . "m");
 	} else {
 		// utiliza el alcance definido en el .rdb para un radar secundario
 		$radar['range'] = $radar['secondaryMaximumRange'];
 		logger(" I> El alcance definido en el fichero del radar es {$radar['range']}NM / " .
-			$radar['range'] * MILLA_NAUTICA_EN_METROS . "m");
+			$radar['range'] * BERTA_MILLA_NAUTICA_EN_METROS . "m");
 	}
 	$screening['range'] = $radar['range'];
 	$radar['screening_file'] = $radar['screening'];

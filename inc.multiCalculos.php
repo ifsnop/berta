@@ -51,11 +51,13 @@ function init_polygons(array $coberturas)
  * Devuelve un array normalizado
  *
  */
-function create_unica(array $mr_polygons)
+function create_unica(array $mr_polygons, string $sensores): array
 {
 	$timer = microtime(true);
 	logger(" D> Generando cobertura única");
-	$p_mr1 = MR\Algorithm::unionMany($mr_polygons);
+	// function cache_operation(MR\Polygon $polygon1, MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation): MR\Polygon
+	// $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
+	$p_mr1 = cache_operation($mr_polygons, null, $sensores, 'unionMany');
 	$normalized = normalizePolygonsForKML($p_mr1->getArray());
 	logger(" V> Finalizada cobertura única: " . round(microtime(true) - $timer, 3) . "s");
 	return $normalized;
@@ -114,7 +116,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
     $radarWithFl = implode(',', $sensores) . "-" . $flWithPad;
 
 	logger(" I> Creando cobertura única/suma");
-	$normalized = create_unica($mr_polygons);
+	$normalized = create_unica($mr_polygons, implode(',', $sensores));
 	$kml = KML_normalized2KML($normalized, 'unica', $sensores, $fl);
 	$kml = KML_create_folder('unica', $kml);
 		
@@ -220,14 +222,6 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 			$mr_polygons[$numero_solape][$nombre_grupo_sensores_interseccion . "-" . $nombre_grupo_sensores_suma] = $result_resta;
 			$normalized = normalizePolygonsForKML($result_resta->getArray());
 			$kml = KML_normalized2KML($normalized, $coverageNames[$numero_solape] , $grupo_sensores, $fl);
-			if ( $result_resta->numPoints == 3 ) {
-				logger(" D> Polígono resultante: 3 puntos, no hay cobertura real, se ignora");
-				print json_encode($result_resta->getArray()) . PHP_EOL;
-				print json_encode($normalized) . PHP_EOL;
-				print $kml . PHP_EOL;
-			}
-
-
 
 			logger(" D> Calculada: nivel {$numero_solape} {$nombre_grupo_sensores} => {$nombre_grupo_sensores_interseccion} - ( {$nombre_grupo_sensores_suma} )");
 			// guardamos el kml para luego juntarlo en uno global, que contenga todos los niveles de cobertura
@@ -511,64 +505,30 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 	return true;
 }
 
-/*
- * Convierte una lista de coordenadas en polígonos ordenados (dentro/fuera),
- * eliminando los que sean muy pequeños y usando las funciones de conrec.
- */
-function genera_contornos(array $result_arr) {
-	debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
-
-	$listaContornos = array();
-    foreach($result_arr as $index => $polygon) {
-	if ( 0 == count($polygon) )
-	    continue;
-	$computeArea = computeArea($polygon);
-	// print count($polygon) . "] " . computeArea($polygon) . PHP_EOL;
-	// logger(" V> Polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
-	// si eliminamos las áreas pequeñas, puede ser que al crear la cobertura única, esas áreas pequeñas pasen a ser
-	// más grandes, y ya no se eliminen.
-	if ( $computeArea < 0.1 ) {
-	    logger(" I> NO Eliminando polígono ($index) con " . count($polygon) . " vértices y área " . round($computeArea,3) . "km2");
-	    //continue;
-	}
-
-	$leftCorner = array();
-	foreach($polygon as $k => $vertex)
-	    $leftCorner = findLeftCorner($vertex[1], $vertex[0], $leftCorner, $polygon, $k);
-
-	$listaContornos[] = array(
-	    'level' => -1,
-	    'polygon' => $polygon,
-	    'inside' => array(),
-	    'area' => $computeArea,
-	    'leftCorner' => $leftCorner,
-	);
-    }
-    // usaremos is_in_polygon porque $listaContornos tiene '0' y '1' como índices de los
-    // vértices en lugar de 'fila' y col.
-    $listaContornos = determinaContornos2_sortContornos($listaContornos, 'is_in_polygon');
-
-    return $listaContornos;
-}
-
-function cache_operation(MR\Polygon $polygon1, MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation): MR\Polygon
+function cache_operation(array|MR\Polygon $polygon1, ?MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation): MR\Polygon
 {
-	$filename = "cache" . DIRECTORY_SEPARATOR . sha1($nombre_grupo_sensores) . ".json";
+	$sha1 = sha1($nombre_grupo_sensores);
+	$pathname = "cache" . DIRECTORY_SEPARATOR . "polygons" . DIRECTORY_SEPARATOR . $sha1[0] . $sha1[1] . DIRECTORY_SEPARATOR;
+	$filename = $pathname . $sha1 . ".json";
 	if (is_file($filename)) {
 		logger(" D> Recuperando {$operation} de diskcache: {$nombre_grupo_sensores}");
-		$cached = unserialize(file_get_contents($filename),
-			['allowed_classes' => [Ifsnop\MartinezRueda\Polygon::class,Ifsnop\MartinezRueda\Point::class]]);
+		$cached = unserialize(
+			file_get_contents($filename),
+			['allowed_classes' => [Ifsnop\MartinezRueda\Polygon::class, Ifsnop\MartinezRueda\Point::class]]
+		);
 		if (false !== $cached) {
 			logger(" D> Cache HIT!");
 			return $cached;
 		}
 	}
 
-	$result = MR\Algorithm::$operation($polygon1, $polygon2);
+	if (null === $polygon2) {
+		$result = MR\Algorithm::$operation($polygon1);
+	} else {
+		$result = MR\Algorithm::$operation($polygon1, $polygon2);
+	}
 	logger(" D> Cache MISS! Guardando {$operation} en diskcache: {$nombre_grupo_sensores}");
+	crearCarpetaResultados($pathname);
 	file_put_contents($filename, serialize($result));
 	return $result;
-
 }
-			
-

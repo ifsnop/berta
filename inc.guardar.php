@@ -444,38 +444,3 @@ function KML_get_rgb_from_coverageLevel(string $coverageLevel, string &$coverage
 
     return $rgb;
 }
-
-/**
- * Genera ficheros para comparar la lista de obstáculos en PHP con la de Matlab
- *
- */
-function generateMatlabFiles($radar, $rutaResultados)
-{
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
-    $rutaTerrenos = $rutaResultados . "Radares_Terrenos" . DIRECTORY_SEPARATOR;
-    $rutaCoordenadas = $rutaResultados . "Radares_Coordenadas" . DIRECTORY_SEPARATOR;
-
-    print "Generando fichero de Matlab para " .
-        "[" . $radar['radar'] . "=>" . $radar['screening']['site'] . "]" . PHP_EOL;
-
-    crearCarpetaResultados($rutaTerrenos);
-    crearCarpetaResultados($rutaCoordenadas);
-
-    if (0 == strlen($radar['screening_file']))
-        return;
-
-    @unlink($rutaTerrenos . $radar['screening_file']['site'] . ".txt");
-    if (false === copy($radar['screening_file'], $rutaTerrenos . $radar['screening']['site'] . ".txt"))
-        die("ERROR: copiando " . $radar['screening_file'] . " a " . $rutaTerrenos . $radarOriginal['site'] . ".txt" . PHP_EOL);
-
-    $coordenadas = $radar['screening']['site'] . "-Latitud=" . $radar['lat'] . ";\r\n" .
-        $radar['screening']['site'] . "-Longitud=" . $radar['lon'] . ";\r\n" .
-        $radar['screening']['site'] . "-Range=" . ($radar['range'] / MILLA_NAUTICA_EN_METROS) . ";";
-
-    @unlink($rutaCoordenadas . $radarOriginal['site'] . ".txt");
-    if (false === file_put_contents($rutaCoordenadas . $radar['screening']['site'] . ".txt", $coordenadas))
-        die("ERROR: escribiendo " . $rutaCoordenadas . $radar['screening']['site'] . ".txt" . PHP_EOL);
-
-    print "INFO NOMBRE FICHERO: " . $rutaTerrenos . $radar['screening']['site'] . ".txt" . PHP_EOL;
-    return true;
-}

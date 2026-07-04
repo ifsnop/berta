@@ -2,37 +2,6 @@
 declare(strict_types=1);
 
 /**
- * Convierte altitudMode en un string
- * 
- * @param int $altitudeMode (ENTRADA)
- * @return string
- */
-function altitudeModetoString($altitudeMode)
-{
-    debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
-
-    $modo = "";
-    switch ($altitudeMode) {
-        case 0:
-            $modo = "clampToGround";
-            break; // "Subject to the ground"; break;
-        case 1:
-            $modo = "clampToSeaFloor";
-            break; // "Subject to seabed"; break;
-        case 2:
-            $modo = "relativeToGround";
-            break; // "Relative to soil"; break;
-        case 3:
-            $modo = "relativeToSeaFloor";
-            break; // "Relative to the seabed"; break;
-        case 4:
-            $modo = "absolute";
-            break;
-    }
-    return $modo;
-}
-
-/**
  * Obtiene un valor cacheado o lo calcula si no existe.
  *
  * @param array  &$cache     Array de caché (pasado por referencia)
@@ -222,66 +191,3 @@ function timer_unidades(float $t)
 
     return $timer_string . " " . $unidad;
 }
-
-/**
- * Returns the area of a closed path on Earth.
- * @param float $path A closed path.
- * @return float The path's area in square kilometers.
- */
-function computeArea(float $path) {
-    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-    return abs(computeSignedArea($path)/1000000.0);
-}
-
-/**
- * Returns the signed area of a closed path on Earth. The sign of the area may be used to
- * determine the orientation of the path.
- * "inside" is the surface that does not contain the South Pole.
- * @param float $path A closed path.
- * @return float The loop's area in square meters.
- */
-function computeSignedArea($path) {
-    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-    return computeSignedAreaP($path, RADIO_TERRESTRE);
-}
-
-/**
- * Returns the signed area of a closed path on a sphere of given radius.
- * The computed area uses the same units as the radius squared.
- * Used by SphericalUtilTest.
- */
-function computeSignedAreaP($path,  $radius) {
-    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-        $size = count($path);
-        if ($size < 3) { return 0; }
-        $total = 0;
-        $prev = $path[$size - 1];
-        $prevTanLat = tan((M_PI / 2 - deg2rad($prev[0])) / 2); // lat
-        $prevLng = deg2rad($prev[1]); //lon
-        // For each edge, accumulate the signed area of the triangle formed by the North Pole
-        // and that edge ("polar triangle").
-        foreach($path as $point) {
-            $tanLat = tan((M_PI / 2 - deg2rad($point[0])) / 2); // lat
-            $lng = deg2rad($point[1]); // lon
-            $total += polarTriangleArea($tanLat, $lng, $prevTanLat, $prevLng);
-            $prevTanLat = $tanLat;
-            $prevLng = $lng;
-        }
-        return $total * ($radius * $radius);
-    }
-
-/**
- * Returns the signed area of a triangle which has North Pole as a vertex.
- * Formula derived from "Area of a spherical triangle given two edges and the included angle"
- * as per "Spherical Trigonometry" by Todhunter, page 71, section 103, point 2.
- * See http://books.google.com/books?id=3uBHAAAAIAAJ&pg=PA71
- * The arguments named "tan" are tan((pi/2 - latitude)/2).
- */
-function polarTriangleArea(float $tan1, float  $lng1, float  $tan2, float  $lng2)
-{
-    die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__);
-    $deltaLng = $lng1 - $lng2;
-    $t = $tan1 * $tan2;
-    return 2 * atan2($t * sin($deltaLng), 1 + $t * cos($deltaLng));
-}
-

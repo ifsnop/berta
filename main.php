@@ -5,19 +5,14 @@ ini_set('display_errors', 1);
 ini_set('memory_limit', '5G');
 
 // DEFINICIÓN DE CONSTANTES
-const RADIO_TERRESTRE = 6371000.0;
-const MILLA_NAUTICA_EN_METROS = 1852.0; // metros equivalentes a 1 milla nautica
-const GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
-const GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
+const BERTA_RADIO_TERRESTRE = 6371000.0;
+const BERTA_MILLA_NAUTICA_EN_METROS = 1852.0; // metros equivalentes a 1 milla nautica
+const BERTA_GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
+const BERTA_GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 const BERTA_ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
 const BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
 CONST BERTA_FEET_TO_METERS = 0.30480370641307;
 const BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION = 0.000001;
-
-// TODO:
-// Probar a generar cono de silencio
-// Mejorar la creación de polígonos utilizando martinz rueda para unirlos en lugar
-// de usar una malla.
 
 // INCLUSIÓN DE FICHEROS
 require_once('inc.cargarScreening.php');
@@ -25,6 +20,7 @@ require_once('inc.cargarCoordenadas.php');
 require_once('inc.auxiliares.php');
 require_once('inc.calculos.php');
 require_once('inc.guardar.php');
+require_once('inc.multiCalculos.php');
 require_once('EtaEstimator.php');
 require_once('vendor/autoload.php');
 
@@ -338,7 +334,7 @@ exit(0);
                     $coberturas[$sensor]['terreno'] = cargarDatosTerreno($infoCoral[$sensor], $config['max-range']); /*  !== -1 ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange']); */
                     if (false !== strpos($sensor, "-psr")) {
                         logger(" V> Detectado PSR, ajustando alcance");
-                        $coberturas[$sensor]['terreno']['range'] = $infoCoral[$sensor]['primaryMaximumRange'] * MILLA_NAUTICA_EN_METROS;
+                        $coberturas[$sensor]['terreno']['range'] = $infoCoral[$sensor]['primaryMaximumRange'] * BERTA_MILLA_NAUTICA_EN_METROS;
                         logger(" I>  El alcance definido para el PSR es de " . ($coberturas[$sensor]['terreno']['range'] / MILLA_NAUTICA_EN_METROS) .
                             "NM / " . $coberturas[$sensor]['terreno']['range'] . "m");
                     }
@@ -387,9 +383,6 @@ exit(0);
         if ((isset($config['mode']['multiradar']) && $config['mode']['multiradar'] === true) ||
             (isset($config['mode']['multiradar_unica']) && $config['mode']['multiradar_unica'] === true)
         ) {
-
-            // included here because it uses php >=8
-            require_once('inc.multiCalculos.php');
             crearCarpetaResultados($config['path']['resultados_multi'] . $nivelVuelo);
             // @param array $rutas donde se genera el archivo(ENTRADA)
             // @param string $altMode si lo queres absolute o relative(ENTRADA)
@@ -427,7 +420,7 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
         
         if ($calculoCono) {
             $radioConom = ($flm - $hA) * tan(deg2rad(BERTA_ANGULO_CONO));
-            $radioCono = $radioConom / MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
+            $radioCono = $radioConom / BERTA_MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
             logger(" N> Radio del Cono: " . round($radioCono, 2) . "NM / " . round($radioConom, 2) . "m");
 
             $polygonCono = calculaCoordenadasCono($radar, $radioCono);
