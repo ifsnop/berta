@@ -160,7 +160,7 @@ function normalizePolygonsForKML(array $polygons): array
 
     foreach ($polygons as $poly) {
         if (!is_array($poly)) continue;
-        if (count($poly) < 4) continue;
+        if (count($poly) < 3) continue;
 
         if (!isClosed($poly)) {
             $poly[] = $poly[0];
@@ -347,29 +347,29 @@ function pointInPolygon(float $y, float $x, array &$poly, int $n): bool
     return $inside;
 }
 
-function KML_write(string $fileName, string $radarWithFL, string $content, bool $disableKmz = false)
+function KML_write(string $filename, string $FL, string $content, bool $disableKmz = false)
 {
 
     if (true === $disableKmz || !class_exists('ZipArchive')) {
         // generar kml y volver
-        logger(" V> Guardando fichero {$fileName}.kml");
-        if (false === ($ret = @file_put_contents("{$fileName}.kml", $content))) {
-            logger(" E> Problema al guardar {$fileName}.kml");
+        logger(" V> Guardando fichero {$filename}{$FL}.kml");
+        if (false === ($ret = @file_put_contents("{$filename}{$FL}.kml", $content))) {
+            logger(" E> Problema al guardar {$filename}{$FL}.kml");
             exit(-1);
             //return false;
         }
 
         return true;
     }
-    logger(" V> Guardando fichero {$fileName}.kmz");
+    logger(" V> Guardando fichero {$filename}.kmz");
 
     $zip = new ZipArchive();
-    $res = $zip->open($fileName . ".kmz", ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE);
+    $res = $zip->open($filename . ".kmz", ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE);
     if (! $res) {
-        logger(" E> No se puede crear el fichero {$fileName}.kmz");
+        logger(" E> No se puede crear el fichero {$filename}.kmz");
         exit(-1);
     }
-    $zip->addFromString($radarWithFL . ".kml", $content);
+    $zip->addFromString("{$filename}{$FL}.kml", $content);
     $zip->close();
 
     return;

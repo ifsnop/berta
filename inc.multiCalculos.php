@@ -201,10 +201,11 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 				// $nombre_grupo_sensores_interseccion
 				// $nombre_grupo_sensores_suma
 				// CACHE AQUI
-				$result_resta = MR\Algorithm::difference(
-					$result_interseccion,
-					$result_suma
-				);
+				// $result_resta = MR\Algorithm::difference(
+				//	$result_interseccion,
+				//	$result_suma
+				//);
+				$result_resta = cache_operation($result_interseccion, $result_suma, "{$nombre_grupo_sensores_interseccion} - {$nombre_grupo_sensores_suma}", 'difference');
 			}
 			logger(" D> Tiempo de resta: " . round(microtime(true) - $timer_difference, 3) . " segundos");
 
@@ -215,10 +216,19 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 			
 			// en mr_polygons guardamos para cada nivel de cobertura (mono, doble, triple) todos los polígonos que forman
 			// ese nivel
-			logger(" D> Polígono resultante:" . $result_resta->numPoints . " nivel {$numero_solape}");
+			logger(" D> Polígono resultante: " . $result_resta->numPoints . " nivel: {$numero_solape}");
 			$mr_polygons[$numero_solape][$nombre_grupo_sensores_interseccion . "-" . $nombre_grupo_sensores_suma] = $result_resta;
 			$normalized = normalizePolygonsForKML($result_resta->getArray());
 			$kml = KML_normalized2KML($normalized, $coverageNames[$numero_solape] , $grupo_sensores, $fl);
+			if ( $result_resta->numPoints == 3 ) {
+				logger(" D> Polígono resultante: 3 puntos, no hay cobertura real, se ignora");
+				print json_encode($result_resta->getArray()) . PHP_EOL;
+				print json_encode($normalized) . PHP_EOL;
+				print $kml . PHP_EOL;
+			}
+
+
+
 			logger(" D> Calculada: nivel {$numero_solape} {$nombre_grupo_sensores} => {$nombre_grupo_sensores_interseccion} - ( {$nombre_grupo_sensores_suma} )");
 			// guardamos el kml para luego juntarlo en uno global, que contenga todos los niveles de cobertura
 			// y todos los radares
@@ -416,7 +426,7 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 	$sensores_suma_cache = array();
 
 	$count = 1;
-	$debug = true;
+	$debug = false;
 
 	foreach ($vsr as $numero_solape => $grupo_solape) {
 		logger(" N> == Calculando cache para cobertura nivel {$numero_solape}"); // mono, doble, triple, etc...
