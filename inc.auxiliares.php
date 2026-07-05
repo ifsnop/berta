@@ -82,17 +82,17 @@ class Combinations
 {
     private $_elements = array();
 
-    public function __construct($elements)
+    public function __construct(array $elements)
     {
         $this->setElements($elements);
     }
 
-    public function setElements($elements)
+    public function setElements(array $elements)
     {
         $this->_elements = array_values($elements);
     }
 
-    public function getCombinations($length, $with_repetition = false)
+    public function getCombinations(int $length, bool $with_repetition = false)
     {
         $combinations = array();
 
@@ -103,7 +103,7 @@ class Combinations
         return $combinations;
     }
 
-    public function getPermutations($length, $with_repetition = false)
+    public function getPermutations(int $length, bool $with_repetition = false)
     {
         $permutations = array();
 
@@ -114,7 +114,7 @@ class Combinations
         return $permutations;
     }
 
-    private function x_calculateCombinations($length, $with_repetition = false, $position = 0, $elements = array())
+    private function x_calculateCombinations(int $length, bool $with_repetition = false, int $position = 0, array $elements = array())
     {
 
         $items_count = count($this->_elements);
@@ -135,7 +135,7 @@ class Combinations
         }
     }
 
-    private function x_calculatePermutations($length, $with_repetition = false, $elements = array(), $keys = array())
+    private function x_calculatePermutations(int $length, bool $with_repetition = false, array $elements = array(), array $keys = array())
     {
 
         foreach ($this->_elements as $key => $value) {
