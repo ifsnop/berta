@@ -100,7 +100,7 @@ $poly = [
     
     ];
 
-$nor = normalizePolygonsForKML($poly);
+$nor = KML_normalizePolygonsForKML($poly);
 $kml = KML_normalized2KML($nor, "mono", ['alcolea'], 40);
 $kml2 = KML_generate_full_kml($kml);
 print_r($kml2);
@@ -335,7 +335,7 @@ exit(0);
                     if (false !== strpos($sensor, "-psr")) {
                         logger(" V> Detectado PSR, ajustando alcance");
                         $coberturas[$sensor]['terreno']['range'] = $infoCoral[$sensor]['primaryMaximumRange'] * BERTA_MILLA_NAUTICA_EN_METROS;
-                        logger(" I>  El alcance definido para el PSR es de " . ($coberturas[$sensor]['terreno']['range'] / MILLA_NAUTICA_EN_METROS) .
+                        logger(" I>  El alcance definido para el PSR es de " . ($coberturas[$sensor]['terreno']['range'] / BERTA_MILLA_NAUTICA_EN_METROS) .
                             "NM / " . $coberturas[$sensor]['terreno']['range'] . "m");
                     }
                     logger(" V> Información del terreno procesada (" . round(microtime(true) - $timer, 3) . "s)");
@@ -368,7 +368,7 @@ exit(0);
                     'por_nivel' =>  $config['path']['resultados_mono'] . $nivelVuelo . DIRECTORY_SEPARATOR,
                     'por_sensor' => $config['path']['resultados_mono'] . $sensor . DIRECTORY_SEPARATOR,
                 );
-                $coberturas[$sensor]['normalized'] = normalizePolygonsForKML($coberturas[$sensor]['polygons']);
+                $coberturas[$sensor]['normalized'] = KML_normalizePolygonsForKML($coberturas[$sensor]['polygons']);
                 $coberturas[$sensor]['kml'] = KML_normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
 
                 $kml = KML_generate_full_kml($coberturas[$sensor]['kml'], $nivelVuelo);
@@ -388,18 +388,36 @@ exit(0);
             // @param string $altMode si lo queres absolute o relative(ENTRADA)
             // array($config['path']['resultados_multi'] . $nivelVuelo . DIRECTORY_SEPARATOR)
             // $altMode = "clampToGround"
-            $kml = multicobertura(
+            $kml_multi = multicobertura(
                 $coberturas,
                 $fl,
                 $config['mode']
             );
-            if ( false === $kml) {
+            if ( false === $kml_multi) {
                 logger(" N> No se han generado contornos para el nivel de vuelo >{$nivelVuelo}<");
                 continue;
             }
-            $kml = KML_generate_full_kml($kml, $nivelVuelo);
+
+            // si se ha pedido la monoradar, incluirla en el kml final
+            $kml_mono = "";
+            if ( isset($config['mode']['monoradar']) && $config['mode']['monoradar'] ) {
+                logger(" V> Se pidió cobertura monoradar, añadiéndola al KML global");
+                // $coberturas[$sensor]['kml'] = KML_normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
+                foreach ($coberturas as $sensor => $datos) {
+                    if (false !== $datos['polygons']) {
+                        // $coberturas[$sensor]['normalized'] = KML_normalizePolygonsForKML($coberturas[$sensor]['polygons']);
+                        // $coberturas[$sensor]['kml'] = KML_normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
+                        $kml_mono .= $datos['kml'];
+                        // $kml_mono = KML_normalized2KML($datos['normalized'], 'mono', [$sensor], $fl);
+                        // $kml = KML_generate_full_kml($kml_mono, $nivelVuelo, $kml);
+                    }
+                }
+
+            }
+            $kml_mono = KML_create_folder('monoradar', $kml_mono);
+            $kml_global = KML_generate_full_kml($kml_mono . $kml_multi, $nivelVuelo);
             crearCarpetaResultados("MULTI/");
-            KML_write("MULTI/prueba", $nivelVuelo, $kml, $config['disable-kmz']);
+            KML_write("MULTI/prueba", $nivelVuelo, $kml_global, $config['disable-kmz']);
         }
     }
     exit(0);

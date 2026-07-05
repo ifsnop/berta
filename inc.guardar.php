@@ -83,6 +83,7 @@ function KML_normalized2KML(array $multi_polygons, string $coverageLevel, array 
 
     $kmlPlacemark =    "  <Placemark>" .
         PHP_EOL . "    <name>{$radarWithFl}</name>" .
+        PHP_EOL . "    <visibility>0</visibility>" .
         PHP_EOL . "    <styleUrl>#transparentPoly-{$coverageLevel}</styleUrl>" .
         PHP_EOL . "    <MultiGeometry>";
 
@@ -154,7 +155,7 @@ function KML_normalized2KML(array $multi_polygons, string $coverageLevel, array 
  * - Nivel 1 = agujero
  * - Nivel 2 = nuevo exterior
  */
-function normalizePolygonsForKML(array $polygons): array
+function KML_normalizePolygonsForKML(array $polygons): array
 {
     $items = [];
 

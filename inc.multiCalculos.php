@@ -58,7 +58,7 @@ function create_unica(array $mr_polygons, string $sensores): array
 	// function cache_operation(MR\Polygon $polygon1, MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation): MR\Polygon
 	// $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
 	$p_mr1 = cache_operation($mr_polygons, null, $sensores, 'unionMany');
-	$normalized = normalizePolygonsForKML($p_mr1->getArray());
+	$normalized = KML_normalizePolygonsForKML($p_mr1->getArray());
 	logger(" V> Finalizada cobertura única: " . round(microtime(true) - $timer, 3) . "s");
 	return $normalized;
 }
@@ -220,7 +220,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 			// ese nivel
 			logger(" D> Polígono resultante: " . $result_resta->numPoints . " nivel: {$numero_solape}");
 			$mr_polygons[$numero_solape][$nombre_grupo_sensores_interseccion . "-" . $nombre_grupo_sensores_suma] = $result_resta;
-			$normalized = normalizePolygonsForKML($result_resta->getArray());
+			$normalized = KML_normalizePolygonsForKML($result_resta->getArray());
 			$kml = KML_normalized2KML($normalized, $coverageNames[$numero_solape] , $grupo_sensores, $fl);
 
 			logger(" D> Calculada: nivel {$numero_solape} {$nombre_grupo_sensores} => {$nombre_grupo_sensores_interseccion} - ( {$nombre_grupo_sensores_suma} )");
@@ -387,9 +387,11 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 		}
 		if ( !empty($kml_per_level) ) {
 			// luego los metemos en un folder
-			$kml .= KML_create_folder( (string) $numero_solape, $kml_per_level);
+			$kml .= KML_create_folder( str_pad((string) $numero_solape, 2, "0", STR_PAD_LEFT), $kml_per_level);
 		}
 	}
+
+	$kml = KML_create_folder('multiradar-directa', $kml);
 
 	// writeKMZ !!!!
 	logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .

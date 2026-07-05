@@ -197,7 +197,7 @@ function calculosFLencimaRadar2(array $radar, float $flm): array
         $count_intersec_azi = count($intersec[$azimuth]) - 1;
         // print "azimuth: {$azimuth} azimuth_real: {$azimuth_real} a_rad: {$a_rad} count_intersec_azi: {$count_intersec_azi}" . PHP_EOL;
         for ($i = $count_intersec_azi; $i >= 0; $i--) {
-            $r = $intersec[$azimuth][$i] * MILLA_NAUTICA_EN_METROS; // Último radio [m]
+            $r = $intersec[$azimuth][$i] * BERTA_MILLA_NAUTICA_EN_METROS; // Último radio [m]
             [$p] = calcula_vertices_interseccion(
                 $r,
                 $a_rad,
