@@ -51,13 +51,13 @@ function init_polygons(array $coberturas)
  * Devuelve un array normalizado
  *
  */
-function create_unica(array $mr_polygons, string $sensores): array
+function create_unica(array $mr_polygons, string $sensores, string $flWithPad): array
 {
 	$timer = microtime(true);
 	logger(" D> Generando cobertura única");
 	// function cache_operation(MR\Polygon $polygon1, MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation): MR\Polygon
 	// $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
-	$p_mr1 = cache_operation($mr_polygons, null, $sensores, 'unionMany');
+	$p_mr1 = cache_operation($mr_polygons, null, $sensores, 'unionMany', $flWithPad);
 	$normalized = KML_normalizePolygonsForKML($p_mr1->getArray());
 	logger(" V> Finalizada cobertura única: " . round(microtime(true) - $timer, 3) . "s");
 	return $normalized;
@@ -116,7 +116,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
     $radarWithFl = implode(',', $sensores) . "-" . $flWithPad;
 
 	logger(" I> Creando cobertura única/suma");
-	$normalized = create_unica($mr_polygons, implode(',', $sensores));
+	$normalized = create_unica($mr_polygons, implode(',', $sensores), $flWithPad);
 	$kml = KML_normalized2KML($normalized, 'unica', $sensores, $fl);
 	$kml = KML_create_folder('unica', $kml);
 		
@@ -138,7 +138,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 	$sensores_suma_cache = array();
 
 	// cacheo de intersecciones y sumas
-	$ret = populate_cache($vsr, $vsr_count, $mr_polygons, $sensores_interseccion_cache, $sensores_suma_cache);
+	$ret = populate_cache($vsr, $vsr_count, $mr_polygons, $sensores_interseccion_cache, $sensores_suma_cache, $flWithPad);
 
 	logger(" D> count sensores_suma_cache: " . implode(',', array_keys($sensores_suma_cache)));
 	logger(" D> count sensores_interseccion_cache: " . implode(',', array_keys($sensores_interseccion_cache)));
@@ -207,7 +207,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 				//	$result_interseccion,
 				//	$result_suma
 				//);
-				$result_resta = cache_operation($result_interseccion, $result_suma, "{$nombre_grupo_sensores_interseccion} - {$nombre_grupo_sensores_suma}", 'difference');
+				$result_resta = cache_operation($result_interseccion, $result_suma, "{$nombre_grupo_sensores_interseccion} - {$nombre_grupo_sensores_suma}", 'difference', $flWithPad);
 			}
 			logger(" D> Tiempo de resta: " . round(microtime(true) - $timer_difference, 3) . " segundos");
 
@@ -416,7 +416,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
  * @return bool true si se ha generado la cache correctamente, false si no.
  * 
  */
-function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &$sensores_interseccion_cache, array &$sensores_suma_cache)
+function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &$sensores_interseccion_cache, array &$sensores_suma_cache, string $flWithPad)
 {
 	$sensores_interseccion_cache = array();
 	$sensores_suma_cache = array();
@@ -457,9 +457,9 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 				$subject = $mr_polygons[$grupo_sensores[0]];
 				$clipping = $mr_polygons[$grupo_sensores[1]];
 				// CACHEAR AQUI!!!!!
-				$result_interseccion = cache_operation($subject, $clipping, $nombre_grupo_sensores_interseccion, 'intersect'); //MR\Algorithm::intersect($subject, $clipping);
+				$result_interseccion = cache_operation($subject, $clipping, $nombre_grupo_sensores_interseccion, 'intersect', $flWithPad); //MR\Algorithm::intersect($subject, $clipping);
 				// LUEGO CACHEAMOS LA SUMA
-				$result_suma = cache_operation($subject, $clipping, $nombre_grupo_sensores_suma, 'union'); //MR\Algorithm::union($subject, $clipping);
+				$result_suma = cache_operation($subject, $clipping, $nombre_grupo_sensores_suma, 'union', $flWithPad); //MR\Algorithm::union($subject, $clipping);
 			} else { // 3 o más
 				// los anteriores ya están en la caché, sólo hay que calcular la suma/intersección con el nuevo
 				// se cogen todos los radares menos el último y se generan dos listas, subgrupo y el resto.
@@ -477,14 +477,14 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 				$subject = $sensores_interseccion_cache[$nombre_subgrupo_sensores_interseccion];
 				if ($debug)
 					logger(" D> retrieved interseccion_cache: {$nombre_subgrupo_sensores_interseccion} md5: " . md5(serialize($subject)));
-				$result_interseccion = cache_operation($subject, $clipping, $nombre_grupo_sensores_interseccion, 'intersect');
+				$result_interseccion = cache_operation($subject, $clipping, $nombre_grupo_sensores_interseccion, 'intersect', $flWithPad);
 				if ($debug)
 					logger(" D> stored interseccion_cache: $nombre_grupo_sensores_interseccion md5: " . md5(serialize($result_interseccion)));
 
 				$subject = $sensores_suma_cache[$nombre_subgrupo_sensores_suma];
 				if ($debug)
 					logger(" D> retrieved suma_cache: {$nombre_subgrupo_sensores_suma} md5: " . md5(serialize($subject)));
-				$result_suma = cache_operation($subject, $clipping, $nombre_grupo_sensores_suma, 'union');
+				$result_suma = cache_operation($subject, $clipping, $nombre_grupo_sensores_suma, 'union', $flWithPad);
 				if ($debug)
 					logger(" D> stored suma_cache: $nombre_grupo_sensores_suma md5: " . md5(serialize($result_suma)));
 			}
@@ -507,9 +507,9 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 	return true;
 }
 
-function cache_operation(array|MR\Polygon $polygon1, ?MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation): MR\Polygon
+function cache_operation(array|MR\Polygon $polygon1, ?MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation, string $nivelVuelo): MR\Polygon
 {
-	$sha1 = sha1($nombre_grupo_sensores);
+	$sha1 = sha1($nombre_grupo_sensores . $nivelVuelo);
 	$pathname = "cache" . DIRECTORY_SEPARATOR . "polygons" . DIRECTORY_SEPARATOR . $sha1[0] . $sha1[1] . DIRECTORY_SEPARATOR;
 	$filename = $pathname . $sha1 . ".json";
 	if (is_file($filename)) {
