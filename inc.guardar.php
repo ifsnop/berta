@@ -43,13 +43,13 @@ function KML_generate_full_kml(string $kml, string $nivelVuelo = "") {
 
 function KML_generate_styles()
 {
-    $coverage_levels = array("unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
+    $coverage_levels = array(0=>"unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
     $kml_styles = "";
-    foreach ($coverage_levels as $level) {
+    foreach ($coverage_levels as $i => $level) {
         $rgb = KML_get_rgb_from_coverageLevel($level);
         $kml_styles .=              "  <Style id=\"transparentPoly-{$level}\">" .
-            PHP_EOL . "    <LineStyle><width>1.5</width></LineStyle>" .
-            PHP_EOL . "    <PolyStyle><color>{$rgb}</color></PolyStyle>" .
+            PHP_EOL . "    <LineStyle><color>{$rgb['line']}</color><width>{$rgb['width']}</width></LineStyle>" .
+            PHP_EOL . "    <PolyStyle><color>{$rgb['poly']}</color></PolyStyle>" .
             PHP_EOL . "  </Style>" . PHP_EOL;
     }
     return $kml_styles;
@@ -420,41 +420,29 @@ function crearCarpetaResultados(string $ruta)
 /*
  * Helper de creaKML
  */
-function KML_get_rgb_from_coverageLevel(string $coverageLevel, string &$coverageLevelAppend = ""): string
+function KML_get_rgb_from_coverageLevel(string $coverageLevel, string &$coverageLevelAppend = ""): array
 {
     switch ($coverageLevel) {
         case "unica":
-            $rgb = "7d00ff00";
-            $coverageLevelAppend = "";
-            break;         // igual que mono
         case "mono":
-            $rgb = "7d00ff00";
-            $coverageLevelAppend = "";
+            // $rgb = "e6ff9724"; // Rascal
+            $rgb = ['poly' => "7d00ff00", 'line' => "80ffffff", 'width' => 1.5];
             break;
-        // case "mono": $rgb = "e6ff9724"; break;          // Rascal
         case "doble":
-            $rgb = "7dff0000";
+            // $rgb = "e63559a5"; // Rascal
+            $rgb = ['poly' => "99004C98", 'line' => "80ffffff", 'width' => 1.5];
             break;
-        // case "doble": $rgb = "e63559a5"; break;         // Rascal
         case "triple":
-            $rgb = "7dffff00";
+            // $rgb = "e69977de"; // Rascal
+            $rgb = ['poly' => "997F00FF", 'line' => "80ffffff", 'width' => 1.5];
             break;
-        // case "triple": $rgb = "e69977de"; break;        // Rascal
         case "cuadruple":
-            $rgb = "7d0000ff";
+            // $rgb = "e67bf600"; // Rascal
+            $rgb = ['poly' => "B30055FF", 'line' => "", 'width' => 0];
             break;
-        // case "cuadruple": $rgb = "e67bf600"; break;     // Rascal
-        case "quintuple":
-            $rgb = "7dff00ff";
-            break;
-        case "sextuple":
-            $rgb = "7d00ffff";
-            break;
-        default:
-            debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
-            // $rgb = "7d00ffff";
-            // break;
+        default:  // más de cuadruple
+            // $rgb = "e67bf600"; // Rascal
+            $rgb = ['poly' => "B30055FF", 'line' => "", 'width' => 0];
     }
-
     return $rgb;
 }
