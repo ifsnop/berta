@@ -4,6 +4,19 @@ declare(strict_types=1);
 const BERTA_PERMISOS = 0775;
 
 /**
+ *
+ * Flujo de trabajo de las llamadas para generar KML, desde las distintas partes
+ * del código que necesitan generar salida.
+ *
+ * La mono queda integrada junto con el resto de llamadas, antes se usaba CreaKML3/4
+ *
+ * mono: normalizePolygonsForKML ->                                      KML_normalized2KML ->                      KML_generate_full_kml -> creaCarpetaResultados -> KMZ_write
+ * multi: multicobertura ->               KML_normalizePolygonsForKML -> KML_normalized2KML -> KML_create_folder -> KML_generate_full_kml -> creaCarpetaResultados -> KMZ_write
+ * unica: multicobertura -> crea_unica -> KML_normalizePolygonsForKML -> KML_normalized2KML -> KML_create_folder -> KML_generate_full_kml -> creaCarpetaResultados -> KMZ_write
+ *
+ */
+
+/**
  * Utiliza uno o varios placemark dentro de una o varias folders y completa el formato kml
  * 
  * @param string $kml contenido a insertar en un kml completo
