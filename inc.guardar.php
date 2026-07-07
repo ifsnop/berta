@@ -43,9 +43,8 @@ function KML_generate_full_kml(string $kml, string $nivelVuelo = "") {
 
 function KML_generate_styles()
 {
-    $coverage_levels = array(0=>"unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
     $kml_styles = "";
-    foreach ($coverage_levels as $i => $level) {
+    for($level = 0; $level < 5; $level++) {
         $rgb = KML_get_rgb_from_coverageLevel($level);
         $kml_styles .=              "  <Style id=\"transparentPoly-{$level}\">" .
             PHP_EOL . "    <LineStyle><color>{$rgb['line']}</color><width>{$rgb['width']}</width></LineStyle>" .
@@ -55,13 +54,17 @@ function KML_generate_styles()
     return $kml_styles;
 }
 
-
-function KML_check_coverage_levels(string $coverageLevel) {
-    $coverage_levels = array(0 => "unica", "mono", "doble", "triple", "cuadruple", "quintuple", "sextuple");
-    if ( !in_array($coverageLevel, $coverage_levels) ) {
+function KML_check_coverage_levels(int &$coverageLevel) {
+    $coverage_levels = array(0 => "unica", "mono", "doble", "triple", "cuadruple");
+    if ( $coverageLevel >= count($coverage_levels) ) {
+        $coverageLevel = count($coverage_levels)-1;
+        return $coverage_levels[count($coverage_levels)-1];
+    } else if ( $coverageLevel < 0 ) {
         debug_print_backtrace(); die("deprecated " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
+    } else {
+        $coverageLevel = (int)$coverageLevel;
+        return $coverage_levels[$coverageLevel];
     }
-    return true; 
 }
 
 /**
@@ -86,7 +89,7 @@ function KML_create_folder(string $folder_name, string $kml) {
  * Solo genera el KML necesario para un polígono
  * @param string $altMode "clampToGround|clampToSeaFloor|RelativeToGround|absolute" (ENTRADA)
  */
-function KML_normalized2KML(array $multi_polygons, string $coverageLevel, array $sensors, int $fl, string $altMode = "clampToGround")
+function KML_normalized2KML(array $multi_polygons, int $coverageLevel, array $sensors, int $fl, string $altMode = "clampToGround")
 {
     KML_check_coverage_levels($coverageLevel);
     $flm = round($fl * 100.0 * BERTA_FEET_TO_METERS, 2);
@@ -401,11 +404,11 @@ function crearCarpetaResultados(string $ruta)
 {
 
     if (!is_dir($ruta)) {
-        logger(" V> Creando carpeta >{$ruta}<");
+        logger(" D> Creando carpeta >{$ruta}<");
         //clearstatcache();
         //$ruta = $ruta ."/". $radar['site'] . "/"; // /home/eval/berta/RESULTADOS/LE_VALLADOLID 
         if (mkdir($ruta, BERTA_PERMISOS, true)) {
-            logger(" V> Carpeta >{$ruta}< creada correctamente");
+            logger(" D> Carpeta >{$ruta}< creada correctamente");
             return true;
         } else {
             logger(" E> Error creando carpeta >{$ruta}<");
@@ -420,23 +423,23 @@ function crearCarpetaResultados(string $ruta)
 /*
  * Helper de creaKML
  */
-function KML_get_rgb_from_coverageLevel(string $coverageLevel, string &$coverageLevelAppend = ""): array
+function KML_get_rgb_from_coverageLevel(int $coverageLevel, string &$coverageLevelAppend = ""): array
 {
     switch ($coverageLevel) {
-        case "unica":
-        case "mono":
+        case 0: // unica
+        case 1: // mono
             // $rgb = "e6ff9724"; // Rascal
             $rgb = ['poly' => "7d00ff00", 'line' => "80ffffff", 'width' => 1.5];
             break;
-        case "doble":
+        case 2: // doble
             // $rgb = "e63559a5"; // Rascal
             $rgb = ['poly' => "99004C98", 'line' => "80ffffff", 'width' => 1.5];
             break;
-        case "triple":
+        case 3: // triple
             // $rgb = "e69977de"; // Rascal
             $rgb = ['poly' => "997F00FF", 'line' => "80ffffff", 'width' => 1.5];
             break;
-        case "cuadruple":
+        case 4: // cuadruple
             // $rgb = "e67bf600"; // Rascal
             $rgb = ['poly' => "B30055FF", 'line' => "", 'width' => 0];
             break;

@@ -369,7 +369,7 @@ exit(0);
                     'por_sensor' => $config['path']['resultados_mono'] . $sensor . DIRECTORY_SEPARATOR,
                 );
                 $coberturas[$sensor]['normalized'] = KML_normalizePolygonsForKML($coberturas[$sensor]['polygons']);
-                $coberturas[$sensor]['kml'] = KML_normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
+                $coberturas[$sensor]['kml'] = KML_normalized2KML($coberturas[$sensor]['normalized'], 1, [$sensor], $fl);
 
                 $kml = KML_generate_full_kml($coberturas[$sensor]['kml'], $nivelVuelo);
                 foreach ($rutas as $val) { // GUARDAR_POR_NIVEL y GUARDAR_POR_RADAR o el que sea

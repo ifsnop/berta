@@ -117,7 +117,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 
 	logger(" I> Creando cobertura única/suma");
 	$normalized = create_unica($mr_polygons, implode(',', $sensores), $flWithPad);
-	$kml = KML_normalized2KML($normalized, 'unica', $sensores, $fl);
+	$kml = KML_normalized2KML($normalized, 0, $sensores, $fl);
 	$kml = KML_create_folder('unica', $kml);
 		
 	// si se selecciona única, sólo se genera la única y se vuelve.
@@ -221,7 +221,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 			logger(" D> Polígono resultante: " . $result_resta->numPoints . " nivel: {$numero_solape}");
 			$mr_polygons[$numero_solape][$nombre_grupo_sensores_interseccion . "-" . $nombre_grupo_sensores_suma] = $result_resta;
 			$normalized = KML_normalizePolygonsForKML($result_resta->getArray());
-			$kml = KML_normalized2KML($normalized, $coverageNames[$numero_solape] , $grupo_sensores, $fl);
+			$kml = KML_normalized2KML($normalized, $numero_solape , $grupo_sensores, $fl);
 
 			logger(" D> Calculada: nivel {$numero_solape} {$nombre_grupo_sensores} => {$nombre_grupo_sensores_interseccion} - ( {$nombre_grupo_sensores_suma} )");
 			// guardamos el kml para luego juntarlo en uno global, que contenga todos los niveles de cobertura
@@ -378,7 +378,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 		<atom:link rel="app" href="https://www.google.com/earth/about/versions/#earth-pro" title="Google Earth Pro 7.3.7.1155"></atom:link>
 	</Folder>
 	*/
-	$kml = "";
+	$kml_directa = "";
 	foreach ($coverages_per_level_KML as $numero_solape => $solapes) {
 		$kml_per_level = ""; // para cada tipo (mono, doble, triple) guardamos todos los kml
 		foreach($solapes as $nombre_grupos_radares => $kml_group) {
@@ -387,11 +387,32 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 		}
 		if ( !empty($kml_per_level) ) {
 			// luego los metemos en un folder
-			$kml .= KML_create_folder( str_pad((string) $numero_solape, 2, "0", STR_PAD_LEFT), $kml_per_level);
+			$kml_directa .= KML_create_folder( str_pad((string) $numero_solape, 2, "0", STR_PAD_LEFT), $kml_per_level);
 		}
 	}
 
-	$kml = KML_create_folder('multiradar-directa', $kml);
+	$kml = KML_create_folder('multiradar-directa', $kml_directa);
+
+	// multiradar-inversa: por ejemplo, todas las coberturas en las que esté paracuellos1 ordenadas por niveles
+ 	$kml_inversa = "";
+	foreach ($sensores as $sensor) {
+		$kml_per_sensor = ""; 
+		foreach ($coverages_per_level_KML as $numero_solape => $solapes) {
+			$kml_per_level = "";
+			foreach($solapes as $nombre_grupos_radares => $kml_group) {
+				if ( false !== strpos($nombre_grupos_radares, $sensor) ) {
+					$kml_per_level .= $kml_group;
+				}
+			}
+
+			if ( !empty($kml_per_level) ) {
+				$kml_per_sensor .= KML_create_folder(str_pad((string) $numero_solape, 2, "0", STR_PAD_LEFT), $kml_per_level);
+			}
+		}
+		$kml_inversa .= KML_create_folder($sensor, $kml_per_sensor);
+	}
+
+	$kml .= KML_create_folder('multiradar-inversa', $kml_inversa);
 
 	// writeKMZ !!!!
 	logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
@@ -513,13 +534,13 @@ function cache_operation(array|MR\Polygon $polygon1, ?MR\Polygon $polygon2, stri
 	$pathname = "cache" . DIRECTORY_SEPARATOR . "polygons" . DIRECTORY_SEPARATOR . $sha1[0] . $sha1[1] . DIRECTORY_SEPARATOR;
 	$filename = $pathname . $sha1 . ".json";
 	if (is_file($filename)) {
-		logger(" D> Recuperando {$operation} de diskcache: {$nombre_grupo_sensores}");
+		//logger(" D> Recuperando {$operation} de diskcache: {$nombre_grupo_sensores}");
 		$cached = unserialize(
 			file_get_contents($filename),
 			['allowed_classes' => [Ifsnop\MartinezRueda\Polygon::class, Ifsnop\MartinezRueda\Point::class]]
 		);
 		if (false !== $cached) {
-			logger(" D> Cache HIT!");
+			//logger(" D> Cache HIT!");
 			return $cached;
 		}
 	}
@@ -529,7 +550,7 @@ function cache_operation(array|MR\Polygon $polygon1, ?MR\Polygon $polygon2, stri
 	} else {
 		$result = MR\Algorithm::$operation($polygon1, $polygon2);
 	}
-	logger(" D> Cache MISS! Guardando {$operation} en diskcache: {$nombre_grupo_sensores}");
+	//logger(" D> Cache MISS! Guardando {$operation} en diskcache: {$nombre_grupo_sensores}");
 	crearCarpetaResultados($pathname);
 	file_put_contents($filename, serialize($result));
 	return $result;
