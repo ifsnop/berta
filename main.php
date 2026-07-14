@@ -403,6 +403,7 @@ exit(0);
             if ( isset($config['mode']['monoradar']) && $config['mode']['monoradar'] ) {
                 logger(" V> Se pidió cobertura monoradar, añadiéndola al KML global");
                 // $coberturas[$sensor]['kml'] = KML_normalized2KML($coberturas[$sensor]['normalized'], 'mono', [$sensor], $fl);
+                ksort($coberturas);
                 foreach ($coberturas as $sensor => $datos) {
                     if (false !== $datos['polygons']) {
                         // $coberturas[$sensor]['normalized'] = KML_normalizePolygonsForKML($coberturas[$sensor]['polygons']);

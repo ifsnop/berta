@@ -102,6 +102,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 	);
 
 	$coverages_per_level_KML = array();
+	$union_coverage_per_level_KML = array();
 
 	$ret = init_polygons($coberturas);
 	if (false === $ret)
@@ -155,7 +156,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 		logger(" N> == Calculando cobertura $coverageNames_fixed"); // mono, doble, triple, etc...
 		$coverages_per_level_KML[$numero_solape] = array();
 		$mr_polygons[$numero_solape] = array();
-		
+	
 		foreach ($grupo_solape as $grupo_sensores) { // primera iteración, sensores individuales
 
 			logger(" V> $count/$vsr_count");
@@ -240,124 +241,15 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 			*/
 		}
 
-		// aquí se calcula la cobertura unica de este nivel (una total por mono, doble, triple) podríamos no utilizarla
-		// y de momento generar ya los folders con el contenido.
-
-		/*
-		// generar aquí la cobertura suma usando todo lo contenido en $mr_polygons[$numero_solape];
-		// no acaba de funcionar bien, hay coberturas que no se suman
-
-		logger(" V> =====CALCULO COBERTURA UNICA====");
-
-		$timer_unica = microtime(true);
-
-		$result_unica = new \MartinezRueda\Polygon(array());
-		$i = 0;
-		$j = 0;
-		foreach ($mr_polygons[$numero_solape] as $n => $polygon) {
-			logger(" D> Uniendo {$n}");
-			$result_arr2 = $polygon->toArray();
-			$listaContornos = genera_contornos($result_arr2);
-			creaKml2(
-				$listaContornos,
-				"N{$numero_solape}_PASO {$i}.0={$n}", //$radares,
-				$rutas,
-				$nivelVuelo,
-				$altMode,
-				$appendToFilename = "",
-				$coverageLevel = "unica_SUMANDO"
-			);
-			$j += $polygon->ncontours();
-			logger(" D> POLYCUENTA SUMANDO:" . $polygon->ncontours() . " j:{$j} NIVEL{$numero_solape}");
-
-			//unset($polygon->contours[0]);
-			//$polygon->contours = array_values($polygon->contours);
-
-			//	    if ( $i >= 2) { logger(" D> AQUI VA A FALLAR");
-			//		print $n . PHP_EOL;
-			//		$i++;
-			//		continue;
-			//		\MartinezRueda\Debug::$debug_on = true;
-			//		print_r($polygon);
-			//	    }
-			print "QQ!!" . PHP_EOL;
-			//print_r($qq);
-
-			print "IFSNOP" . PHP_EOL;
-			var_dump($result_unica);
-
-			file_put_contents("N{$numero_solape}_PASO {$i}.0={$n}.json", json_encode($result_unica->toArray()));
-			file_put_contents("N{$numero_solape}_PASO {$i}.1={$n}.json", json_encode($polygon->toArray()));
-			foreach ($result_unica->toArray() as $idx => $poly) print $idx . " " . count($poly) . PHP_EOL;
-			$mr_algorithm = new \MartinezRueda\Algorithm();
-			$result_unica = $mr_algorithm->getUnion($result_unica, $polygon);
-			$qq = $result_unica->toArray();
-			print "WW!!" . PHP_EOL;
-			foreach ($result_unica->toArray() as $idx => $poly) print $idx . " " . count($poly) . PHP_EOL;
-			file_put_contents("N{$numero_solape}_PASO {$i}.2={$n}.json", json_encode($result_unica->toArray()));
-
-			//if ( $i > 10)
-			// break;
-
-
-			$result_arr2 = $result_unica->toArray();
-			$listaContornos = genera_contornos($result_arr2);
-			// print_r($listaContornos);
-			creaKml2(
-				$listaContornos,
-				"N{$numero_solape}_PASO {$i}.1={$n}", //$radares,
-				$rutas,
-				$nivelVuelo,
-				$altMode,
-				$appendToFilename = "",
-				$coverageLevel = "unica_SUMANDO_PARCIAL"
-			);
-
-			$i++;
+	 	// sumar todos los polígonos de este nivel para generar un polígono único que represente la cobertura de este nivel
+		if ( count ($mr_polygons[$numero_solape]) < 1 ) {
+			logger(" D> No hay polígonos para el nivel {$numero_solape}, no se genera cobertura unificada");
+			continue;
 		}
-		*/
+		$normalized = create_unica($mr_polygons[$numero_solape], (string) $numero_solape, $flWithPad);
+		$kml = KML_normalized2KML($normalized, $numero_solape, [(string)$numero_solape], $fl);
+		$union_coverage_per_level_KML[$numero_solape] = $kml;
 
-		/*
-		*logger(" D> 00 POLYCUENTA TOTAL:". $result_unica->ncontours() ." NIVEL{$numero_solape}");
-		*
-	    *$polygon = $mr_polygons[$numero_solape]['monflorite-alcolea+paracuellos1+paracuellos2'];
-	    *$mr_algorithm = new \MartinezRueda\Algorithm();
-	    *$result_unica = $mr_algorithm->getUnion( $result_unica, $polygon );
-	    *$result_arr2 = $result_unica->toArray();
-	    *$listaContornos = genera_contornos($result_arr2);
-	    *creaKml2(
-		*$listaContornos,
-		*"N{$numero_solape}_PASO UNICO", //$radares,
-		*$rutas,
-		*$nivelVuelo,
-		*$altMode,
-		*$appendToFilename = "",
-		*$coverageLevel = "unica_SUMANDO_PARCIAL"
-	    *);
-		*
-		*logger(" D> 01 POLYCUENTA TOTAL:". $result_unica->ncontours() ." NIVEL{$numero_solape}");
-		*/
-		/*
-		logger(" D> POLYCUENTA TOTAL:" . $result_unica->ncontours() . " NIVEL{$numero_solape}");
-
-		$result_arr2 = $result_unica->toArray();
-		$listaContornos = genera_contornos($result_arr2);
-		$placemarks = KML_get_placemarks(
-			$listaContornos,
-			"unica nivel " . $coverageNames[$numero_solape],
-			$rutas,
-			$nivelVuelo,
-			$altMode,
-			$appendToFilename = "",
-			$coverageLevel = $coverageNames[$numero_solape]
-		);
-		if (false !== $ret) {
-			$coverages_per_level_KML[$numero_solape]["unica nivel " . $coverageNames[$numero_solape]] = $placemarks;
-		}
-		logger(" D> Tiempo de unica: " . round(microtime(true) - $timer_unica, 2) . " segundos");
-		KML_create_from_placemarks($coverages_per_level_KML, $nivelVuelo, $nivelVuelo);
-		exit(0);
-		*/
 	}
 
 	// Estructura para meter los kml de los polígonos en carpetas
@@ -411,9 +303,14 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 		}
 		$kml_inversa .= KML_create_folder($sensor, $kml_per_sensor);
 	}
-
 	$kml .= KML_create_folder('multiradar-inversa', $kml_inversa);
 
+	$kml_union = "";
+	foreach ($union_coverage_per_level_KML as $numero_solape => $solapes) {
+		$kml_union .= $solapes; // KML_create_folder( str_pad((string) $numero_solape, 2, "0", STR_PAD_LEFT), $solapes);
+	}
+	$kml .= KML_create_folder('multiradar-union', $kml_union);
+	
 	// writeKMZ !!!!
 	logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
 		"Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
