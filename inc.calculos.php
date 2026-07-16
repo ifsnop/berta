@@ -9,6 +9,7 @@ const BERTA_INTERSECTION_TOLERANCE_LIMIT_NM = 20; // Tolerancia para asegurar so
 const BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM / BERTA_RADIO_TERRESTRE;
 const BERTA_INTERSECTION_TOLERANCE_LIMIT_M = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM * BERTA_MILLA_NAUTICA_EN_METROS; // Distancia máxima entre subdivisiones entre vértices
 const BERTA_MALLA_TOO_SMALL_CHECK = 22500; // Si la malla es menor que este número de celdas, se considera demasiado pequeña y se vuelve a intentar con más precisión
+const BERTA_INTERSECTION_CACHE_TOLERANCE = 4; // Número de decimales a los que se redondean los ángulos para cachear los cosenos y senos de los azimuths. Más precisión = más memoria y más tiempo de cálculo, menos precisión = menos memoria y menos tiempo de cálculo.
 
 /**
  * Calcula el ángulo de máxima cobertura del radar sobre la superficie terrestre.
@@ -669,10 +670,9 @@ function calcula_vertices_interseccion(
     $debug = false;
 
     static $a1a2_cache = [];
-    static $called = 0;
+    // static $called = 0;
 
-    // $r = round($r, 0);
-    $a1_rad  = round($a1_rad, 2);
+    $a1_rad  = round($a1_rad, BERTA_INTERSECTION_CACHE_TOLERANCE);
 
     if ( $debug )
         printf("INFO r: %.20f, a1_rad: %.20f, cos_lat90: %.20f, sin_lat90: %.20f, lat_rad: %.20f, lon_rad: %.20f" . PHP_EOL,
@@ -685,16 +685,18 @@ function calcula_vertices_interseccion(
     if ( $debug )
         print "cos_alpha: {$cos_alpha} sin_alpha: {$sin_alpha}" . PHP_EOL;
 
+    
     [$cos_a1, $sin_a1] = getCached($a1a2_cache, (string) $a1_rad, function () use ($a1_rad) {
         return [
             cos($a1_rad),
             sin($a1_rad),
         ];
     });
-
+    
+/*
     $cos_a1 = cos($a1_rad);
     $sin_a1 = sin($a1_rad);
-
+*/
     if ( $debug )
         print "cos_a1: {$cos_a1} sin_a1: {$sin_a1}" . PHP_EOL;
 
@@ -738,13 +740,18 @@ function calcula_vertices_interseccion(
     //print "INFO " . serialize($p1) . PHP_EOL; exit(0);
     
     if ( !is_null($a2_rad) ) {
-        $a2_rad  = round($a2_rad, 2);
+        
+        $a2_rad  = round($a2_rad, BERTA_INTERSECTION_CACHE_TOLERANCE);
         [$cos_a2, $sin_a2] = getCached($a1a2_cache, (string) $a2_rad, function () use ($a2_rad) {
             return [
                 cos($a2_rad),
                 sin($a2_rad),
             ];
         });
+        /*
+        $cos_a2 = cos($a2_rad);
+        $sin_a2 = sin($a2_rad);
+        */
         $cos_lat2 = $cos_lat90xcos_alpha2 +
             $sin_lat90xsin_alpha2 * $cos_a2;
         $cos_lat2 = max(-1.0, min(1.0, $cos_lat2)); // clamp
@@ -765,15 +772,14 @@ function calcula_vertices_interseccion(
         $lon2_d += BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $cos_a2;
         $p2 = [rad2deg($asin_lat2_rad), rad2deg($lon2_d)];
 
-        if ( $debug ) 
-            print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
-
+        //if ( $debug ) 
+        //    print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
+        // print json_encode([$p1, $p2]) . PHP_EOL;
         return [$p1, $p2];
     }
-
-    if ( $debug )
-        print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
-
+    //if ( $debug )
+    //    print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
+    // print json_encode($p1) . PHP_EOL;
     return [$p1];
 }
 
