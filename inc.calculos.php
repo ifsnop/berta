@@ -9,7 +9,7 @@ const BERTA_INTERSECTION_TOLERANCE_LIMIT_NM = 20; // Tolerancia para asegurar so
 const BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM / BERTA_RADIO_TERRESTRE;
 const BERTA_INTERSECTION_TOLERANCE_LIMIT_M = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM * BERTA_MILLA_NAUTICA_EN_METROS; // Distancia máxima entre subdivisiones entre vértices
 const BERTA_MALLA_TOO_SMALL_CHECK = 22500; // Si la malla es menor que este número de celdas, se considera demasiado pequeña y se vuelve a intentar con más precisión
-const BERTA_INTERSECTION_CACHE_TOLERANCE = 4; // Número de decimales a los que se redondean los ángulos para cachear los cosenos y senos de los azimuths. Más precisión = más memoria y más tiempo de cálculo, menos precisión = menos memoria y menos tiempo de cálculo.
+const BERTA_INTERSECTION_CACHE_TOLERANCE = 5; // Número de decimales a los que se redondean los ángulos para cachear los cosenos y senos de los azimuths. Más precisión = más memoria y más tiempo de cálculo, menos precisión = menos memoria y menos tiempo de cálculo.
 
 /**
  * Calcula el ángulo de máxima cobertura del radar sobre la superficie terrestre.
