@@ -417,8 +417,8 @@ exit(0);
             }
             $kml_mono = KML_create_folder('monoradar', $kml_mono);
             $kml_global = KML_generate_full_kml($kml_mono . $kml_multi, $nivelVuelo);
-            crearCarpetaResultados("MULTI/");
-            KML_write("MULTI/prueba", $nivelVuelo, $kml_global, $config['disable-kmz']);
+            crearCarpetaResultados($config['path']['resultados_multi']);
+            KML_write($config['path']['resultados_multi'], $nivelVuelo, $kml_global, $config['disable-kmz']);
         }
     }
     exit(0);

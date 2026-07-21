@@ -242,10 +242,14 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
 		}
 
 	 	// sumar todos los polígonos de este nivel para generar un polígono único que represente la cobertura de este nivel
-		if ( count ($mr_polygons[$numero_solape]) < 1 ) {
+		if ( !isset($mr_polygons[$numero_solape]) || (count($mr_polygons[$numero_solape]) < 1) ) {
 			logger(" D> No hay polígonos para el nivel {$numero_solape}, no se genera cobertura unificada");
 			continue;
 		}
+		// print_r($mr_polygons);
+		// print "numero_solape: $numero_solape" . PHP_EOL;
+		// print "count: " . count($mr_polygons[$numero_solape]) . PHP_EOL;
+		// print "listado: " . implode(',', array_keys($mr_polygons[$numero_solape])) . PHP_EOL;
 		$normalized = create_unica($mr_polygons[$numero_solape], (string) $numero_solape, $flWithPad);
 		$kml = KML_normalized2KML($normalized, $numero_solape, [(string)$numero_solape], $fl);
 		$union_coverage_per_level_KML[$numero_solape] = $kml;
