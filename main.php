@@ -26,23 +26,14 @@ require_once('vendor/autoload.php');
 
 use Ifsnop\MartinezRueda as MR;
 
-/*
-	$mr_polygons  = unserialize(file_get_contents("entrada.json"));
-    $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
-
-	print "MD5: " . md5(serialize($mr_polygons)) . " " . md5(json_encode($p_mr1->getArray())) . PHP_EOL;
-    exit(0);
-
-*/
-
 $config = array(
     'sensores' => array(),
     /*
-	    "alcolea",
+        "alcolea",
         "barajas",
         "canchoblanco",
         "erillas",
-	    "monflorite",
+	"monflorite",
         "paracuellos1",
         "paracuellos2",
         "sesolles",
@@ -93,20 +84,6 @@ function printHelp()
 function programaPrincipal(array $config)
 {
 
-/*
-$poly = [
-    [[4,4], [5,4], [5,5],[4,5],[4,4]],
-    [[0,0], [0,10], [10,10], [10,0], [0,0]], 
-    
-    ];
-
-$nor = KML_normalizePolygonsForKML($poly);
-$kml = KML_normalized2KML($nor, "mono", ['alcolea'], 40);
-$kml2 = KML_generate_full_kml($kml);
-print_r($kml2);
-exit(0);
-*/
-
     $shortopts  = "r:"; // radar name
     $shortopts .= "m:"; // max range in NM
     $shortopts .= "1"; // modo monoradar
@@ -121,7 +98,8 @@ exit(0);
     $shortopts .= "s:"; // steps
     $shortopts .= "c"; // cálculo del cono
     $shortopts .= "z"; // desactiva kmz y genera kml
-    $longopts = array("radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "cone", "disable-kmz");
+    $shortopts .= "k:"; // lee directamente un fichero de screening sin usar radar database
+    $longopts = array("radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "cone", "disable-kmz", "screening-file");
     $options = getopt($shortopts, $longopts);
     if (0 == count($options)) {
         printHelp();
@@ -133,6 +111,16 @@ exit(0);
             case 'h':
                 printHelp();
                 exit(0);
+	    case 'screening-file':
+	    case 'k':
+		if (is_string($value) && is_file($value)) {
+		    crearRdbFromScreeningV2($value);
+		} else {
+		    logger(" E> Se necesita un fichero para procesar su screening y generar un rdb asociado.");
+		    exit(-1);
+		}
+		break;
+
             case 'list':
             case 'l':
                 $config['mode']['list'] = true;

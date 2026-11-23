@@ -191,3 +191,30 @@ function timer_unidades(float $t)
 
     return $timer_string . " " . $unidad;
 }
+
+/*
+ * Converts decimal degrees in degree, minute, seconds
+ * @param $latitude double latitude in decimal degrees
+ * @param $longitude double longitude in decimal degrees
+ *
+ * @return string latitude and longitude in text, with degrees, minutes, seconds
+ */
+function DECtoDMS($latitude, $longitude) {
+    $lat_direction = $latitude < 0 ? 'S': 'N';
+    $lon_direction = $longitude < 0 ? 'W': 'E';
+
+    $latitude = abs($latitude);
+    $lat_d = floor($latitude);
+    $lat_m = floor(($latitude - $lat_d)*60);
+    $lat_s = ($latitude - $lat_d - $lat_m/60)*3600;
+
+    $longitude = abs($longitude);
+    $lon_d = floor($longitude);
+    $lon_m = floor(($longitude - $lon_d)*60);
+    $lon_s = ($longitude - $lon_d - $lon_m/60)*3600;
+    return [
+	sprintf("%02d:%02d:%06.3f%s", $lat_d, $lat_m, $lat_s, $lat_direction),
+	sprintf("%02d:%02d:%06.3f%s", $lon_d, $lon_m, $lon_s, $lon_direction)
+    ];
+}
+

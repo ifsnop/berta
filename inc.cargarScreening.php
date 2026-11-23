@@ -39,6 +39,77 @@ TerrainHeight 1661.2135000000321
 */
 
 
+function crearRdbFromScreeningV2(string $filepath) {
+
+    if (false === ($contenidoFichero = @file($filepath, FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES))) {
+	logger(" E> No ha sido posible leer el fichero: >" . $filepath . "<");
+	exit(-1);
+    }
+
+    if ("Version 2" != trim($contenidoFichero[1])) {
+	logger(" E> Solo válido para screenings v2");
+	exit(-1);
+    }
+
+    logger(" D> Procesando fichero screening versión 2");
+    $screening = array(
+	'site'     	=> substr(trim($contenidoFichero[0]), DISTANCIA_A_SITE),
+	'version' => (int) substr(trim($contenidoFichero[1]), DISTANCIA_A_VERSION),
+	'longitude' 	=> doubleval(substr(trim($contenidoFichero[2]), DISTANCIA_A_LONGITUDE)),
+	'latitude' 	=> doubleval(substr(trim($contenidoFichero[3]), DISTANCIA_A_LATITUDE)),
+	'centralAngle' => substr(trim($contenidoFichero[4]), DISTANCIA_A_CENTRALANGLE),
+	'heightReference' => substr(trim($contenidoFichero[5]), DISTANCIA_A_HEIGHTREFERENCE),
+	'k-factor' 	=> doubleval(substr(trim($contenidoFichero[6]), DISTANCIA_A_K_FACTOR)),
+	'towerHeight' 	=> doubleval(substr(trim($contenidoFichero[7]), DISTANCIA_A_TOWER_HEIGHT)),
+	'range' 	=> doubleval(substr(trim($contenidoFichero[8]), DISTANCIA_A_RANGE)),
+	'terrainHeight' => doubleval(substr(trim($contenidoFichero[9]), DISTANCIA_A_TERRAIN_HEIGHT)),
+	'totalAzimuths' => (int) trim($contenidoFichero[10]),
+	'method'   	=> false,
+    );
+
+    logger(" D> Generando .rdb asociado");
+    [$lat, $lon] = DECtoDMS($screening['latitude'], $screening['longitude']);
+    $screening['name'] = strtolower(preg_replace('/\s+/', '_', $screening['site']));
+    $content = "radarIdentifier: \"{$screening['name']}\"
+radarLatitude: \"{$lat}\"
+radarLongitude: \"{$lon}\"
+radarGroundAltitude: \"{$screening['terrainHeight']}\"
+radarType: \"ModeS\"
+antennaType: \"single\"
+radarRevolutionTime: \"-1\"
+screening: \"{$filepath}\"
+surveillanceMap: \"\"
+nodeNumber: \"\"
+interrogationMode: \"Single Interrogation mode\"
+acquisitionMode: \"Normal Acquisition mode\"
+primaryElectricalHeight: \"0\"
+primaryConeOfSilence: \"45.000000\"
+primaryMinimumRange: \"0.50\"
+primaryMaximumRange: \"100\"
+secondaryElectricalHeight: \"{$screening['towerHeight']}\"
+secondaryConeOfSilence: \"45.000000\"
+secondaryMinimumRange: \"0.250000\"
+secondaryMaximumRange: \"{$screening['range']}\"
+coordinateType: \"polar\"
+validationBit: \"0\"
+rangePrecision: \"256\"
+azimuthPrecision: \"16384\"
+xPrecision: \"19.770000\"
+yPrecision: \"19.770000\"
+usage: \"civil en-route\"
+sic: \"-1\"
+sac: \"-1\"
+uap: \"-1\"
+appl: \"-1\"
+comments: \"RADAR: \"
+";
+
+    file_put_contents($screening['name'] . ".rdb", $content);
+
+    logger(" N> Generado fichero >{$screening['name']}.rdb<");
+    exit(0);
+
+}
 
 /**
  * Esta funcion se encarga de abrir el fichero de terrenos y leer la informacion para almacenarla en memoria.
@@ -73,6 +144,7 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 			'terrainHeight' => doubleval(substr(trim($contenidoFichero[9]), DISTANCIA_A_TERRAIN_HEIGHT)),
 			'totalAzimuths' => (int) trim($contenidoFichero[10]),
 			'method'   	=> false,
+			'version'	=> 1,
 			'listaAzimuths' => array(),
 		);
 		$lineaActual = 11; // primera línea donde comienzan los AZIMUT
@@ -97,7 +169,7 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 	}
 	//TRATAMIENTO DE LOS DATOS DE LOS AZIMUTHS (Segunda parte del fichero)
 	// recorremos los azimuths
-	logger(" V> Cargando contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")");
+	logger(" V> Cargado contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")");
 	$timer = microtime(true);
 	$acimutOld = 0;
 	for ($i = 0; $i < $screening['totalAzimuths']; $i++) {
@@ -146,24 +218,6 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 			$angulo = doubleval($salida[1]);
 			$altura = doubleval($salida[2]);
 
-			/*
-	    if ( $oldAngulo == $angulo ) { // si hay un ángulo con dos altitudes, quitar el último insertado
-			if ( $first_warning_distance ) {
-		    	logger(" V> Distancia al radar duplicada, eliminando");
-		    	$first_warning_distance = false;
-			}
-			array_pop($listaObstaculos);
-	    }
-	    $oldAngulo = $angulo;
-	    if ( $altura >= 32627 ) { // && $j >= ($contadorObstaculos - 2) ) {
-			if ( $first_warning_wallnode ) {
-		    	logger(" !> Ignorando los dos últimos obstáculos, desde PredictV23.10 están corruptos! j:{$j} contadorObstaculos:{$contadorObstaculos}");
-		    	$first_warning_wallnode = false;
-			}
-			break;
-	    }
-		*/
-
 			$listaObstaculos[] = array(
 				'angulo' => $angulo,
 				'altura' => $altura
@@ -176,14 +230,8 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 		$acimutOld = $acimutActual;
 	} // end for exterior
 
-
 	logger(" I> Cargado contenido de >" . $radar['screening'] . "< en " . round(microtime(true) - $timer, 3) . "s");
-	// Camprobacion extra para algunos valores
-	//    if ($screening['k-factor'] <= 0) {
-	//        $screening['radioTerrestreAumentado'] = (4/3) * BERTA_RADIO_TERRESTRE;
-	//    } else {
 	$screening['radioTerrestreAumentado'] = $screening['k-factor'] * BERTA_RADIO_TERRESTRE;
-	//    }
 
 	// tenemos tres alcances posibles: el que viene definido en el screening, el definido en el .rdb o uno forzado por línea de comandos
 	// vamos a descartar siempre el que viene en el screening, y usaremos el que viene del .rdb
@@ -203,10 +251,10 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 	$radar['screening'] = $screening;
 
 	/*
-    if ( false !== strpos($radar['radar'], "-psr") ) {
-        logger(" I> Detectado PSR, ajustando nombre, REVISAR porque ahora screening|site no se usa"); exit(-1);
-        $radar['screening']['site'] = $radar['screening']['site'] . "_PSR";
-    }
-    */
+        if ( false !== strpos($radar['radar'], "-psr") ) {
+            logger(" I> Detectado PSR, ajustando nombre, REVISAR porque ahora screening|site no se usa"); exit(-1);
+            $radar['screening']['site'] = $radar['screening']['site'] . "_PSR";
+        }
+       */
 	return $radar;
 }
