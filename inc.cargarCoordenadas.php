@@ -129,6 +129,7 @@ function parseRBKFile(string $radar_rbk_file, string $name, string $sassc_id = "
 	    continue;
 	}
     }
+
     if ( !empty($lat) && !empty($lon) ) {
 	$radar[$name] = array(
 	    'radar' => $name,
@@ -142,14 +143,16 @@ function parseRBKFile(string $radar_rbk_file, string $name, string $sassc_id = "
 	);
 	$radar[$name] = array_merge($radar[$name], $values);
 	$radar[$name]['fecha_modificado'] = $fechaUltimaModificacion;
+	$radar[$name]['coneOfSilence'] = doubleval($radar[$name]['secondaryConeOfSilence']);
 
 	// si en el fichero se definen dos radares (PSR y SSR, hay que devolver dos radares, no uno!)
-        if ( false !== strpos($radar[$name]['radarType'], "primary") ) {
+	if ( false !== strpos($radar[$name]['radarType'], "primary") ) {
             // copiamos en un radar nuevo los datos
             $radar[$name . "-psr"] = $radar[$name];
+            $radar[$name . "-psr"]['coneOfSilence'] = doubleval($radar[$name]['primaryConeOfSilence']);
             // le cambiamos el nombre para reflejar que ahora tiene PSR
             $radar[$name . "-psr"]['radar'] = $radar[$name . "-psr"]['radar'] . "-psr";
-        }
+	}
     } else {
         logger(" I> El radar {$name} no tiene coordenadas definidas, se ignora");
     }

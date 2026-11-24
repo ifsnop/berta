@@ -9,7 +9,6 @@ const BERTA_RADIO_TERRESTRE = 6371000.0;
 const BERTA_MILLA_NAUTICA_EN_METROS = 1852.0; // metros equivalentes a 1 milla nautica
 const BERTA_GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 const BERTA_GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
-const BERTA_ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
 const BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
 CONST BERTA_FEET_TO_METERS = 0.30480370641307;
 const BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION = 0.000001;
@@ -424,9 +423,9 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
         // se devuelve para cada azimut, la distancia más lejana
         logger(" D> calculosFLencimaRadar2");
         $polygons = calculosFLencimaRadar2($radar, $flm);
-        
+
         if ($calculoCono) {
-            $radioConom = ($flm - $hA) * tan(deg2rad(BERTA_ANGULO_CONO));
+            $radioConom = ($flm - $hA) * tan(deg2rad($radar['coneOfSilence']));
             $radioCono = $radioConom / BERTA_MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
             logger(" N> Radio del Cono: " . round($radioCono, 2) . "NM / " . round($radioConom, 2) . "m");
 
