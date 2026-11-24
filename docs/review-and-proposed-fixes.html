@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BERTA — code review and proposed fixes</title>
+<style>
+:root {
+  --bg: #fbfbfa; --fg: #1f2328; --muted: #5d646d; --line: #e3e3e0; --soft: #f2f2ef;
+  --accent: #1d5fa8; --code-bg: #f5f5f2; --before: #fbeaea; --before-line: #d9a3a3;
+  --after: #e7f4e6; --after-line: #94c492; --mark: #fff3c4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c; --fg: #e4e6e9; --muted: #9aa1aa; --line: #2e3237; --soft: #20242a;
+    --accent: #7fb2ec; --code-bg: #1e2227; --before: #2f2022; --before-line: #6b3b3f;
+    --after: #1d2b20; --after-line: #3f6d45; --mark: #4a4220;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); max-width: 1320px; margin: 0 auto; }
+.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px 24px; border-right: 1px solid var(--line); font-size: 13.5px; }
+.toc-title { font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: 11.5px; color: var(--muted); margin-bottom: 10px; }
+.toc ul { list-style: none; margin: 0; padding: 0; }
+.toc li { margin: 2px 0; }
+.toc li.l1 { margin-top: 16px; font-weight: 650; }
+.toc li.l2 { margin-top: 8px; font-weight: 550; padding-left: 6px; }
+.toc li.l3 { padding-left: 16px; }
+.toc a { color: var(--fg); text-decoration: none; display: block; padding: 1px 6px; border-radius: 4px; }
+.toc a:hover, .toc a.active { background: var(--soft); color: var(--accent); }
+main { padding: 32px 48px 120px; min-width: 0; }
+header.top h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; }
+header.top .meta { color: var(--muted); font-size: 13.5px; margin-bottom: 18px; }
+header.top .intro { max-width: 78ch; }
+.legend { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
+.legend .code-ref { margin-right: 4px; }
+.part { margin-top: 56px; }
+.part-title { font-size: 24px; margin: 0 0 4px; padding-bottom: 10px; border-bottom: 2px solid var(--fg); }
+h2.doc-title { font-size: 21px; margin: 40px 0 8px; color: var(--accent); }
+h3 { font-size: 18px; margin: 36px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+h4 { font-size: 15.5px; margin: 24px 0 6px; }
+p, li { max-width: 82ch; }
+a { color: var(--accent); }
+code { font: 12.8px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code-bg);
+  padding: 1px 4px; border-radius: 4px; }
+.table { overflow-x: auto; margin: 12px 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.8px; }
+th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; background: var(--soft); white-space: nowrap; }
+td.issue-code { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+tr:target, tr.flash { background: var(--mark); }
+.code-ref { font-weight: 600; text-decoration: none; border-bottom: 1px dotted var(--accent); }
+.code { margin: 10px 0 18px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+.code.before { border-color: var(--before-line); }
+.code.after { border-color: var(--after-line); }
+.code-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px 4px 12px;
+  font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); }
+.code.before .code-head { background: var(--before); color: var(--fg); }
+.code.after .code-head { background: var(--after); color: var(--fg); }
+.code pre { margin: 0; padding: 12px 14px; overflow-x: auto; }
+.code pre code { background: none; padding: 0; font-size: 12.6px; white-space: pre; tab-size: 4; }
+button.copy { font: 12px system-ui, sans-serif; border: 1px solid var(--line); background: var(--bg); color: var(--fg);
+  border-radius: 4px; padding: 2px 9px; cursor: pointer; }
+button.copy:hover { border-color: var(--accent); }
+ul.tasks { list-style: none; padding-left: 4px; }
+ul.tasks label { display: inline; cursor: pointer; }
+ul.tasks input { margin-right: 8px; }
+label.applied { font-size: 12.5px; font-weight: 500; color: var(--muted); margin-left: 10px; white-space: nowrap; cursor: pointer; }
+h3:has(label.applied input:checked) { color: var(--muted); }
+h3:has(label.applied input:checked)::after { content: " ✓"; color: #3a8f45; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--line); }
+  main { padding: 24px 18px 80px; }
+}
+@media print {
+  .toc, button.copy, label.applied { display: none; }
+  .layout { display: block; }
+  main { padding: 0; }
+  .code pre code { white-space: pre-wrap; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc"><div class="toc-title">Contents</div><ul><li class="l1"><a href="#part-problems">Part I — Problems found</a></li><li class="l2"><a href="#code-review">Code review</a></li><li class="l3"><a href="#review-how-it-was-checked">How it was checked</a></li><li class="l3"><a href="#review-mono-radar-coverage">Mono-radar coverage</a></li><li class="l3"><a href="#review-multi-radar-coverage">Multi-radar coverage</a></li><li class="l3"><a href="#review-output-files-and-options">Output files and options</a></li><li class="l3"><a href="#review-suggested-priorities">Suggested priorities</a></li><li class="l2"><a href="#maths-review">Mathematics review</a></li><li class="l3"><a href="#maths-errors">Errors</a></li><li class="l3"><a href="#maths-precision">Precision</a></li><li class="l3"><a href="#maths-speed">Speed</a></li><li class="l1"><a href="#part-fixes">Part II — Proposed fixes</a></li><li class="l3"><a href="#fix-results">Results</a></li><li class="l3"><a href="#fix-how-to-apply-and-verify">How to apply and verify</a></li><li class="l3"><a href="#fix-change-1-main-php-constants-and-flags">Change 1 — main.php: constants and flags</a></li><li class="l3"><a href="#fix-change-2-main-php-psr-range-in-nm">Change 2 — main.php: PSR range in NM</a></li><li class="l3"><a href="#fix-change-3-main-php-cone-of-silence-radius">Change 3 — main.php: cone of silence radius</a></li><li class="l3"><a href="#fix-change-4-inc-cargarscreening-php-forced-range-log">Change 4 — inc.cargarScreening.php: forced-range log</a></li><li class="l3"><a href="#fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp">Change 5 — inc.calculos.php: obsolete constants and acos clamp</a></li><li class="l3"><a href="#fix-change-6-inc-calculos-php-replacement-block-part-a">Change 6 — inc.calculos.php: replacement block, part A</a></li><li class="l3"><a href="#fix-change-6-part-b-perfil-cartesiano">Change 6, part B — perfil_cartesiano</a></li><li class="l3"><a href="#fix-change-6-part-c-calcula-cruces-and-cruces-segmento">Change 6, part C — calcula_cruces and cruces_segmento</a></li><li class="l3"><a href="#fix-change-6-part-d-intervals-and-outline-tracing">Change 6, part D — intervals and outline tracing</a></li><li class="l3"><a href="#fix-change-6-part-e-destino-and-destinovincenty">Change 6, part E — destino and destinoVincenty</a></li><li class="l3"><a href="#fix-change-7-inc-multicalculos-php-multicobertura-body">Change 7 — inc.multiCalculos.php: multicobertura body</a></li><li class="l3"><a href="#fix-change-8-inc-multicalculos-php-multi-refinamiento">Change 8 — inc.multiCalculos.php: multi_refinamiento</a></li><li class="l3"><a href="#fix-left-out-dead-code-and-open-questions">Left out, dead code and open questions</a></li></ul></nav>
+<main>
+<header class="top">
+<h1>BERTA — code review and proposed fixes</h1>
+<div class="meta">Review of commit <code>ba079d8</code> · 24 November 2026 · bundled <code>spain.tsk</code> radar data</div>
+<p class="intro">Part I lists the problems found: the code review (caching, output, options) and the review of the coverage maths (errors, precision, speed). Part II gives every proposed change with its exact location, the code before and after, and how to check it. Issue codes link to their definition; “applied” boxes and checklist items are saved in this browser so you can track manual changes.</p>
+<div class="legend">Issue codes: <a class="code-ref" href="#issue-M1">M1</a> <a class="code-ref" href="#issue-M2">M2</a> <a class="code-ref" href="#issue-M3">M3</a> <a class="code-ref" href="#issue-M4">M4</a> <a class="code-ref" href="#issue-M5">M5</a> <a class="code-ref" href="#issue-M6">M6</a> <a class="code-ref" href="#issue-X1">X1</a> <a class="code-ref" href="#issue-X2">X2</a> <a class="code-ref" href="#issue-X3">X3</a> <a class="code-ref" href="#issue-X4">X4</a> <a class="code-ref" href="#issue-X5">X5</a> <a class="code-ref" href="#issue-X6">X6</a> <a class="code-ref" href="#issue-O1">O1</a> <a class="code-ref" href="#issue-O2">O2</a> <a class="code-ref" href="#issue-O3">O3</a> <a class="code-ref" href="#issue-O4">O4</a> <a class="code-ref" href="#issue-O5">O5</a> <a class="code-ref" href="#issue-O6">O6</a> <a class="code-ref" href="#issue-E1">E1</a> <a class="code-ref" href="#issue-E2">E2</a> <a class="code-ref" href="#issue-E3">E3</a> <a class="code-ref" href="#issue-E4">E4</a> <a class="code-ref" href="#issue-E5">E5</a> <a class="code-ref" href="#issue-E6">E6</a> <a class="code-ref" href="#issue-E7">E7</a> <a class="code-ref" href="#issue-E8">E8</a> <a class="code-ref" href="#issue-P1">P1</a> <a class="code-ref" href="#issue-P2">P2</a> <a class="code-ref" href="#issue-P3">P3</a> <a class="code-ref" href="#issue-S1">S1</a> <a class="code-ref" href="#issue-S2">S2</a> <a class="code-ref" href="#issue-S3">S3</a></div>
+</header>
+<section class="part" id="part-problems"><h1 class="part-title">Part I — Problems found</h1>
+<h2 id="code-review" class="doc-title">Code review: mono-radar and multi-radar coverage</h2>
+<p>The coverage maths is sound: mono-radar geometry and the multi-radar overlap breakdown both matched independent references. Nearly every bug sits in the layers around it — caching, file output and option handling — and several of them silently produce wrong maps. The repo has no tests, and about 15% of the code is dead.</p>
+<h3 id="review-how-it-was-checked">How it was checked</h3>
+<p>Everything ran on a copy of the repo at commit <code>ba079d8</code>, using the bundled <code>spain.tsk</code> radar data, PHP 8.3 and PHPStan 2.1.</p>
+<div class="table"><table><thead><tr><th>Check</th><th>What was done</th><th>Result</th></tr></thead><tbody><tr><td>Syntax</td><td><code>php -l</code> on every file</td><td>Clean</td></tr><tr><td>Static analysis</td><td>PHPStan level 5 with the dead-code rules</td><td>27 findings: 2 real (duplicate <code>version</code> key, call to undefined <code>generateMatlabFiles</code>), the rest dead code</td></tr><tr><td>Mono geometry</td><td>Vertex formula compared with an exact spherical calculation</td><td>Within ~20 m (the deliberate overlap margin); ~80 m at 250 NM in Spain</td></tr><tr><td>Mono area</td><td>4 radars at FL30–FL250 compared with a shadow-aware reference</td><td>Within 0.0–0.5%</td></tr><tr><td>Mono edge cases</td><td>PSR radars, forced range (<code>-m</code>), cone (<code>-c</code>)</td><td>PSR and cone bugs found</td></tr><tr><td>Multi breakdown</td><td>20,000 random points: count of single-radar coverages vs. the coverage-level layer they land in</td><td>0 mismatches with a cold cache, for 3 and 9 radars</td></tr><tr><td>Multi caching</td><td>Same flight level re-run with a different radar set</td><td>53% of points on the wrong level</td></tr></tbody></table></div>
+<h3 id="review-mono-radar-coverage">Mono-radar coverage</h3>
+<p>The geometry is correct, but PSR radars always come out empty and the cache ignores both the cone flag and changes to the screening file. Code: <code>inc.calculos.php</code>, plus <code>calculosFL</code> in <code>main.php</code>.</p>
+<p><strong>What holds up</strong></p>
+<ul><li><strong>Positions:</strong> vertices sit within ~20 m of the exact spherical position. The error grows to ~80 m at 250 NM in Spain and ~300 m at 60°N.</li><li><strong>Area above the radar:</strong> within 0.0–0.5% of the shadow-aware reference at every flight level tested (paracuellos1, valdespina, erillas, alcolea).</li><li><strong>Speed:</strong> about 1 s per radar per flight level below the radar, well under that above it.</li></ul>
+<p><strong>Bugs found</strong></p>
+<div class="table"><table><thead><tr><th>#</th><th>Bug</th><th>Where</th><th>Effect</th><th>Evidence</th></tr></thead><tbody><tr id="issue-M1"><td class="issue-code">M1</td><td>PSR range converted to metres twice: set as <code>primaryMaximumRange * 1852</code>, then multiplied by 1852 again, so <code>acos</code> returns NaN</td><td><code>main.php:325</code>, <code>inc.calculos.php:52</code></td><td>Every <code>*-psr</code> radar gets an empty polygon <code>[[]]</code>, cached, with no error</td><td>Reproduced on paracuellos1-psr</td></tr><tr id="issue-M2"><td class="issue-code">M2</td><td>Mono cache key is only radar + flight level</td><td><code>main.php:282</code></td><td>With a warm cache <code>-c</code> does nothing; after one <code>-c -f</code> run, later runs without the cone still show the hole</td><td>Byte-identical output reproduced</td></tr><tr id="issue-M3"><td class="issue-code">M3</td><td>Cache only invalidated when the <code>.rdb</code> changes, not the <code>.scr</code></td><td><code>main.php:291</code>, <code>inc.cargarCoordenadas.php:144</code></td><td>Re-running PREDICT without touching the <code>.rdb</code> gives old coverage</td><td>Read in code</td></tr><tr id="issue-M4"><td class="issue-code">M4</td><td><code>BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD</code> is 20 NM ÷ Earth radius in metres (≈ 20 m, not 20 NM); line 420 compares metres with it</td><td><code>inc.calculos.php:9</code>, <code>:420</code></td><td>Check is always true; harmless today but misleading</td><td>Measured</td></tr><tr id="issue-M5"><td class="issue-code">M5</td><td>Range too short to reach the flight level gives a NaN angle</td><td><code>inc.calculos.php:51</code></td><td>Result (no coverage) is right by accident; not handled explicitly</td><td>Reproduced with <code>-m 5</code> at FL400</td></tr><tr id="issue-M6"><td class="issue-code">M6</td><td>Minor parsing issues: <code>preg_match</code> returning 0 treated as success; azimuth keys assumed to run 0..N-1; forced-range log divides NM by 1852</td><td><code>inc.cargarScreening.php</code></td><td>Silent bad data on malformed screening files</td><td>Read in code</td></tr></tbody></table></div>
+<p><strong>Latent issue:</strong> <code>calculosFLencimaRadar2</code> joins every crossing of the flight level into one ring. If the line of sight dropped back below the flight level beyond a ridge, the shadow would be filled in and replaced by notches. The bundled profiles only ever rise (zero azimuths with more than one crossing), so it does not trigger today. The below-radar sector builder already handles this case and could be reused.</p>
+<h3 id="review-multi-radar-coverage">Multi-radar coverage</h3>
+<p>The breakdown is exactly right on a cold cache, but the polygon disk cache hands back results from a different radar set, so a warm cache produces wrong maps. Code: <code>inc.multiCalculos.php</code>.</p>
+<p><strong>What holds up</strong></p>
+<ul><li><strong>Coverage levels:</strong> every one of 20,000 sampled points landed in the right "exactly k radars" layer, for both a 3-radar and a 9-radar run.</li><li><strong>Method:</strong> each level is the intersection of a radar group minus the union of all other radars, which is correct.</li></ul>
+<p><strong>Bugs found</strong></p>
+<div class="table"><table><thead><tr><th>#</th><th>Bug</th><th>Where</th><th>Effect</th><th>Evidence</th></tr></thead><tbody><tr id="issue-X1"><td class="issue-code">X1</td><td>Polygon cache key is <code>sha1(name . FL)</code>; for the per-level union the name is just <code>&quot;1&quot;</code>, <code>&quot;2&quot;</code>… with no radar set</td><td><code>inc.multiCalculos.php:434</code>, <code>:253</code></td><td>Running {barajas, paracuellos1, alcolea} after {barajas, paracuellos1, valladolid}: 53% of points on the wrong level in <code>multiradar-union</code></td><td>Reproduced; 0% with a cold cache</td></tr><tr id="issue-X2"><td class="issue-code">X2</td><td>Polygon cache never invalidated: key ignores <code>-m</code>, cone, radar file dates and operation type; <code>-f</code> does not clear it</td><td><code>inc.multiCalculos.php:432–457</code></td><td><code>-m 60</code> with a warm cache gives different output from a cold one</td><td>Reproduced</td></tr><tr id="issue-X3"><td class="issue-code">X3</td><td>The "unica" layer is built, then <code>$kml</code> is overwritten</td><td><code>inc.multiCalculos.php:121–122</code>, <code>:225</code>, <code>:290</code></td><td>Union of all radars missing from output in <code>-2</code> mode; only appears with <code>-u</code></td><td>Reproduced</td></tr><tr id="issue-X4"><td class="issue-code">X4</td><td>An empty single-radar result reaches <code>ramer_douglas_peucker</code></td><td><code>inc.multiCalculos.php:33</code></td><td>Fatal <code>InvalidArgumentException</code>; process still exits 0. Hit by every PSR because of <a class="code-ref" href="#issue-M1">M1</a></td><td>Reproduced</td></tr><tr id="issue-X5"><td class="issue-code">X5</td><td>"Inversa" view matches radar names with <code>strpos</code></td><td><code>inc.multiCalculos.php:299</code></td><td>Under <code>paracuellos1</code> it also lists groups with only <code>paracuellos1-psr</code></td><td>Read in code</td></tr><tr id="issue-X6"><td class="issue-code">X6</td><td>Groups grow as 2^N − 1</td><td><code>multicobertura</code></td><td>9 radars = 511 groups, 71 s for one flight level, ~8 h for FL1–400</td><td>Measured</td></tr></tbody></table></div>
+<p>For <a class="code-ref" href="#issue-X6">X6</a>, the per-level union layer alone could be built incrementally with about N² boolean operations; only the per-group breakdown truly needs 2^N.</p>
+<h3 id="review-output-files-and-options">Output files and options</h3>
+<p>KMZ output, the default whenever the PHP zip extension is installed, overwrites itself on every flight level.</p>
+<div class="table"><table><thead><tr><th>#</th><th>Issue</th><th>Where</th><th>Effect</th></tr></thead><tbody><tr id="issue-O1"><td class="issue-code">O1</td><td><code>.kmz</code> name leaves out the flight level; the entry inside the zip holds the whole relative path; the <code>! $res</code> check can never catch an error</td><td><code>inc.guardar.php:384–389</code></td><td>Mono writes <code>sensor-FL.kmz</code>, multi writes <code>RESULTADOS/MULTI/.kmz</code>, each replaced every FL. From reading the code; not run (no zip extension on the test machine)</td></tr><tr id="issue-O2"><td class="issue-code">O2</td><td>Multi output is <code>RESULTADOS/MULTI/&lt;FL&gt;.kml</code> with no radar set in the name</td><td><code>main.php:409</code></td><td>Each run replaces the last; an empty <code>MULTI/&lt;FL&gt;/</code> folder is also created</td></tr><tr id="issue-O3"><td class="issue-code">O3</td><td><code>--screening-file</code> is missing its <code>:</code> in the long options</td><td><code>main.php:102</code></td><td>Long option unusable; only <code>-k</code> works</td></tr><tr id="issue-O4"><td class="issue-code">O4</td><td>Help lists <code>--rascal</code>, <code>--no-rascal</code> and <code>-p</code></td><td><code>main.php:64–81</code></td><td>Using them exits with "Parámetro no esperado"</td></tr><tr id="issue-O5"><td class="issue-code">O5</td><td>Dead code: ~220 lines in <code>inc.calculos.php</code> (marching squares, polygon tracer, all ending in <code>die()</code>); <code>countSetBits</code> (would crash on its <code>global</code> line); <code>EtaEstimator.php</code> loaded but unused</td><td>several</td><td>Noise for readers and PHPStan</td></tr><tr id="issue-O6"><td class="issue-code">O6</td><td><code>sesolles.rdb</code> points to <code>sesolles_EGM96_k.scr</code>, which is not in the data folder</td><td><code>spain.tsk</code></td><td>Selecting sesolles exits</td></tr></tbody></table></div>
+<h3 id="review-suggested-priorities">Suggested priorities</h3>
+<p>Fix the two bugs that crash or blank results first, then the caches that silently serve wrong maps.</p>
+<ul class="tasks"><li><label><input type="checkbox" data-persist><strong>Fix the PSR unit bug and skip empty polygons</strong> (<a class="code-ref" href="#issue-M1">M1</a>, <a class="code-ref" href="#issue-X4">X4</a>).</label></li><li><label><input type="checkbox" data-persist><strong>Put everything that affects a result into the cache keys</strong> (<a class="code-ref" href="#issue-M2">M2</a>, <a class="code-ref" href="#issue-M3">M3</a>, <a class="code-ref" href="#issue-X1">X1</a>, <a class="code-ref" href="#issue-X2">X2</a>):</label><ul><li>Mono cache: add the cone flag, the max range and the <code>.scr</code> file date.</li><li>Polygon cache: add the full radar set, the operation type and the date of the single-radar results it was built from.</li><li>Make <code>-f</code> clear the polygon cache too.</li></ul></li><li><label><input type="checkbox" data-persist><strong>Fix the output files</strong> (<a class="code-ref" href="#issue-O1">O1</a>, <a class="code-ref" href="#issue-O2">O2</a>, <a class="code-ref" href="#issue-X3">X3</a>): flight level in KMZ names, radar set in the multi file name, stop the unica layer being overwritten.</label></li><li><label><input type="checkbox" data-persist><strong>Commit the checks as regression tests and delete the dead code</strong> (<a class="code-ref" href="#issue-O5">O5</a>). The geometry, area and point-sampling scripts used for this review can become the first test suite.</label></li></ul>
+<h2 id="maths-review" class="doc-title">Mathematics review: errors, precision and speed</h2>
+<p>No error in the core geometry changes the maps by much. The biggest correctness problem is the polygon-union step, and the biggest wins are speed. All tests ran on 9 radars × FL1–400.</p>
+<p><strong>Checked and correct:</strong> the formula for the maximum coverage angle (law of cosines on the 4/3-Earth model), the conversion of central angle to ground distance, and the "wall" extension beyond the last screening point. That extension assumes the last screening point is the highest-elevation one, and it is on 99.9% of azimuths.</p>
+<h3 id="maths-errors">Errors</h3>
+<div class="table"><table><thead><tr><th>#</th><th>Error</th><th>Measured effect</th><th>Fix</th></tr></thead><tbody><tr id="issue-E1"><td class="issue-code">E1</td><td>PSR range is converted to metres twice, so the angle is NaN (same bug as <a class="code-ref" href="#issue-M1">M1</a>)</td><td>Every <code>-psr</code> radar gets empty coverage</td><td>Pass the range in NM</td></tr><tr id="issue-E2"><td class="issue-code">E2</td><td><code>acos</code> has no domain clamp</td><td>NaN whenever the range can't reach the flight level</td><td>Clamp the argument to [−1, 1]</td></tr><tr id="issue-E3"><td class="issue-code">E3</td><td>Union step is fragile. Sectors are widened by 20 m sideways and azimuths are rounded to 5 decimals (the "FL22" commit) so the union library copes</td><td>The library silently returned an empty result once and threw on valid barajas input. On real data it misplaces 0.02–0.2% of points below the radar</td><td>Trace the outline directly from the per-azimuth distance intervals; no union, no 20 m margin, no rounding</td></tr><tr id="issue-E4"><td class="issue-code">E4</td><td>Terrain shadow. The terrain floor is drawn point to point. Behind a ridge, the real floor is the line of sight from the radar</td><td>+0.2–3.8% coverage near radar height, about 0 from FL100 up</td><td>Floor follows the highest line of sight so far. Check how PREDICT defines its screening points before adopting this one</td></tr><tr id="issue-E5"><td class="issue-code">E5</td><td><code>0.30480370641307</code> is 1/3.2808, not 0.3048</td><td>0.15 m at FL400</td><td>Use 0.3048</td></tr><tr id="issue-E6"><td class="issue-code">E6</td><td><code>W += 0.01</code> covers for flight-level circles that pass exactly through a terrain point</td><td>No count errors today across 3,600 radar-level runs</td><td>Decide inside/outside once per point and drop the 1 cm workaround</td></tr><tr id="issue-E7"><td class="issue-code">E7</td><td>When the wall top is capped, only the y coordinate is replaced</td><td>Triggers in 140 of 1,800 runs for monflorite, but both points stay above FL400, so no visible effect</td><td>Keep the point on the ray</td></tr><tr id="issue-E8"><td class="issue-code">E8</td><td>Cone of silence radius is computed as height × tan(45°), using a fixed constant</td><td>Correct only at 45°. The <code>.rdb</code> already stores the cone angle</td><td>radius = height / tan(angle), with the angle read from the <code>.rdb</code></td></tr></tbody></table></div>
+<h3 id="maths-precision">Precision</h3>
+<div class="table"><table><thead><tr><th>#</th><th>Item</th><th>Error today</th><th>Fix</th><th>Speed cost</th></tr></thead><tbody><tr id="issue-P1"><td class="issue-code">P1</td><td>Vertex formula (the longitude step is approximate)</td><td>up to 80 m at 250 NM, 300 m at 60°N, compared with an exact sphere</td><td>Exact spherical formula</td><td>2.7× faster (0.31 vs 0.86 µs per vertex)</td></tr><tr id="issue-P2"><td class="issue-code">P2</td><td>Sphere instead of the real Earth shape (WGS84)</td><td>120–235 m at 50 NM, about 1.1 km at 250 NM</td><td>Vincenty geodesic. A single local radius doesn't fix it: diagonal azimuths still err by 180 m</td><td>+4 ms per level</td></tr><tr id="issue-P3"><td class="issue-code">P3</td><td>Arc drawn as straight chords</td><td>≤ 4.4 m at 0.5° steps, 17.6 m at 1° steps</td><td>Not needed</td><td>—</td></tr></tbody></table></div>
+<p>The WGS84 figures assume PREDICT's distances are true ground distances on a 6,371 km sphere. That's worth confirming against one PREDICT coverage export.</p>
+<h3 id="maths-speed">Speed</h3>
+<div class="table"><table><thead><tr><th>#</th><th>Change</th><th>Before</th><th>After</th><th>Same result?</th></tr></thead><tbody><tr id="issue-S1"><td class="issue-code">S1</td><td>Outline tracing below the radar (fixes <a class="code-ref" href="#issue-E3">E3</a>)</td><td>0.85–1.7 s per level</td><td>0.05–0.15 s</td><td>Closer to the per-azimuth ground truth than today</td></tr><tr id="issue-S2"><td class="issue-code">S2</td><td>Terrain profile computed once per radar, plus fast skipping of segments that can't cross the level</td><td>paracuellos1 20 s, canchoblanco 88 s, alcolea 8 s (FL1–400)</td><td>7.5 s, 17 s, 2.6 s in the prototype; 2.0 s, 5.1 s, 0.6 s in the final patch</td><td>Identical crossing points</td></tr><tr id="issue-S3"><td class="issue-code">S3</td><td>Multi-radar by successive splitting instead of all 2^N − 1 groups</td><td>9 radars: 1,323 boolean operations, 68 s per level</td><td>328 operations, 9.2 s in the prototype; 327 operations, 9.3 s in the final patch</td><td>Per-group areas identical (0.000 km²)</td></tr></tbody></table></div>
+</section><section class="part" id="part-fixes"><h1 class="part-title">Part II — Proposed fixes</h1>
+<p>Eight changes in four files fix the PSR, cone and multi-radar cache bugs and remove the fragile polygon union. A full 400-level single-radar run becomes 10–17× faster and a 9-radar multi run about 7× faster. Every change below was applied to a clean copy of commit <code>ba079d8</code> and tested end to end; each section gives the exact location, the code to paste and how to check it. Issue codes (<a class="code-ref" href="#issue-E1">E1</a>, <a class="code-ref" href="#issue-P1">P1</a>, <a class="code-ref" href="#issue-S1">S1</a>, <a class="code-ref" href="#issue-X1">X1</a>…) refer to the earlier code review and maths review.</p>
+<h3 id="fix-results">Results</h3>
+<p>Measured on the patched copy with the bundled <code>spain.tsk</code> data, both flags off (default). Timings are calculation only, same machine, same method before and after.</p>
+<div class="table"><table><thead><tr><th>Check</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>paracuellos1, FL1–400 single-radar</td><td>19.9 s</td><td>1.96 s</td></tr><tr><td>canchoblanco, FL1–400 single-radar</td><td>88.0 s</td><td>5.1 s</td></tr><tr><td>alcolea, FL1–400 single-radar</td><td>8.2 s</td><td>0.59 s</td></tr><tr><td>9 radars, multi-radar at FL150 (cold cache)</td><td>68 s, 1,323 boolean ops</td><td>9.3 s, 327 ops</td></tr><tr><td>Crossing lists vs. independent prototype (9 radars × 720/360 azimuths × 400 FL = 1.87 M)</td><td>—</td><td>0 differences, 0 parity errors</td></tr><tr><td>Polygons vs. ground truth (per-azimuth intervals), 8 radar/FL cases, 5,000 points each</td><td>0.02–0.2% wrong below radar</td><td>0.00–0.02%</td></tr><tr><td>Multi-radar levels vs. point sampling (3 and 9 radars)</td><td>53% wrong with a warm cache from another radar set</td><td>0%</td></tr><tr><td>PSR coverage (paracuellos1-psr, FL100)</td><td>empty</td><td>1 polygon, 100 NM</td></tr><tr><td><code>unica</code> layer in <code>-2</code> output</td><td>missing</td><td>present</td></tr><tr><td>Vertex position error vs. exact sphere</td><td>up to 80 m at 250 NM</td><td>0 m</td></tr></tbody></table></div>
+<h3 id="fix-how-to-apply-and-verify">How to apply and verify</h3>
+<p>Apply the changes in order on a branch; line numbers refer to the files at <code>ba079d8</code>, before any edit.</p>
+<ol><li>Changes 1–4 are small, independent edits. Each can be applied and checked on its own.</li><li>Change 5 edits the top of <code>inc.calculos.php</code>. Apply it <strong>after</strong> Change 6 if you go by line numbers, or match the text instead.</li><li>Change 6 replaces one contiguous block of <code>inc.calculos.php</code>: <strong>lines 156–784</strong>, from the <code>/**</code> above <code>  * CASO A </code> down to the closing <code>}</code> of <code>calcula_vertices_interseccion()</code>, just before the Ramer–Douglas–Peucker comment. Parts A–E, pasted in that order, are the new block.</li><li>Changes 7 and 8 are in <code>inc.multiCalculos.php</code> and depend only on the existing <code>MR</code> alias.</li><li><strong>Delete the caches after applying:</strong> <code>rm -rf cache/</code>. The single-radar cache is only invalidated when an <code>.rdb</code> changes, so old JSON polygons would otherwise be reused.</li><li>Check: <code>php -l</code> on the four files, then <code>vendor/bin/phpstan analyse</code>. Expect only the two findings that already exist (duplicate <code>version</code> key, <code>generateMatlabFiles</code>), plus "always false" notes in <code>perfil_cartesiano</code> while <code>BERTA_PERFIL_ESCALONADO</code> is <code>false</code>.</li></ol>
+<p><strong>Two flags stay off by default</strong>, because both depend on how PREDICT defines its data:</p>
+<ul><li><code>BERTA_PERFIL_ESCALONADO</code> (<a class="code-ref" href="#issue-E4">E4</a>): the visibility floor follows the highest line of sight so far. Effect: +0.2–3.8% coverage near radar height, about 0 from FL100 up. Turn on once you confirm the screening points are terrain/horizon points rather than an already-computed shadow line.</li><li><code>BERTA_ELIPSOIDE_WGS84</code> (<a class="code-ref" href="#issue-P2">P2</a>): positions on WGS84 via Vincenty instead of a 6,371 km sphere. Effect: moves vertices 120–235 m at 50 NM and about 1.1 km at 250 NM; costs about 4 ms per level. Turn on once a PREDICT coverage export confirms its distances are true ground distances.</li></ul>
+<h3 id="fix-change-1-main-php-constants-and-flags">Change 1 — main.php: constants and flags <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-1-main-php-constants-and-flags"> applied</label></h3>
+<p>Fixes <a class="code-ref" href="#issue-E5">E5</a> (feet constant) and adds the three settings the new code reads. <code>0.30480370641307</code> is 1/3.2808, not the international foot; the error is 0.15 m at FL400. The <code>W += 0.01</code> workaround it lived with is removed in Change 6.</p>
+<p><strong>Where:</strong> <code>main.php</code>, line 14.</p>
+<div class="code before"><div class="code-head"><span>Before</span><button class="copy" type="button">Copy</button></div><pre><code>CONST BERTA_FEET_TO_METERS = 0.30480370641307;
+const BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION = 0.000001;</code></pre></div>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>const BERTA_FEET_TO_METERS = 0.3048; // pie internacional (antes 0.30480370641307 = 1/3.2808)
+const BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION = 0.000001;
+// El suelo de visibilidad entre puntos del screening sigue la línea de visión más alta hasta ese punto
+// (máximo acumulado del ángulo de elevación). Activar tras confirmar la semántica del screening de PREDICT.
+const BERTA_PERFIL_ESCALONADO = false;
+// Posiciones sobre el elipsoide WGS84 (Vincenty) en lugar de una esfera de radio BERTA_RADIO_TERRESTRE.
+// Activar tras confirmar contra una cobertura exportada de PREDICT.
+const BERTA_ELIPSOIDE_WGS84 = false;
+const BERTA_SUBDIVISION_RADIAL_NM = 10.0; // longitud máxima de un lado radial antes de subdividirlo (NM)</code></pre></div>
+<p><strong>Verify:</strong> with Change 6 applied, crossing parity stays correct at exactly FL25 and FL50, where terrain points sit exactly on the flight-level circle (0 errors over 9 radars × 400 levels).</p>
+<h3 id="fix-change-2-main-php-psr-range-in-nm">Change 2 — main.php: PSR range in NM <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-2-main-php-psr-range-in-nm"> applied</label></h3>
+<p>Fixes <a class="code-ref" href="#issue-E1">E1</a>. The PSR range was stored in metres, then <code>calculaAnguloMaximaCobertura()</code> multiplied it by 1852 again, so <code>acos</code> returned NaN and every <code>*-psr</code> radar came out empty. The range is now kept in NM like everywhere else, and a forced range (<code>-m</code>) is no longer overridden for PSR.</p>
+<p><strong>Where:</strong> <code>main.php</code>, the <code>if (false !== strpos($sensor, &quot;-psr&quot;))</code> block, lines 323–328.</p>
+<div class="code before"><div class="code-head"><span>Before</span><button class="copy" type="button">Copy</button></div><pre><code>                    if (false !== strpos($sensor, &quot;-psr&quot;)) {
+                        logger(&quot; V&gt; Detectado PSR, ajustando alcance&quot;);
+                        $coberturas[$sensor][&#x27;terreno&#x27;][&#x27;range&#x27;] = $infoCoral[$sensor][&#x27;primaryMaximumRange&#x27;] * BERTA_MILLA_NAUTICA_EN_METROS;
+                        logger(&quot; I&gt;  El alcance definido para el PSR es de &quot; . ($coberturas[$sensor][&#x27;terreno&#x27;][&#x27;range&#x27;] / BERTA_MILLA_NAUTICA_EN_METROS) .
+                            &quot;NM / &quot; . $coberturas[$sensor][&#x27;terreno&#x27;][&#x27;range&#x27;] . &quot;m&quot;);
+                    }</code></pre></div>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>                    if ((false !== strpos($sensor, &quot;-psr&quot;)) &amp;&amp; (-1 == $config[&#x27;max-range&#x27;])) {
+                        logger(&quot; V&gt; Detectado PSR, ajustando alcance&quot;);
+                        // el alcance se guarda en NM, igual que en cargarDatosTerreno()
+                        $coberturas[$sensor][&#x27;terreno&#x27;][&#x27;range&#x27;] = (float) $infoCoral[$sensor][&#x27;primaryMaximumRange&#x27;];
+                        $coberturas[$sensor][&#x27;terreno&#x27;][&#x27;screening&#x27;][&#x27;range&#x27;] = $coberturas[$sensor][&#x27;terreno&#x27;][&#x27;range&#x27;];
+                        logger(&quot; I&gt;  El alcance definido para el PSR es de &quot; . $coberturas[$sensor][&#x27;terreno&#x27;][&#x27;range&#x27;] .
+                            &quot;NM / &quot; . ($coberturas[$sensor][&#x27;terreno&#x27;][&#x27;range&#x27;] * BERTA_MILLA_NAUTICA_EN_METROS) . &quot;m&quot;);
+                    }</code></pre></div>
+<p><strong>Verify:</strong> <code>rm -rf cache/paracuellos1-psr &amp;&amp; php main.php -r paracuellos1-psr -s 100 -z -f</code>. The log says <code>100NM / 185200m</code>, and <code>RESULTADOS/MONO/100/paracuellos1-psr-FL100.kml</code> contains one <code>&lt;Polygon&gt;</code> (before: none).</p>
+<h3 id="fix-change-3-main-php-cone-of-silence-radius">Change 3 — main.php: cone of silence radius <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-3-main-php-cone-of-silence-radius"> applied</label></h3>
+<p>Fixes <a class="code-ref" href="#issue-E8">E8</a>. The cone angle now comes from the <code>.rdb</code> (<code>primaryConeOfSilence</code> for PSR, <code>secondaryConeOfSilence</code> otherwise), falling back to <code>BERTA_ANGULO_CONO</code>. The radius is height ÷ tan(elevation), which is the radius for an elevation angle above which there is no detection. At 45°, the value in every bundled <code>.rdb</code>, the result is identical to today. If SASS-C defines the field as a half-angle from the vertical instead, keep <code>* tan(...)</code> and only take the angle from the <code>.rdb</code>.</p>
+<p><strong>Where:</strong> <code>main.php</code>, inside <code>calculosFL()</code>, line 429 (first line of the <code>if ($calculoCono)</code> block in the above-radar branch).</p>
+<div class="code before"><div class="code-head"><span>Before</span><button class="copy" type="button">Copy</button></div><pre><code>        if ($calculoCono) {
+            $radioConom = ($flm - $hA) * tan(deg2rad(BERTA_ANGULO_CONO));</code></pre></div>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>        if ($calculoCono) {
+            // ángulo de elevación del cono definido en el .rdb (primario para PSR, secundario si no)
+            $claveCono = (false !== strpos($radar[&#x27;radar&#x27;], &quot;-psr&quot;)) ? &#x27;primaryConeOfSilence&#x27; : &#x27;secondaryConeOfSilence&#x27;;
+            $anguloCono = (isset($radar[$claveCono]) &amp;&amp; is_numeric($radar[$claveCono]) &amp;&amp; (float) $radar[$claveCono] &gt; 0)
+                ? (float) $radar[$claveCono] : BERTA_ANGULO_CONO;
+            // por encima de este ángulo de elevación no hay detección: radio = altura / tan(elevación)
+            $radioConom = ($flm - $hA) / tan(deg2rad($anguloCono));</code></pre></div>
+<p>The rest of the block (the <code>MR\Algorithm::difference</code> with the cone polygon) is unchanged.</p>
+<p><strong>Verify:</strong> <code>php main.php -r paracuellos1 -s 150 -z -f -c</code> logs <code>Radio del Cono: 2.08NM / 3845.76m</code>, and the KML has one polygon with one inner ring, as before.</p>
+<h3 id="fix-change-4-inc-cargarscreening-php-forced-range-log">Change 4 — inc.cargarScreening.php: forced-range log <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-4-inc-cargarscreening-php-forced-range-log"> applied</label></h3>
+<p>Cosmetic, part of <a class="code-ref" href="#issue-M6">M6</a>. <code>$radar[&#x27;range&#x27;]</code> is in NM, but the log divided it by 1852. Calculation is unaffected.</p>
+<p><strong>Where:</strong> <code>inc.cargarScreening.php</code>, lines 241–242, in <code>cargarDatosTerreno()</code>.</p>
+<div class="code before"><div class="code-head"><span>Before</span><button class="copy" type="button">Copy</button></div><pre><code>		logger(&quot; I&gt; Se ha forzado un alcance de &quot; . ($radar[&#x27;range&#x27;] / BERTA_MILLA_NAUTICA_EN_METROS) .
+			&quot;NM / &quot; . $radar[&#x27;range&#x27;] . &quot;m&quot;);</code></pre></div>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>		logger(&quot; I&gt; Se ha forzado un alcance de &quot; . $radar[&#x27;range&#x27;] .
+			&quot;NM / &quot; . ($radar[&#x27;range&#x27;] * BERTA_MILLA_NAUTICA_EN_METROS) . &quot;m&quot;);</code></pre></div>
+<p><strong>Verify:</strong> <code>php main.php -r paracuellos1 -s 100 -m 60 -z</code> logs <code>60NM / 111120m</code>.</p>
+<h3 id="fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp">Change 5 — inc.calculos.php: obsolete constants and acos clamp <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp"> applied</label></h3>
+<p>Fixes <a class="code-ref" href="#issue-E2">E2</a> and removes constants that only the replaced code used (including the 20 NM ÷ metres unit mix, <a class="code-ref" href="#issue-M4">M4</a>, and the azimuth rounding behind the "FL22" commit).</p>
+<p><strong>5a. Where:</strong> <code>inc.calculos.php</code>, lines 6–12. <strong>Delete</strong> these lines (keep the blank line before the <code>calculaAnguloMaximaCobertura</code> docblock):</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>// Más velocidad y menos precisión aumentando INTERSECTION_SUBDIVISION_LIMIT
+// Más precisión y menos velocidad disminuyendo INTERSECTION_SUBDIVISION_LIMIT
+const BERTA_INTERSECTION_TOLERANCE_LIMIT_NM = 20; // ...
+const BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM / BERTA_RADIO_TERRESTRE;
+const BERTA_INTERSECTION_TOLERANCE_LIMIT_M = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM * BERTA_MILLA_NAUTICA_EN_METROS; // ...
+const BERTA_MALLA_TOO_SMALL_CHECK = 22500; // ...
+const BERTA_INTERSECTION_CACHE_TOLERANCE = 5; // ...</code></pre></div>
+<p><strong>5b. Where:</strong> <code>inc.calculos.php</code>, lines 51–54, in <code>calculaAnguloMaximaCobertura()</code>. When the range can't reach the flight level, the cosine exceeds 1 and <code>acos</code> returned NaN. Clamped, the angle is 0, which means no coverage.</p>
+<div class="code before"><div class="code-head"><span>Before</span><button class="copy" type="button">Copy</button></div><pre><code>    $anguloMaxCob = acos(
+        (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar[&#x27;range&#x27;] * BERTA_MILLA_NAUTICA_EN_METROS,2))
+        / (2 * $earthToRadar * $earthToFl)
+    );</code></pre></div>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>    $cosAngulo = (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar[&#x27;range&#x27;] * BERTA_MILLA_NAUTICA_EN_METROS,2))
+        / (2 * $earthToRadar * $earthToFl);
+    // &gt; 1: el alcance no llega al nivel de vuelo (ángulo 0, sin cobertura); &lt; -1 no es posible geométricamente
+    $anguloMaxCob = acos(max(-1.0, min(1.0, $cosAngulo)));</code></pre></div>
+<p><strong>Verify:</strong> <code>php main.php -r paracuellos1 -s 400 -m 5 -z -f</code> no longer logs <code>NANrad</code> and produces no coverage (5 NM can't reach FL400).</p>
+<h3 id="fix-change-6-inc-calculos-php-replacement-block-part-a">Change 6 — inc.calculos.php: replacement block, part A <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-6-inc-calculos-php-replacement-block-part-a"> applied</label></h3>
+<p>Change 6 replaces <strong>lines 156–784</strong> of <code>inc.calculos.php</code> with parts A–E pasted in order. It removes <code>create_matriz_obstaculos()</code>, <code>create_matriz_intersecciones()</code>, <code>create_poligonos_cobertura()</code> and <code>calcula_vertices_interseccion()</code>; nothing else calls them. <code>calculaCoordenadasCono()</code>, <code>polarToLatLon()</code> and everything from the Ramer–Douglas–Peucker comment down stay as they are.</p>
+<p>What the new block does:</p>
+<ul><li><strong>Terrain profile once per radar</strong> (part B). It no longer depends on the flight level; each level only truncates it and adds the wall (<a class="code-ref" href="#issue-S2">S2</a>).</li><li><strong>Robust crossings</strong> (part C). Each point is classified inside/outside the flight-level circle once, so the crossing count always has the right parity without <code>W += 0.01</code> or an epsilon (<a class="code-ref" href="#issue-E6">E6</a>). Segments that can't cut the circle are skipped (<a class="code-ref" href="#issue-S2">S2</a>).</li><li><strong>Outline from intervals</strong> (part D). Below the radar, the outline is traced straight from each azimuth's covered distance intervals. There is no polygon union, no 20 m overlap and no rounding (<a class="code-ref" href="#issue-E3">E3</a>, <a class="code-ref" href="#issue-S1">S1</a>).</li><li><strong>Exact positions</strong> (part E): an exact spherical formula, with optional WGS84 (<a class="code-ref" href="#issue-P1">P1</a>, <a class="code-ref" href="#issue-P2">P2</a>).</li></ul>
+<p>Part A holds the three functions <code>calculosFL()</code> already calls, with the same signatures. Above the radar, the star polygon stays as today whenever every azimuth has exactly one crossing (all 3,600 radar-level cases tested). Otherwise it switches to the interval construction, which fixes the latent ridge case. <code>create_muro()</code> now returns a list of points, so the capped wall point stays on the range line (<a class="code-ref" href="#issue-E7">E7</a>).</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>/**
+ * CASO A
+ * Cobertura cuando el nivel de vuelo está por encima del radar.
+ * Si todos los acimuts tienen un único cruce, se devuelve un polígono en estrella que une el alcance de cada
+ * acimut (interpolación lineal entre acimuts). Si algún acimut tiene varios cruces (el haz vuelve a quedar por
+ * encima del nivel tras una sierra), se construye la cobertura por intervalos, igual que en el CASO B.
+ *
+ * @param array $radar (ENTRADA)
+ * @param float $flm nivel de vuelo en metros (ENTRADA)
+ * @return array lista de anillos [[lat, lon], ...] (SALIDA)
+ */
+function calculosFLencimaRadar2(array $radar, float $flm): array
+{
+    $cruces = calcula_cruces($radar, $flm);
+
+    foreach ($cruces as $lista) {
+        if (1 != count($lista)) {
+            logger(&quot; D&gt; Acimuts con varios cruces por encima del radar, se usa la construcción por intervalos&quot;);
+            return poligonos_desde_intervalos($radar, intervalos_desde_cruces($cruces, true));
+        }
+    }
+
+    $azimuth_step = 360.0 / count($cruces);
+    $anillo = array();
+    foreach (array_values($cruces) as $j =&gt; $lista) {
+        $anillo[] = destino($radar[&#x27;lat_rad&#x27;], $radar[&#x27;lon_rad&#x27;], $lista[0] * BERTA_MILLA_NAUTICA_EN_METROS, deg2rad($j * $azimuth_step));
+    }
+    return [$anillo];
+}
+
+/**
+ * Muro final de cobertura: intersección de la recta radar -&gt; último obstáculo con la recta de alcance máximo
+ * (y = m·x), más el punto de la recta de alcance a BERTA_MAX_WALL_HEIGHT si la intersección queda por debajo.
+ *
+ * @return array lista de puntos [x, y] a añadir tras el último obstáculo (vacía si no hay muro)
+ */
+function create_muro(array &amp;$radar, float $xa, float $ya, float $xb, float $yb, float $m): array
+{
+    /* Intersección segmento - línea
+     *   x = xa + t*(xb-xa), y = ya + t*(yb-ya)
+     *   y = m*x
+     *   t = (m*xa - ya) / ((yb-ya) - m*(xb-xa))
+     */
+    $dx = $xb - $xa;
+    $dy = $yb - $ya;
+    $den = $dy - $m * $dx;
+    if (0.0 == $den) {
+        return array();
+    }
+    $t = ($m * $xa - $ya) / $den;
+    if ($t &lt; 1) { // la recta de alcance queda antes del último obstáculo
+        return array();
+    }
+    $xi = $xa + $t * $dx;
+    $yi = $ya + $t * $dy;
+    $radioTope = BERTA_MAX_WALL_HEIGHT + $radar[&#x27;screening&#x27;][&#x27;radioTerrestreAumentado&#x27;];
+    if (hypot($xi, $yi) &gt;= $radioTope) {
+        // la intersección ya está por encima del tope del muro: basta con ella (antes se movía fuera de la recta)
+        return array([$xi, $yi]);
+    }
+    $alpha_m = atan($m);
+    return array([$xi, $yi], [$radioTope * cos($alpha_m), $radioTope * sin($alpha_m)]);
+}
+
+/*
+ * CASO B
+ * Cobertura cuando el nivel de vuelo está por debajo del radar.
+ *
+ * @param array $radar (ENTRADA)
+ * @param float $flm nivel de vuelo en metros (ENTRADA)
+ * @return array lista de anillos [[lat, lon], ...]; vacía si no hay cobertura
+ */
+function calculosFLdebajoRadar2(array &amp;$radar, float $flm): array
+{
+    $cruces = calcula_cruces($radar, $flm);
+    return poligonos_desde_intervalos($radar, intervalos_desde_cruces($cruces, false));
+}</code></pre></div>
+<h3 id="fix-change-6-part-b-perfil-cartesiano">Change 6, part B — perfil_cartesiano <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-6-part-b-perfil-cartesiano"> applied</label></h3>
+<p>Paste directly after part A. This builds each azimuth's terrain profile in the Earth-centred x/y plane once per radar and caches it in a <code>static</code> variable keyed by radar name. Before, <code>create_matriz_obstaculos()</code> recomputed every sine and cosine on every flight level. It also stores, per segment, the smallest x²+y² along it (<code>min2</code>), which lets part C skip segments that can't reach the flight-level circle.</p>
+<p>With <code>BERTA_PERFIL_ESCALONADO = false</code>, the points are exactly those the old code used (radar first, then every obstacle), so the crossings are identical. With it <code>true</code>, points hidden behind the current horizon are dropped, and before each new horizon a corner point is added on the previous line of sight at that point's central angle (<a class="code-ref" href="#issue-E4">E4</a>).</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>/**
+ * Perfil de cada acimut en coordenadas cartesianas respecto al centro de la Tierra aumentada, independiente
+ * del nivel de vuelo. Se calcula una vez por radar y se guarda en una caché estática.
+ * Para cada acimut: x, y, ang (ángulo central), r2 (x²+y²) por punto y min2 (mínimo de x²+y² sobre el
+ * segmento k -&gt; k+1), que permite descartar segmentos que no pueden cortar la circunferencia del nivel.
+ *
+ * Con BERTA_PERFIL_ESCALONADO el suelo de visibilidad sigue la línea de visión más alta hasta cada punto:
+ * los puntos ocultos se descartan y, antes de cada nuevo horizonte, se añade la esquina sobre la línea de
+ * visión anterior.
+ */
+function perfil_cartesiano(array &amp;$radar): array
+{
+    static $cache = array();
+    $clave = $radar[&#x27;radar&#x27;] . &#x27;|&#x27; . ($radar[&#x27;screening_file&#x27;] ?? &#x27;&#x27;) . &#x27;|&#x27; . (BERTA_PERFIL_ESCALONADO ? 1 : 0);
+    if (isset($cache[$clave])) {
+        return $cache[$clave];
+    }
+
+    $Rk = $radar[&#x27;screening&#x27;][&#x27;radioTerrestreAumentado&#x27;];
+    $ya = $Rk + $radar[&#x27;screening&#x27;][&#x27;towerHeight&#x27;] + $radar[&#x27;screening&#x27;][&#x27;terrainHeight&#x27;];
+    $perfil = array();
+    foreach ($radar[&#x27;screening&#x27;][&#x27;listaAzimuths&#x27;] as $azimut =&gt; $listaObstaculos) {
+        $x = [0.0]; $y = [$ya]; $ang = [0.0]; // el radar es el primer punto
+        $hx = null; $hy = null; $emax = -INF;
+        foreach ($listaObstaculos as $i =&gt; $obstaculo) {
+            if (0 == $i) {
+                continue; // obstáculo 0 = el propio radar, insertado al cargar el screening
+            }
+            $r = $Rk + $obstaculo[&#x27;altura&#x27;];
+            $a = $obstaculo[&#x27;angulo&#x27;];
+            $px = $r * sin($a);
+            $py = $r * cos($a);
+            if (BERTA_PERFIL_ESCALONADO) {
+                $e = atan2($py - $ya, $px); // ángulo de elevación visto desde el radar
+                if ($e &lt;= $emax) {
+                    continue; // oculto tras el horizonte actual
+                }
+                if (null !== $hx) {
+                    // esquina: línea de visión del horizonte actual evaluada en el ángulo central de este punto
+                    $den = $hx * cos($a) - ($hy - $ya) * sin($a);
+                    if (0.0 != $den) {
+                        $s = $ya * sin($a) / $den;
+                        $x[] = $s * $hx; $y[] = $ya + $s * ($hy - $ya); $ang[] = $a;
+                    }
+                }
+                $hx = $px; $hy = $py; $emax = $e;
+            }
+            $x[] = $px; $y[] = $py; $ang[] = $a;
+        }
+        $n = count($x);
+        $r2 = array(); $min2 = array();
+        for ($k = 0; $k &lt; $n; $k++) {
+            $r2[$k] = $x[$k] * $x[$k] + $y[$k] * $y[$k];
+        }
+        for ($k = 0; $k &lt; $n - 1; $k++) {
+            $dx = $x[$k + 1] - $x[$k]; $dy = $y[$k + 1] - $y[$k];
+            $A = $dx * $dx + $dy * $dy;
+            $t = ($A &gt; 0) ? -($x[$k] * $dx + $y[$k] * $dy) / $A : 0.0;
+            $min2[$k] = ($t &gt; 0 &amp;&amp; $t &lt; 1)
+                ? (($x[$k] + $t * $dx) ** 2 + ($y[$k] + $t * $dy) ** 2)
+                : min($r2[$k], $r2[$k + 1]);
+        }
+        $perfil[$azimut] = array(&#x27;x&#x27; =&gt; $x, &#x27;y&#x27; =&gt; $y, &#x27;ang&#x27; =&gt; $ang, &#x27;r2&#x27; =&gt; $r2, &#x27;min2&#x27; =&gt; $min2);
+    }
+    return $cache[$clave] = $perfil;
+}</code></pre></div>
+<p>The corner point: the line of sight from the radar (0, ya) through the current horizon point (hx, hy) is (s·hx, ya + s·(hy−ya)). The radial line at central angle a satisfies x·cos(a) − y·sin(a) = 0. Solving gives s = ya·sin(a) / (hx·cos(a) − (hy−ya)·sin(a)).</p>
+<h3 id="fix-change-6-part-c-calcula-cruces-and-cruces-segmento">Change 6, part C — calcula_cruces and cruces_segmento <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-6-part-c-calcula-cruces-and-cruces-segmento"> applied</label></h3>
+<p>Paste after part B. <code>calcula_cruces()</code> replaces <code>create_matriz_obstaculos()</code> + <code>create_matriz_intersecciones()</code>. It returns, for each azimuth, the distances (NM) where the profile crosses the flight-level circle, in order from the radar. That's the same format as the old <code>$intersec</code>.</p>
+<p>Three differences from the old code:</p>
+<ol><li><strong>Truncation at the maximum range angle</strong> uses a binary search on the central angles. They are increasing in every bundled file (0 out-of-order steps).</li><li><strong>Segment rejection:</strong> if both ends are inside the circle, or both are outside and the segment's closest approach (<code>min2</code>) is also outside, the segment can't cross and is skipped.</li><li><strong>Classification:</strong> each point's sign f = x²+y²−W² is computed once and shared by the two segments that meet there. My first attempt computed f separately per segment (<code>C</code> and <code>A+B+C</code>); a terrain point exactly on the FL25 circle then came out "inside" for one segment and "outside" for the next, losing a crossing. With one sign per point the count always has the right parity: odd above the radar, even below.</li></ol>
+<p>In <code>cruces_segmento()</code>:</p>
+<ul><li><strong>One end inside, one outside:</strong> exactly one root. It uses the numerically stable form q = −½(B + sign(B)·√D) and keeps the root that falls in [0, 1].</li><li><strong>Both ends outside:</strong> two roots only if the segment's closest point is inside the circle. Straight rays in the 4/3-Earth model can dip below a flight level and rise again.</li><li><strong>Both ends inside:</strong> no crossing. A circle is convex, so a segment between two inside points stays inside.</li></ul>
+<p>The distance is Rk·atan2(x, y)/1852, the same as the old π/2 − atan2(y, x).</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>/**
+ * Cruces entre la circunferencia del nivel de vuelo y el perfil (más el muro final) de cada acimut.
+ * Sustituye a create_matriz_obstaculos() + create_matriz_intersecciones().
+ * Cada punto se clasifica una sola vez como dentro (r² &lt; W²) o fuera, así que la paridad de los cruces
+ * es siempre correcta sin sumar 10 cm a W ni usar épsilon.
+ *
+ * @return array [acimut =&gt; lista de distancias en NM, en orden desde el radar]
+ */
+function calcula_cruces(array &amp;$radar, float $flm): array
+{
+    $perfil = perfil_cartesiano($radar);
+    $Rk = $radar[&#x27;screening&#x27;][&#x27;radioTerrestreAumentado&#x27;];
+    $W = $Rk + $flm; // radio de la circunferencia del nivel de vuelo
+    $W2 = $W * $W;
+    $alpha_max = calculaAnguloMaximaCobertura($radar, $flm);
+    $m = tan(M_PI_2 - $alpha_max); // recta de alcance máximo
+
+    $cruces = array();
+    foreach ($perfil as $azimut =&gt; $p) {
+        // número de puntos con ángulo central &lt;= alpha_max (los ángulos son crecientes)
+        $lo = 0; $hi = count($p[&#x27;ang&#x27;]);
+        while ($lo &lt; $hi) {
+            $mid = ($lo + $hi) &gt;&gt; 1;
+            if ($p[&#x27;ang&#x27;][$mid] &lt;= $alpha_max) $lo = $mid + 1; else $hi = $mid;
+        }
+        $n = $lo;
+        $lista = array();
+        for ($k = 0; $k &lt; $n - 1; $k++) {
+            $dentro1 = $p[&#x27;r2&#x27;][$k] &lt; $W2;
+            $dentro2 = $p[&#x27;r2&#x27;][$k + 1] &lt; $W2;
+            if ($dentro1 === $dentro2 &amp;&amp; ($dentro1 || $p[&#x27;min2&#x27;][$k] &gt;= $W2)) {
+                continue; // el segmento no puede cortar la circunferencia
+            }
+            cruces_segmento($p[&#x27;x&#x27;][$k], $p[&#x27;y&#x27;][$k], $p[&#x27;x&#x27;][$k + 1], $p[&#x27;y&#x27;][$k + 1],
+                $p[&#x27;r2&#x27;][$k] - $W2, $p[&#x27;r2&#x27;][$k + 1] - $W2, $Rk, $lista);
+        }
+        // muro final, si el último punto conservado no es ya un muro
+        if ($n &gt;= 2) {
+            $xb = $p[&#x27;x&#x27;][$n - 1]; $yb = $p[&#x27;y&#x27;][$n - 1];
+            if (sqrt($p[&#x27;r2&#x27;][$n - 1]) - $Rk &lt;= 30000) {
+                $fprev = $p[&#x27;r2&#x27;][$n - 1] - $W2;
+                foreach (create_muro($radar, 0.0, $p[&#x27;y&#x27;][0], $xb, $yb, $m) as [$xm, $ym]) {
+                    $fm = $xm * $xm + $ym * $ym - $W2;
+                    cruces_segmento($xb, $yb, $xm, $ym, $fprev, $fm, $Rk, $lista);
+                    $xb = $xm; $yb = $ym; $fprev = $fm;
+                }
+            }
+        }
+        $cruces[$azimut] = $lista;
+    }
+    return $cruces;
+}
+
+/**
+ * Cruces de un segmento con la circunferencia de radio W. $f1 y $f2 son x²+y²-W² en los extremos,
+ * calculados una sola vez por punto para que dos segmentos contiguos clasifiquen igual el punto común.
+ * Añade a $lista la distancia (NM, sobre la Tierra aumentada) de cada cruce.
+ */
+function cruces_segmento(float $x1, float $y1, float $x2, float $y2, float $f1, float $f2, float $Rk, array &amp;$lista): void
+{
+    $dx = $x2 - $x1;
+    $dy = $y2 - $y1;
+    $A = $dx * $dx + $dy * $dy;
+    if (0.0 == $A) {
+        return;
+    }
+    $B = 2 * ($x1 * $dx + $y1 * $dy);
+    $C = $f1;
+    $ts = array();
+    if (($f1 &lt; 0) !== ($f2 &lt; 0)) {
+        // un extremo dentro y otro fuera: exactamente un cruce en [0,1]
+        $s = sqrt(max(0.0, $B * $B - 4 * $A * $C));
+        $q = -0.5 * ($B + ($B &gt;= 0 ? $s : -$s)); // fórmula estable
+        $t1 = $q / $A;
+        $t2 = (0.0 != $q) ? $C / $q : $t1;
+        $e1 = ($t1 &lt; 0) ? -$t1 : (($t1 &gt; 1) ? $t1 - 1 : 0.0);
+        $e2 = ($t2 &lt; 0) ? -$t2 : (($t2 &gt; 1) ? $t2 - 1 : 0.0);
+        $ts[] = max(0.0, min(1.0, ($e1 &lt;= $e2) ? $t1 : $t2));
+    } elseif ($f1 &gt;= 0) {
+        // los dos extremos fuera: dos cruces si el segmento entra en el círculo
+        $tv = -$B / (2 * $A);
+        if ($tv &gt; 0 &amp;&amp; $tv &lt; 1 &amp;&amp; ($C - $B * $B / (4 * $A)) &lt; 0) {
+            $s = sqrt($B * $B - 4 * $A * $C);
+            $ts[] = (-$B - $s) / (2 * $A);
+            $ts[] = (-$B + $s) / (2 * $A);
+        }
+    } // los dos dentro: un segmento dentro de un círculo no puede salir de él
+    foreach ($ts as $t) {
+        $xi = $x1 + $t * $dx;
+        $yi = $y1 + $t * $dy;
+        $lista[] = $Rk * atan2($xi, $yi) / BERTA_MILLA_NAUTICA_EN_METROS; // ángulo central desde el eje y
+    }
+}</code></pre></div>
+<p><strong>Verify (parts B and C):</strong> on all 9 radars, FL1–400 and every azimuth (1.87 M lists), the crossings matched an independently written prototype exactly, with 0 parity errors. With the flag off, the counts and distances also matched the old code's (to the 1 cm W offset it used), checked on paracuellos1 at FL21 and FL34.</p>
+<h3 id="fix-change-6-part-d-intervals-and-outline-tracing">Change 6, part D — intervals and outline tracing <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-6-part-d-intervals-and-outline-tracing"> applied</label></h3>
+<p>Paste after part C. These two functions replace <code>create_poligonos_cobertura()</code>. The old code built one annular sector per covered interval, widened each by 20 m sideways so neighbours overlapped, and merged hundreds of them with <code>MR\Algorithm::unionMany</code>. That took 97% of the time below the radar. In testing the library also returned an empty result for valid input once, and threw <code>PolyBoolException</code> on barajas.</p>
+<p><code>intervalos_desde_cruces()</code> pairs the crossings into covered intervals. Below the radar the profile starts above the flight level, so the pairs are (c0,c1), (c2,c3)… Above the radar it starts below, so the intervals are [0,c0], (c1,c2)…</p>
+<p><code>poligonos_desde_intervalos()</code> traces the outline directly, treating azimuth bin j as spanning j·step ± step/2:</p>
+<ol><li>Merge touching intervals inside each bin.</li><li>Create directed edges with the covered region on the left. Each interval gets a lower arc (+u) and an upper arc (−u). Each bin boundary gets the radial stretches covered on one side only: +v where only the left bin covers, −v where only the right bin covers.</li><li>Chain the edges into rings. Where two rings touch at one vertex, prefer a left turn, so they stay separate rings.</li><li>Convert vertices to lat/lon with <code>destino()</code>. Radial sides longer than <code>BERTA_SUBDIVISION_RADIAL_NM</code> (10 NM) are subdivided, because a great circle isn't straight in lat/lon.</li></ol>
+<p>The output has the same shape as <code>getArray()</code>: a list of rings, first point not repeated. Nesting (holes) is still sorted out by <code>KML_normalizePolygonsForKML()</code>, unchanged.</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>/**
+ * Convierte los cruces de cada acimut en intervalos cubiertos [inicio, fin] en NM.
+ * Por debajo del radar el perfil empieza por encima del nivel: (c0,c1), (c2,c3)...
+ * Por encima del radar empieza por debajo: [0,c0], (c1,c2)...
+ */
+function intervalos_desde_cruces(array $cruces, bool $encima): array
+{
+    $intervalos = array();
+    foreach (array_values($cruces) as $j =&gt; $lista) {
+        if ($encima) {
+            array_unshift($lista, 0.0);
+        }
+        $iv = array();
+        for ($i = 0; $i + 1 &lt; count($lista); $i += 2) {
+            if ($lista[$i + 1] &gt; $lista[$i]) {
+                $iv[] = [$lista[$i], $lista[$i + 1]];
+            }
+        }
+        $intervalos[$j] = $iv;
+    }
+    return $intervalos;
+}
+
+/**
+ * Contorno de la cobertura a partir de los intervalos de cada acimut, sin unión de polígonos.
+ * El acimut j cubre [j·paso - paso/2, j·paso + paso/2]. Se generan las aristas del borde (arcos en cada
+ * intervalo y tramos radiales donde sólo un acimut vecino tiene cobertura) y se encadenan en anillos.
+ * Sustituye a create_poligonos_cobertura(): sin solape de 20 m, sin redondeo de ángulos y sin Martinez-Rueda.
+ *
+ * @param array $intervalos [j =&gt; [[inicio_nm, fin_nm], ...]]
+ * @return array lista de anillos [[lat, lon], ...] (sin repetir el primer punto), mismo formato que getArray()
+ */
+function poligonos_desde_intervalos(array $radar, array $intervalos): array
+{
+    $N = count($intervalos);
+    if (0 == $N) {
+        return array();
+    }
+    $paso = 360.0 / $N;
+
+    // ordenar y fusionar intervalos que se tocan dentro de cada acimut
+    $bins = array();
+    for ($j = 0; $j &lt; $N; $j++) {
+        $iv = $intervalos[$j] ?? array();
+        usort($iv, fn($a, $b) =&gt; $a[0] &lt;=&gt; $b[0]);
+        $fusion = array();
+        foreach ($iv as [$s, $e]) {
+            if ($e &lt;= $s) continue;
+            $u = count($fusion) - 1;
+            if ($u &gt;= 0 &amp;&amp; $s &lt;= $fusion[$u][1]) $fusion[$u][1] = max($fusion[$u][1], $e);
+            else $fusion[] = [$s, $e];
+        }
+        $bins[$j] = $fusion;
+    }
+
+    // aristas dirigidas en el plano (u = índice de frontera de acimut, v = distancia), región a la izquierda
+    // dirección: 0 = +u, 1 = +v, 2 = -u, 3 = -v
+    $salidas = array();
+    $puntos = array();
+    $arista = function (int $k1, float $r1, int $k2, float $r2, int $dir) use (&amp;$salidas, &amp;$puntos, $N): void {
+        $k1 %= $N; $k2 %= $N;
+        $a = $k1 . &#x27;|&#x27; . $r1; $b = $k2 . &#x27;|&#x27; . $r2;
+        $puntos[$a] = [$k1, $r1]; $puntos[$b] = [$k2, $r2];
+        $salidas[$a][] = [$b, $dir];
+    };
+    for ($j = 0; $j &lt; $N; $j++) {
+        foreach ($bins[$j] as [$s, $e]) {
+            $arista($j, $s, $j + 1, $s, 0);   // arco inferior
+            $arista($j + 1, $e, $j, $e, 2);   // arco superior
+        }
+    }
+    $cubre = function (array $set, float $x): bool {
+        foreach ($set as [$s, $e]) if ($x &gt; $s &amp;&amp; $x &lt; $e) return true;
+        return false;
+    };
+    for ($k = 0; $k &lt; $N; $k++) { // frontera k, entre el acimut k-1 y el k
+        $L = $bins[($k - 1 + $N) % $N];
+        $R = $bins[$k];
+        $cortes = array();
+        foreach ([$L, $R] as $set) foreach ($set as [$s, $e]) { $cortes[(string) $s] = $s; $cortes[(string) $e] = $e; }
+        $cortes = array_values($cortes);
+        sort($cortes);
+        for ($i = 0; $i &lt; count($cortes) - 1; $i++) {
+            $a = $cortes[$i]; $b = $cortes[$i + 1]; $medio = 0.5 * ($a + $b);
+            $l = $cubre($L, $medio); $r = $cubre($R, $medio);
+            if ($l &amp;&amp; !$r) $arista($k, $a, $k, $b, 1);      // región a la izquierda de la frontera
+            elseif ($r &amp;&amp; !$l) $arista($k, $b, $k, $a, 3);  // región a la derecha de la frontera
+        }
+    }
+
+    // encadenar aristas en anillos; en un vértice con varias salidas se prefiere girar a la izquierda
+    $preferencia = array(0 =&gt; [1, 0, 3], 1 =&gt; [2, 1, 0], 2 =&gt; [3, 2, 1], 3 =&gt; [0, 3, 2]);
+    $anillos = array();
+    foreach (array_keys($salidas) as $inicio) {
+        while (!empty($salidas[$inicio])) {
+            $anillo = array($inicio);
+            [$actual, $dir] = array_pop($salidas[$inicio]);
+            while ($actual !== $inicio) {
+                $anillo[] = $actual;
+                $opciones = $salidas[$actual] ?? array();
+                if (empty($opciones)) {
+                    logger(&quot; E&gt; Contorno abierto en poligonos_desde_intervalos (vértice {$actual})&quot;);
+                    break;
+                }
+                $elegida = array_key_first($opciones);
+                foreach ($preferencia[$dir] as $quiero) {
+                    foreach ($opciones as $i =&gt; $o) {
+                        if ($o[1] === $quiero) { $elegida = $i; break 2; }
+                    }
+                }
+                [$siguiente, $dir] = $opciones[$elegida];
+                unset($salidas[$actual][$elegida]);
+                $actual = $siguiente;
+            }
+            $anillos[] = $anillo;
+        }
+    }
+
+    // a lat/lon, subdividiendo los lados radiales largos
+    $latlon = array();
+    $aLatLon = function (int $k, float $r) use ($radar, $paso, &amp;$latlon): array {
+        $clave = $k . &#x27;|&#x27; . $r;
+        if (!isset($latlon[$clave])) {
+            $latlon[$clave] = ($r &lt;= 0.0)
+                ? [rad2deg($radar[&#x27;lat_rad&#x27;]), rad2deg($radar[&#x27;lon_rad&#x27;])]
+                : destino($radar[&#x27;lat_rad&#x27;], $radar[&#x27;lon_rad&#x27;], $r * BERTA_MILLA_NAUTICA_EN_METROS, deg2rad($k * $paso - $paso / 2));
+        }
+        return $latlon[$clave];
+    };
+    $resultado = array();
+    foreach ($anillos as $anillo) {
+        $poly = array();
+        $n = count($anillo);
+        for ($i = 0; $i &lt; $n; $i++) {
+            [$k1, $r1] = $puntos[$anillo[$i]];
+            [$k2, $r2] = $puntos[$anillo[($i + 1) % $n]];
+            $p = $aLatLon($k1, $r1);
+            if (empty($poly) || $poly[count($poly) - 1] != $p) $poly[] = $p;
+            if ($k1 === $k2 &amp;&amp; abs($r2 - $r1) &gt; BERTA_SUBDIVISION_RADIAL_NM) {
+                $ns = (int) ceil(abs($r2 - $r1) / BERTA_SUBDIVISION_RADIAL_NM);
+                for ($s = 1; $s &lt; $ns; $s++) {
+                    $poly[] = $aLatLon($k1, $r1 + ($r2 - $r1) * $s / $ns);
+                }
+            }
+        }
+        if (count($poly) &gt; 1 &amp;&amp; $poly[0] == $poly[count($poly) - 1]) array_pop($poly);
+        if (count($poly) &gt;= 3) $resultado[] = $poly;
+    }
+    return $resultado;
+}</code></pre></div>
+<p><strong>Verify:</strong> for 5,000 random points per case, a point is inside the polygons exactly when its distance falls in an interval of its azimuth bin. The mismatch was 0.00% for paracuellos1 FL20/FL23, canchoblanco FL20, barajas FL19 and valdespina FL25, against 0.02–0.2% for the old union. The <code>Contorno abierto</code> error appeared 0 times in a sweep of 10 radars (including paracuellos1-psr) × FL1–400.</p>
+<h3 id="fix-change-6-part-e-destino-and-destinovincenty">Change 6, part E — destino and destinoVincenty <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-6-part-e-destino-and-destinovincenty"> applied</label></h3>
+<p>Paste after part D. This is the last piece of the Change 6 block, ending just before the Ramer–Douglas–Peucker comment. <code>destino()</code> replaces <code>calcula_vertices_interseccion()</code>.</p>
+<p>The old function was exact for latitude, but its longitude step was an approximation: 80 m off at 250 NM in Spain and 300 m at 60°N. It also shifted every vertex 20 m sideways for the union overlap. The exact spherical formula is shorter and 2.7× faster per vertex (0.31 µs against 0.86 µs).</p>
+<p>With <code>BERTA_ELIPSOIDE_WGS84 = true</code> it uses Vincenty's direct solution on WGS84 (<a class="code-ref" href="#issue-P2">P2</a>), at about 1.5 µs per vertex, roughly 4 ms per flight level. The implementation was checked against known values: 111,319.49 m east along the equator gives 1.0000000°, and 110,574.39 m north from the equator gives 1.0000000°. A single local Earth radius (Euler) is not enough: it still errs by about 180 m at 50 NM on diagonal azimuths.</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>/**
+ * Problema directo: punto a $dist_m metros del radar con rumbo $az_rad.
+ * Esfera de radio BERTA_RADIO_TERRESTRE (fórmula exacta) o, con BERTA_ELIPSOIDE_WGS84, geodésica de Vincenty.
+ * Sustituye a calcula_vertices_interseccion(), cuya fórmula de longitud era aproximada.
+ *
+ * @return array [lat, lon] en grados
+ */
+function destino(float $lat_rad, float $lon_rad, float $dist_m, float $az_rad): array
+{
+    if (BERTA_ELIPSOIDE_WGS84) {
+        return destinoVincenty($lat_rad, $lon_rad, $dist_m, $az_rad);
+    }
+    $d = $dist_m / BERTA_RADIO_TERRESTRE;
+    $sinLat = sin($lat_rad); $cosLat = cos($lat_rad);
+    $cosD = cos($d); $sinD = sin($d);
+    $sinLat2 = $sinLat * $cosD + $cosLat * $sinD * cos($az_rad);
+    $lat2 = asin(max(-1.0, min(1.0, $sinLat2)));
+    $lon2 = $lon_rad + atan2(sin($az_rad) * $sinD * $cosLat, $cosD - $sinLat * $sinLat2);
+    return [rad2deg($lat2), rad2deg($lon2)];
+}
+
+/**
+ * Problema directo de Vincenty sobre el elipsoide WGS84.
+ * @return array [lat, lon] en grados
+ */
+function destinoVincenty(float $lat_rad, float $lon_rad, float $dist_m, float $az_rad): array
+{
+    $a = 6378137.0; $f = 1 / 298.257223563; $b = $a * (1 - $f);
+    $U1 = atan((1 - $f) * tan($lat_rad));
+    $sigma1 = atan2(tan($U1), cos($az_rad));
+    $sinAlpha = cos($U1) * sin($az_rad);
+    $cos2Alpha = 1 - $sinAlpha * $sinAlpha;
+    $u2 = $cos2Alpha * ($a * $a - $b * $b) / ($b * $b);
+    $A = 1 + $u2 / 16384 * (4096 + $u2 * (-768 + $u2 * (320 - 175 * $u2)));
+    $B = $u2 / 1024 * (256 + $u2 * (-128 + $u2 * (74 - 47 * $u2)));
+    $sigma = $dist_m / ($b * $A);
+    $cos2SigmaM = cos(2 * $sigma1 + $sigma);
+    for ($i = 0; $i &lt; 100; $i++) {
+        $cos2SigmaM = cos(2 * $sigma1 + $sigma);
+        $sinSigma = sin($sigma);
+        $deltaSigma = $B * $sinSigma * ($cos2SigmaM + $B / 4 * (cos($sigma) * (-1 + 2 * $cos2SigmaM ** 2)
+            - $B / 6 * $cos2SigmaM * (-3 + 4 * $sinSigma ** 2) * (-3 + 4 * $cos2SigmaM ** 2)));
+        $anterior = $sigma;
+        $sigma = $dist_m / ($b * $A) + $deltaSigma;
+        if (abs($sigma - $anterior) &lt; 1e-12) break;
+    }
+    $sinSigma = sin($sigma); $cosSigma = cos($sigma);
+    $cos2SigmaM = cos(2 * $sigma1 + $sigma);
+    $tmp = sin($U1) * $sinSigma - cos($U1) * $cosSigma * cos($az_rad);
+    $lat2 = atan2(sin($U1) * $cosSigma + cos($U1) * $sinSigma * cos($az_rad), (1 - $f) * sqrt($sinAlpha * $sinAlpha + $tmp * $tmp));
+    $lambda = atan2($sinSigma * sin($az_rad), cos($U1) * $cosSigma - sin($U1) * $sinSigma * cos($az_rad));
+    $C = $f / 16 * $cos2Alpha * (4 + $f * (4 - 3 * $cos2Alpha));
+    $L = $lambda - (1 - $C) * $f * $sinAlpha * ($sigma + $C * $sinSigma * ($cos2SigmaM + $C * $cosSigma * (-1 + 2 * $cos2SigmaM ** 2)));
+    return [rad2deg($lat2), rad2deg($lon_rad + $L)];
+}</code></pre></div>
+<p><strong>Verify (whole Change 6):</strong> <code>php -l inc.calculos.php</code>, then:</p>
+<ul><li><code>php main.php -r paracuellos1 -s 20 -z -f</code> should produce essentially the same coverage as before (the old union misplaced 0.02–0.2% of points at sector edges), about 16× faster.</li><li><code>php main.php -r paracuellos1 -s 100 -z -f</code> should still produce one polygon with 720 vertices.</li></ul>
+<h3 id="fix-change-7-inc-multicalculos-php-multicobertura-body">Change 7 — inc.multiCalculos.php: multicobertura body <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-7-inc-multicalculos-php-multicobertura-body"> applied</label></h3>
+<p>Fixes <a class="code-ref" href="#issue-S3">S3</a> (speed), <a class="code-ref" href="#issue-X1">X1</a> and <a class="code-ref" href="#issue-X2">X2</a> (cache served results from another radar set or stale inputs) and <a class="code-ref" href="#issue-X3">X3</a> (<code>unica</code> layer lost). Instead of building all 2^N−1 radar groups through <code>populate_cache()</code> and <code>cache_operation()</code>, it takes the regions from <code>multi_refinamiento()</code> (Change 8). Each region is keyed by the exact set of radars covering it, such as <code>&quot;barajas,paracuellos1&quot;</code>. The KML folders (<code>unica</code>, <code>multiradar-directa</code>, <code>multiradar-inversa</code>, <code>multiradar-union</code>) and placemark names stay the same.</p>
+<p><strong>7a. Where:</strong> <code>multicobertura()</code>, <strong>lines 119–257</strong>: from <code>logger(&quot; I&gt; Creando cobertura única/suma&quot;);</code> down to the closing <code>}</code> of the <code>foreach ($vsr as $numero_solape =&gt; $grupo_solape)</code> loop, just before the <code>// Estructura para meter los kml de los polígonos en carpetas</code> comment. Replace those lines with:</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>	// celdas = zonas cubiertas exactamente por un conjunto de radares, más la unión de todos
+	$refinado = multi_refinamiento($mr_polygons, $flWithPad);
+
+	logger(&quot; I&gt; Creando cobertura única/suma&quot;);
+	$normalized = KML_normalizePolygonsForKML($refinado[&#x27;union&#x27;]-&gt;getArray());
+	$kml_unica = KML_normalized2KML($normalized, 0, $sensores, $fl);
+	$kml_unica = KML_create_folder(&#x27;unica&#x27;, $kml_unica);
+
+	// si se selecciona única, sólo se genera la única y se vuelve.
+	if (isset($calculoMode[&#x27;multiradar_unica&#x27;]) &amp;&amp; true === $calculoMode[&#x27;multiradar_unica&#x27;]) {
+		return $kml_unica;
+	}
+
+	// agrupar las celdas por número de radares que las cubren (mono, doble, triple...)
+	$celdas_por_nivel = array();
+	foreach ($refinado[&#x27;celdas&#x27;] as $nombre_grupo_sensores =&gt; $poligono) {
+		$celdas_por_nivel[count(explode(&#x27;,&#x27;, $nombre_grupo_sensores))][$nombre_grupo_sensores] = $poligono;
+	}
+	ksort($celdas_por_nivel);
+
+	foreach ($celdas_por_nivel as $numero_solape =&gt; $celdas) {
+		$coverageNames_fixed = ($numero_solape &gt;= count($coverageNames)) ? &quot;de más de {$numero_solape}&quot; : $coverageNames[$numero_solape];
+		logger(&quot; N&gt; == Cobertura $coverageNames_fixed: &quot; . count($celdas) . &quot; zonas&quot;);
+		ksort($celdas);
+		foreach ($celdas as $nombre_grupo_sensores =&gt; $poligono) {
+			$normalized = KML_normalizePolygonsForKML($poligono-&gt;getArray());
+			$coverages_per_level_KML[$numero_solape][$nombre_grupo_sensores] =
+				KML_normalized2KML($normalized, $numero_solape, explode(&#x27;,&#x27;, $nombre_grupo_sensores), $fl);
+		}
+		// polígono único del nivel: las celdas de un mismo nivel no se solapan
+		$union_nivel = (1 == count($celdas)) ? reset($celdas) : MR\Algorithm::unionMany(array_values($celdas));
+		$normalized = KML_normalizePolygonsForKML($union_nivel-&gt;getArray());
+		$union_coverage_per_level_KML[$numero_solape] = KML_normalized2KML($normalized, $numero_solape, [(string) $numero_solape], $fl);
+	}
+</code></pre></div>
+<p>The per-level union now calls <code>MR\Algorithm::unionMany</code> directly instead of <code>create_unica()</code>. That removes the cache key <code>&quot;1&quot;</code>, <code>&quot;2&quot;</code>… that ignored the radar set (<a class="code-ref" href="#issue-X1">X1</a>).</p>
+<p><strong>7b. Where:</strong> line 281, inside the <code>multiradar-directa</code> loop. <strong>Delete</strong> this debug line, which printed every group name to stdout:</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>			print &quot;\t&quot; . $nombre_grupos_radares . PHP_EOL;</code></pre></div>
+<p><strong>7c. Where:</strong> line 290. Keep the <code>unica</code> folder in the output; before, <code>$kml</code> was overwritten here (<a class="code-ref" href="#issue-X3">X3</a>).</p>
+<div class="code before"><div class="code-head"><span>Before</span><button class="copy" type="button">Copy</button></div><pre><code>	$kml = KML_create_folder(&#x27;multiradar-directa&#x27;, $kml_directa);</code></pre></div>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>	$kml = $kml_unica . KML_create_folder(&#x27;multiradar-directa&#x27;, $kml_directa);</code></pre></div>
+<p><strong>Verify:</strong></p>
+<ol><li><code>rm -rf cache/multi &amp;&amp; php main.php -2 -r &quot;barajas paracuellos1 valladolid&quot; -s 100 -z</code>. <code>RESULTADOS/MULTI/100.kml</code> now contains a <code>&lt;name&gt;unica&lt;/name&gt;</code> folder, and the log shows <code>Refinamiento multiradar: 6 zonas, 12 operaciones</code>.</li><li>Run the same level with <code>&quot;barajas paracuellos1 alcolea&quot;</code>. Point sampling against the single-radar polygons gave 0% wrong levels, against 53% before.</li><li>Repeat the last command. The log shows <code>Multicobertura recuperada de la caché</code>.</li></ol>
+<h3 id="fix-change-8-inc-multicalculos-php-multi-refinamiento">Change 8 — inc.multiCalculos.php: multi_refinamiento <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-8-inc-multicalculos-php-multi-refinamiento"> applied</label></h3>
+<p>New function; append it at the end of <code>inc.multiCalculos.php</code>, after <code>cache_operation()</code>.</p>
+<p><strong>Method.</strong> Radars are added one at a time. Adding radar S splits every existing region P into P∩S (now also covered by S) and P−S (unchanged), and adds S−(union so far) as S's own region. Empty regions are dropped, so the number of operations follows the number of overlap regions that actually exist, not the 2^N−1 groups. For 9 radars at FL150 that's 93 regions and 327 operations, against 1,323 before. If S doesn't touch P at all, the difference is skipped.</p>
+<p><strong>Caching.</strong> The disk cache key is the SHA-1 of the flight level, the radar names and the serialized input polygons. Any change to a single-radar coverage (new <code>.scr</code>, <code>-m</code>, <code>-c</code>, a fix in the maths) therefore misses the cache instead of returning stale results (<a class="code-ref" href="#issue-X2">X2</a>). Files go to <code>cache/multi/</code>, relative to the working directory like the existing <code>cache/polygons/</code>.</p>
+<div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>/**
+ * Cobertura multiradar por refinamiento incremental.
+ * Al añadir el radar S, cada celda P se parte en P∩S (pasa a tener S) y P−S (se queda igual), y se añade
+ * S−(unión de los anteriores). Las celdas vacías se descartan, así que el trabajo depende del número de zonas
+ * de solape que existen y no de las 2^N−1 combinaciones de radares.
+ * El resultado se guarda en disco con una clave que incluye el nivel de vuelo, los radares y el contenido de
+ * sus polígonos, de modo que un cambio en cualquier cobertura monoradar invalida la caché.
+ *
+ * @param array&lt;string, MR\Polygon&gt; $mr_polygons polígono de cada sensor
+ * @return array{celdas: array&lt;string, MR\Polygon&gt;, union: MR\Polygon} celdas: &quot;a,b&quot; =&gt; zona cubierta exactamente por a y b
+ */
+function multi_refinamiento(array $mr_polygons, string $flWithPad): array
+{
+	ksort($mr_polygons);
+	$clave = sha1($flWithPad . &#x27;|&#x27; . implode(&#x27;,&#x27;, array_keys($mr_polygons)) . &#x27;|&#x27; . serialize($mr_polygons));
+	$ruta = &quot;cache&quot; . DIRECTORY_SEPARATOR . &quot;multi&quot; . DIRECTORY_SEPARATOR . $clave[0] . $clave[1] . DIRECTORY_SEPARATOR;
+	$fichero = $ruta . $clave . &quot;.ser&quot;;
+	if (is_file($fichero)) {
+		$cacheado = unserialize(
+			(string) file_get_contents($fichero),
+			[&#x27;allowed_classes&#x27; =&gt; [MR\Polygon::class, MR\Point::class]]
+		);
+		if (is_array($cacheado) &amp;&amp; isset($cacheado[&#x27;celdas&#x27;], $cacheado[&#x27;union&#x27;])) {
+			logger(&quot; D&gt; Multicobertura recuperada de la caché {$fichero}&quot;);
+			return $cacheado;
+		}
+	}
+
+	$timer = microtime(true);
+	$operaciones = 0;
+	$celdas = array();
+	$union = null;
+	foreach ($mr_polygons as $sensor =&gt; $S) {
+		$nuevas = array();
+		foreach ($celdas as $nombre =&gt; $P) {
+			$interseccion = MR\Algorithm::intersect($P, $S); $operaciones++;
+			if ($interseccion-&gt;numPoints &gt; 0) {
+				$nuevas[$nombre . &#x27;,&#x27; . $sensor] = $interseccion;
+				$resta = MR\Algorithm::difference($P, $S); $operaciones++;
+				if ($resta-&gt;numPoints &gt; 0) {
+					$nuevas[$nombre] = $resta;
+				}
+			} else {
+				$nuevas[$nombre] = $P; // S no toca esta celda
+			}
+		}
+		if (null === $union) {
+			$solo = $S;
+			$union = $S;
+		} else {
+			$solo = MR\Algorithm::difference($S, $union); $operaciones++;
+			$union = MR\Algorithm::union($union, $S); $operaciones++;
+		}
+		if ($solo-&gt;numPoints &gt; 0) {
+			$nuevas[$sensor] = $solo;
+		}
+		$celdas = $nuevas;
+	}
+	logger(&quot; V&gt; Refinamiento multiradar: &quot; . count($celdas) . &quot; zonas, {$operaciones} operaciones, &quot; . round(microtime(true) - $timer, 3) . &quot;s&quot;);
+
+	$resultado = array(&#x27;celdas&#x27; =&gt; $celdas, &#x27;union&#x27; =&gt; $union);
+	crearCarpetaResultados($ruta);
+	file_put_contents($fichero, serialize($resultado));
+	return $resultado;
+}</code></pre></div>
+<p><strong>Verify:</strong> with 9 radars at FL150 (<code>barajas paracuellos1 valladolid alcolea canchoblanco erillas monflorite valdespina paracuellos2</code>), every one of the 93 regions had the same area as the old algorithm's group (largest difference 0.000 km² out of 678,762 km²). Point sampling of the output KML gave 0 wrong levels.</p>
+<h3 id="fix-left-out-dead-code-and-open-questions">Left out, dead code and open questions</h3>
+<p><strong>Dead code after these changes</strong>, safe to delete once you're happy (nothing calls it):</p>
+<ul><li><code>inc.multiCalculos.php</code>: <code>create_unica()</code>, <code>populate_cache()</code>, <code>cache_operation()</code> and the <code>cache/polygons/</code> directory.</li><li><code>inc.auxiliares.php</code>: <code>getCached()</code> (only <code>calcula_vertices_interseccion()</code> used it).</li></ul>
+<p><strong>Not included here</strong> (from the earlier code review, independent of the maths):</p>
+<ul><li>KMZ file name without the flight level (<a class="code-ref" href="#issue-O1">O1</a>) and multi output name without the radar set (<a class="code-ref" href="#issue-O2">O2</a>).</li><li>Single-radar cache key ignoring <code>-c</code> and the <code>.scr</code> date (<a class="code-ref" href="#issue-M2">M2</a>, <a class="code-ref" href="#issue-M3">M3</a>). Until fixed, run <code>-f</code> or clear <code>cache/</code> when switching the cone or updating a screening.</li><li>The empty-polygon guard in <code>init_polygons()</code> (<a class="code-ref" href="#issue-X4">X4</a>). PSR no longer produces empty polygons after Change 2, but the guard is still worth adding.</li><li><code>--screening-file</code> missing <code>:</code>, help listing options that don't work, and the other dead code (<a class="code-ref" href="#issue-O3">O3</a>–<a class="code-ref" href="#issue-O5">O5</a>).</li></ul>
+<p><strong>Open questions before turning the flags on:</strong></p>
+<ul class="tasks"><li><label><input type="checkbox" data-persist>Confirm what PREDICT's screening points are: terrain/horizon points, or an already-computed shadow line. That decides <code>BERTA_PERFIL_ESCALONADO</code>.</label></li><li><label><input type="checkbox" data-persist>Compare one BERTA level against a PREDICT coverage export, to confirm PREDICT's Earth radius and that its distances are true ground distances. That decides <code>BERTA_ELIPSOIDE_WGS84</code>.</label></li><li><label><input type="checkbox" data-persist>Confirm whether SASS-C <code>ConeOfSilence</code> is an elevation angle or a half-angle from the vertical (Change 3). It makes no difference at 45°.</label></li></ul>
+<p>The prototype functions and measurement scripts behind these numbers are in the session scratchpad and will be lost if it is cleared. They can become a test suite in the repo if you want them kept.</p>
+</section>
+</main>
+</div>
+<script>
+document.querySelectorAll('button.copy').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var text = b.closest('.code').querySelector('pre code').innerText;
+    var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1400); };
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done); }
+    else { var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
+  });
+});
+var boxes = document.querySelectorAll('input[data-persist]');
+boxes.forEach(function (c, i) {
+  var key = 'berta-review:' + (c.dataset.key || 'task-' + i);
+  try { c.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  c.addEventListener('change', function () { try { localStorage.setItem(key, c.checked ? '1' : '0'); } catch (e) {} });
+  c.addEventListener('click', function (e) { e.stopPropagation(); });
+});
+document.querySelectorAll('a.code-ref').forEach(function (a) {
+  a.addEventListener('click', function () {
+    var row = document.querySelector(a.getAttribute('href'));
+    if (row) { row.classList.add('flash'); setTimeout(function () { row.classList.remove('flash'); }, 1600); }
+  });
+});
+var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+var targets = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+var onScroll = function () {
+  var y = window.scrollY + 40, cur = 0;
+  targets.forEach(function (t, i) { if (t && t.offsetTop <= y) cur = i; });
+  links.forEach(function (a, i) { a.classList.toggle('active', i === cur); });
+};
+window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+</script>
+</body>
+</html>
