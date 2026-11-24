@@ -63,13 +63,13 @@ $ITEMS = [
     ['E5', 'Maths', 'Feet constant 1/3.2808 instead of 0.3048', 'Change 1', 'check_E5', false],
     ['E6', 'Maths', 'W += 0.01 workaround instead of robust crossing classification', 'Change 6C', 'check_E6', false],
     ['E7', 'Maths', 'Capped wall point moved off the range line', 'Change 6A', 'check_E7', false],
-    ['E8', 'Maths', 'Cone radius uses a fixed 45° instead of the .rdb cone angle', 'Change 3', 'check_E8', false],
+    ['E8', 'Maths', 'Cone radius uses a fixed 45° instead of the .rdb cone angle', 'Change 3 (done in af810d4)', 'check_E8', false],
     ['P1', 'Precision', 'Approximate vertex formula (up to 80 m at 250 NM) + 20 m offset', 'Change 6E', 'check_P1', false],
     ['P2', 'Precision', 'Sphere instead of WGS84 — flag BERTA_ELIPSOIDE_WGS84', 'Change 6E (flag)', 'check_P2', false],
     ['S2', 'Speed', 'Full FL1-400 single-radar sweep (profile once per radar, segment rejection)', 'Change 6B-C', 'check_S2', true],
     ['Q1', 'Open question', 'Confirm what PREDICT screening points are (decides E4)', 'manual', 'check_Q', false],
     ['Q2', 'Open question', 'Compare one level with a PREDICT export (decides P2, Earth radius)', 'manual', 'check_Q', false],
-    ['Q3', 'Open question', 'Is SASS-C ConeOfSilence an elevation angle or a half-angle from vertical? (E8)', 'manual', 'check_Q', false],
+    ['Q3', 'Open question', 'Is SASS-C ConeOfSilence an elevation angle or a half-angle from vertical? (E8) — answered', 'manual', 'check_Q', false],
 ];
 $ALIASES = ['E1' => 'M1', 'E2' => 'M5', 'S1' => 'E3', 'S3' => 'X6'];
 
@@ -658,21 +658,31 @@ function check_E7(): array {
 }
 
 function check_E8(): array {
+    // Q3 (respondida): ConeOfSilence es el semiángulo medido desde la vertical del radar; 0º = sin cono.
+    // radio = (altura sobre el radar) · tan(ángulo)
     $ws = workspace('E8', true);
     $d = "$ws/spain.tsk/radar_data.rbk";
     rdb_variant("$d/paracuellos1.rdb", "$d/zcone.rdb", ['radarIdentifier' => 'zcone', 'secondaryConeOfSilence' => '30.000000']);
+    rdb_variant("$d/paracuellos1.rdb", "$d/zcone0.rdb", ['radarIdentifier' => 'zcone0', 'secondaryConeOfSilence' => '0.000000']);
     $r = berta($ws, ['-r', 'zcone', '-s', '150', '-z', '-f', '-c']);
-    if (crashed($r)) return res('ERROR', 'BERTA crashed with -c');
+    if (crashed($r)) return res('OPEN', 'BERTA crashed with -c (30° cone)');
     $kml = (string) mono_kml($ws, 'zcone', 150); $rad = ref_radar($ws, 'zcone');
-    if (!preg_match('#<innerBoundaryIs>.*?<coordinates>(.*?)</coordinates>#s', $kml, $m)) return res('OPEN', 'no cone hole in the output');
+    if (!preg_match('#<innerBoundaryIs>.*?<coordinates>(.*?)</coordinates>#s', $kml, $m)) return res('OPEN', 'no cone hole in the output for a 30° cone');
     $c = [rad2deg($rad['lat']), rad2deg($rad['lon'])]; $ds = [];
     foreach (preg_split('/\s+/', trim($m[1])) as $t) { $v = explode(',', $t); if (count($v) >= 2) $ds[] = hav($c, [(float) $v[1], (float) $v[0]]); }
     $rr = array_sum($ds) / count($ds); $h = 150 * 100 * PIE - $rad['hA'];
-    $cand = ['elevation 30° (h/tan)' => $h / tan(deg2rad(30)), 'half-angle 30° (h·tan)' => $h * tan(deg2rad(30)), 'fixed 45°' => $h];
+    $cand = ['half-angle from vertical (h·tan)' => $h * tan(deg2rad(30)), 'elevation angle (h/tan)' => $h / tan(deg2rad(30)), 'fixed 45°' => $h];
     $best = ''; $err = INF; foreach ($cand as $k => $v) if (abs($rr - $v) / $v < $err) { $err = abs($rr - $v) / $v; $best = $k; }
-    if ($err > 0.03) return res('MANUAL', sprintf('cone radius %.0f m matches no expected model', $rr));
-    return $best === 'fixed 45°' ? res('OPEN', sprintf('cone radius %.0f m = fixed 45°, the .rdb angle (30°) is ignored', $rr))
-        : res('FIXED', sprintf('cone radius %.0f m uses the .rdb angle as %s — confirm semantics in Q3', $rr, $best));
+    if ($err > 0.03) return res('OPEN', sprintf('30° cone radius %.0f m matches no model (expected %.0f m = h·tan30°)', $rr, $h * tan(deg2rad(30))));
+    if ($best !== 'half-angle from vertical (h·tan)') return res('OPEN', sprintf('30° cone radius %.0f m follows "%s"; expected %.0f m (half-angle from vertical)', $rr, $best, $h * tan(deg2rad(30))));
+
+    // 0º = sin cono: no debe fallar ni dejar un agujero
+    $r0 = berta($ws, ['-r', 'zcone0', '-s', '150', '-z', '-f', '-c']);
+    if (crashed($r0)) return res('OPEN', sprintf('30° cone correct (%.0f m), but a 0° cone (= no cone) crashes BERTA', $rr));
+    $k0 = (string) mono_kml($ws, 'zcone0', 150);
+    if (!kml_polygons($k0)) return res('OPEN', sprintf('30° cone correct (%.0f m), but a 0° cone removes the whole coverage', $rr));
+    if (str_contains($k0, '<innerBoundaryIs>')) return res('OPEN', sprintf('30° cone correct (%.0f m), but a 0° cone (= no cone) still leaves a hole', $rr));
+    return res('FIXED', sprintf('30° cone radius %.0f m = h·tan30° (half-angle from vertical); 0° gives no cone', $rr));
 }
 
 function check_P1(): array {

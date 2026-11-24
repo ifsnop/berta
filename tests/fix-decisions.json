@@ -1,0 +1,3 @@
+{
+    "Q3": "ConeOfSilence is the half-angle measured from the radar's vertical; 0° means no cone. Radius = height above radar × tan(angle)."
+}
