@@ -10,8 +10,15 @@ const BERTA_MILLA_NAUTICA_EN_METROS = 1852.0; // metros equivalentes a 1 milla n
 const BERTA_GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
 const BERTA_GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
 const BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
-CONST BERTA_FEET_TO_METERS = 0.30480370641307;
+const BERTA_FEET_TO_METERS = 0.3048; // pie internacional (antes 0.30480370641307 = 1/3.2808)
 const BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION = 0.000001;
+// El suelo de visibilidad entre puntos del screening sigue la línea de visión más alta hasta ese punto
+// (máximo acumulado del ángulo de elevación). Activar tras confirmar la semántica del screening de PREDICT.
+const BERTA_PERFIL_ESCALONADO = false;
+// Posiciones sobre el elipsoide WGS84 (Vincenty) en lugar de una esfera de radio BERTA_RADIO_TERRESTRE.
+// Activar tras confirmar contra una cobertura exportada de PREDICT.
+const BERTA_ELIPSOIDE_WGS84 = false;
+const BERTA_SUBDIVISION_RADIAL_NM = 10.0; // longitud máxima de un lado radial antes de subdividirlo (NM)
 
 // INCLUSIÓN DE FICHEROS
 require_once('inc.cargarScreening.php');
@@ -319,11 +326,13 @@ function programaPrincipal(array $config)
                 // ¿tenemos datos del terreno cargados? vamos a cargarlos una sola vez
                 if (!isset($coberturas[$sensor]['terreno'])) {
                     $coberturas[$sensor]['terreno'] = cargarDatosTerreno($infoCoral[$sensor], $config['max-range']); /*  !== -1 ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange']); */
-                    if (false !== strpos($sensor, "-psr")) {
+                    if ((false !== strpos($sensor, "-psr")) && (-1 == $config['max-range'])) {
                         logger(" V> Detectado PSR, ajustando alcance");
-                        $coberturas[$sensor]['terreno']['range'] = $infoCoral[$sensor]['primaryMaximumRange'] * BERTA_MILLA_NAUTICA_EN_METROS;
-                        logger(" I>  El alcance definido para el PSR es de " . ($coberturas[$sensor]['terreno']['range'] / BERTA_MILLA_NAUTICA_EN_METROS) .
-                            "NM / " . $coberturas[$sensor]['terreno']['range'] . "m");
+                        // el alcance se guarda en NM, igual que en cargarDatosTerreno()
+                        $coberturas[$sensor]['terreno']['range'] = (float) $infoCoral[$sensor]['primaryMaximumRange'];
+                        $coberturas[$sensor]['terreno']['screening']['range'] = $coberturas[$sensor]['terreno']['range'];
+                        logger(" I>  El alcance definido para el PSR es de " . $coberturas[$sensor]['terreno']['range'] .
+                            "NM / " . ($coberturas[$sensor]['terreno']['range'] * BERTA_MILLA_NAUTICA_EN_METROS) . "m");
                     }
                     logger(" V> Información del terreno procesada (" . round(microtime(true) - $timer, 3) . "s)");
                     if (false) {
