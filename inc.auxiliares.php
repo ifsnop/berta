@@ -18,6 +18,26 @@ function getCached(array &$cache, string $key, callable $compute)
 }
 
 /**
+ * Indica si un resultado de cobertura tiene al menos un anillo con área (3 o más puntos).
+ * false, null, [] y [[]] (anillo vacío, como el de cachés antiguas) significan "sin cobertura".
+ *
+ * @param mixed $polygons lista de anillos [[lat, lon], ...] o false
+ * @return bool true si hay cobertura que dibujar
+ */
+function tieneCobertura($polygons): bool
+{
+    if (!is_array($polygons)) {
+        return false;
+    }
+    foreach ($polygons as $anillo) {
+        if (is_array($anillo) && count($anillo) >= 3) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Express number with a byte prefix (byte, Kb, Mb, Gb...)
  * @param float $size number of bytes
  * @return string rounded number with prefix

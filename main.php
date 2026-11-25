@@ -358,6 +358,14 @@ function programaPrincipal(array $config)
                 // si se ha forzado el alcance, la caché está invalidada automáticamente.
             }
 
+            // Un nivel sin cobertura no genera KML, esté por encima o por debajo del radar. Cubre también
+            // cachés antiguas con [] o [[]] y una caché ilegible (json_decode devuelve null).
+            if (!tieneCobertura($coberturas[$sensor]['polygons'])) {
+                logger(" N> Sin cobertura para el sensor >{$sensor}< en FL{$nivelVuelo}, no se genera KML");
+                $coberturas[$sensor]['polygons'] = false;
+                continue;
+            }
+
             // si estamos en mono cobertura, generamos ya el kml
             if (isset($config['mode']['monoradar']) && $config['mode']['monoradar']) {
                 $rutas = array(
@@ -432,6 +440,12 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
         // se devuelve para cada azimut, la distancia más lejana
         logger(" D> calculosFLencimaRadar2");
         $polygons = calculosFLencimaRadar2($radar, $flm);
+        // sin ningún anillo de al menos 3 puntos no hay cobertura (p. ej. alcance que no llega al nivel):
+        // se devuelve false antes de restar el cono
+        if (!tieneCobertura($polygons)) {
+            logger(" I> No existe cobertura para el sensor {$radar['radar']} a FL{$nivelVuelo}");
+            return false;
+        }
 
         if ($calculoCono) {
             $radioConom = ($flm - $hA) * tan(deg2rad($radar['coneOfSilence']));
@@ -453,11 +467,13 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
 
         logger(" D> calculosFLdebajoRadar2");
         $polygons = calculosFLdebajoRadar2($radar, $flm);
+    }
 
-        if (0 == count($polygons)) {
-            logger(" I> No existe cobertura para el sensor {$radar['radar']} a FL{$nivelVuelo}");
-            return false;
-        }
+    // Igual por encima que por debajo del radar: sin anillos con área no hay cobertura y se devuelve
+    // false (también si el cono lo ha eliminado todo). Un nivel sin cobertura no genera KML.
+    if (!tieneCobertura($polygons)) {
+        logger(" I> No existe cobertura para el sensor {$radar['radar']} a FL{$nivelVuelo}");
+        return false;
     }
 
     return $polygons;

@@ -91,7 +91,7 @@ h3:has(label.applied input:checked)::after { content: " ✓"; color: #3a8f45; }
 </head>
 <body>
 <div class="layout">
-<nav class="toc"><div class="toc-title">Contents</div><ul><li class="l1"><a href="#part-problems">Part I — Problems found</a></li><li class="l2"><a href="#code-review">Code review</a></li><li class="l3"><a href="#review-how-it-was-checked">How it was checked</a></li><li class="l3"><a href="#review-mono-radar-coverage">Mono-radar coverage</a></li><li class="l3"><a href="#review-multi-radar-coverage">Multi-radar coverage</a></li><li class="l3"><a href="#review-output-files-and-options">Output files and options</a></li><li class="l3"><a href="#review-suggested-priorities">Suggested priorities</a></li><li class="l2"><a href="#maths-review">Mathematics review</a></li><li class="l3"><a href="#maths-errors">Errors</a></li><li class="l3"><a href="#maths-precision">Precision</a></li><li class="l3"><a href="#maths-speed">Speed</a></li><li class="l1"><a href="#part-fixes">Part II — Proposed fixes</a></li><li class="l3"><a href="#fix-results">Results</a></li><li class="l3"><a href="#fix-how-to-apply-and-verify">How to apply and verify</a></li><li class="l3"><a href="#fix-change-1-main-php-constants-and-flags">Change 1 — main.php: constants and flags</a></li><li class="l3"><a href="#fix-change-2-main-php-psr-range-in-nm">Change 2 — main.php: PSR range in NM</a></li><li class="l3"><a href="#fix-change-3-main-php-cone-of-silence-radius">Change 3 — main.php: cone of silence radius</a></li><li class="l3"><a href="#fix-change-4-inc-cargarscreening-php-forced-range-log">Change 4 — inc.cargarScreening.php: forced-range log</a></li><li class="l3"><a href="#fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp">Change 5 — inc.calculos.php: obsolete constants and acos clamp</a></li><li class="l3"><a href="#fix-change-6-inc-calculos-php-replacement-block-part-a">Change 6 — inc.calculos.php: replacement block, part A</a></li><li class="l3"><a href="#fix-change-6-part-b-perfil-cartesiano">Change 6, part B — perfil_cartesiano</a></li><li class="l3"><a href="#fix-change-6-part-c-calcula-cruces-and-cruces-segmento">Change 6, part C — calcula_cruces and cruces_segmento</a></li><li class="l3"><a href="#fix-change-6-part-d-intervals-and-outline-tracing">Change 6, part D — intervals and outline tracing</a></li><li class="l3"><a href="#fix-change-6-part-e-destino-and-destinovincenty">Change 6, part E — destino and destinoVincenty</a></li><li class="l3"><a href="#fix-change-7-inc-multicalculos-php-multicobertura-body">Change 7 — inc.multiCalculos.php: multicobertura body</a></li><li class="l3"><a href="#fix-change-8-inc-multicalculos-php-multi-refinamiento">Change 8 — inc.multiCalculos.php: multi_refinamiento</a></li><li class="l3"><a href="#fix-left-out-dead-code-and-open-questions">Left out, dead code and open questions</a></li></ul></nav>
+<nav class="toc"><div class="toc-title">Contents</div><ul><li class="l1"><a href="#part-problems">Part I — Problems found</a></li><li class="l2"><a href="#code-review">Code review</a></li><li class="l3"><a href="#review-how-it-was-checked">How it was checked</a></li><li class="l3"><a href="#review-mono-radar-coverage">Mono-radar coverage</a></li><li class="l3"><a href="#review-multi-radar-coverage">Multi-radar coverage</a></li><li class="l3"><a href="#review-output-files-and-options">Output files and options</a></li><li class="l3"><a href="#review-suggested-priorities">Suggested priorities</a></li><li class="l2"><a href="#maths-review">Mathematics review</a></li><li class="l3"><a href="#maths-errors">Errors</a></li><li class="l3"><a href="#maths-precision">Precision</a></li><li class="l3"><a href="#maths-speed">Speed</a></li><li class="l1"><a href="#part-fixes">Part II — Proposed fixes</a></li><li class="l3"><a href="#fix-results">Results</a></li><li class="l3"><a href="#fix-how-to-apply-and-verify">How to apply and verify</a></li><li class="l3"><a href="#fix-change-1-main-php-constants-and-flags">Change 1 — main.php: constants and flags</a></li><li class="l3"><a href="#fix-change-2-main-php-psr-range-in-nm">Change 2 — main.php: PSR range in NM</a></li><li class="l3"><a href="#fix-change-3-main-php-cone-of-silence-radius">Change 3 — main.php: cone of silence radius</a></li><li class="l3"><a href="#fix-change-4-inc-cargarscreening-php-forced-range-log">Change 4 — inc.cargarScreening.php: forced-range log</a></li><li class="l3"><a href="#fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp">Change 5 — inc.calculos.php: obsolete constants and acos clamp</a></li><li class="l3"><a href="#fix-change-5c-no-coverage">Change 5c — levels without coverage (X4, O7)</a></li><li class="l3"><a href="#fix-change-6-inc-calculos-php-replacement-block-part-a">Change 6 — inc.calculos.php: replacement block, part A</a></li><li class="l3"><a href="#fix-change-6-part-b-perfil-cartesiano">Change 6, part B — perfil_cartesiano</a></li><li class="l3"><a href="#fix-change-6-part-c-calcula-cruces-and-cruces-segmento">Change 6, part C — calcula_cruces and cruces_segmento</a></li><li class="l3"><a href="#fix-change-6-part-d-intervals-and-outline-tracing">Change 6, part D — intervals and outline tracing</a></li><li class="l3"><a href="#fix-change-6-part-e-destino-and-destinovincenty">Change 6, part E — destino and destinoVincenty</a></li><li class="l3"><a href="#fix-change-7-inc-multicalculos-php-multicobertura-body">Change 7 — inc.multiCalculos.php: multicobertura body</a></li><li class="l3"><a href="#fix-change-8-inc-multicalculos-php-multi-refinamiento">Change 8 — inc.multiCalculos.php: multi_refinamiento</a></li><li class="l3"><a href="#fix-left-out-dead-code-and-open-questions">Left out, dead code and open questions</a></li></ul></nav>
 <main>
 <header class="top">
 <h1>BERTA — code review and proposed fixes</h1>
@@ -102,6 +102,8 @@ h3:has(label.applied input:checked)::after { content: " ✓"; color: #3a8f45; }
 <ul>
 <li><a class="code-ref" href="#issue-M1">M1</a> / <a class="code-ref" href="#issue-E1">E1</a> PSR range — Change 2 applied.</li>
 <li><a class="code-ref" href="#issue-E5">E5</a> feet constant — Change 1 applied.</li>
+<li><a class="code-ref" href="#issue-M5">M5</a> / <a class="code-ref" href="#issue-E2">E2</a> NaN with a short range, and <a class="code-ref" href="#issue-X4">X4</a> multi-radar crash — Changes 5b + 5c applied.</li>
+<li>O7 (new rule): a level without coverage produces no KML, above or below the radar — Change 5c.</li>
 <li><a class="code-ref" href="#issue-E8">E8</a> cone of silence — Change 3, done in <code>af810d4</code>; Q3 answered (half-angle from the vertical).</li>
 </ul>
 <p style="margin:6px 0 0">Everything else in this document is still pending.</p></div>
@@ -213,6 +215,7 @@ const BERTA_SUBDIVISION_RADIAL_NM = 10.0; // longitud máxima de un lado radial 
 			&quot;NM / &quot; . ($radar[&#x27;range&#x27;] * BERTA_MILLA_NAUTICA_EN_METROS) . &quot;m&quot;);</code></pre></div>
 <p><strong>Verify:</strong> <code>php main.php -r paracuellos1 -s 100 -m 60 -z</code> logs <code>60NM / 111120m</code>.</p>
 <h3 id="fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp">Change 5 — inc.calculos.php: obsolete constants and acos clamp <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp"> applied</label></h3>
+<p class="done">✓ <strong>5b applied in the code</strong>, together with Change 5c below (branch <code>review-checker</code>). 5a (removing the obsolete constants) is still pending.</p>
 <p>Fixes <a class="code-ref" href="#issue-E2">E2</a> and removes constants that only the replaced code used (including the 20 NM ÷ metres unit mix, <a class="code-ref" href="#issue-M4">M4</a>, and the azimuth rounding behind the "FL22" commit).</p>
 <p><strong>5a. Where:</strong> <code>inc.calculos.php</code>, lines 6–12. <strong>Delete</strong> these lines (keep the blank line before the <code>calculaAnguloMaximaCobertura</code> docblock):</p>
 <div class="code"><div class="code-head"><span>php</span><button class="copy" type="button">Copy</button></div><pre><code>// Más velocidad y menos precisión aumentando INTERSECTION_SUBDIVISION_LIMIT
@@ -232,6 +235,75 @@ const BERTA_INTERSECTION_CACHE_TOLERANCE = 5; // ...</code></pre></div>
     // &gt; 1: el alcance no llega al nivel de vuelo (ángulo 0, sin cobertura); &lt; -1 no es posible geométricamente
     $anguloMaxCob = acos(max(-1.0, min(1.0, $cosAngulo)));</code></pre></div>
 <p><strong>Verify:</strong> <code>php main.php -r paracuellos1 -s 400 -m 5 -z -f</code> no longer logs <code>NANrad</code> and produces no coverage (5 NM can't reach FL400).</p>
+<p class="done" style="border-left-color:#c0392b;background:var(--before)"><strong>Do not apply 5b on its own</strong> on the current code (before Change 6). With the clamp, α becomes 0, no obstacle is left inside the range except the radar itself, and <code>create_muro()</code> divides by zero (<code>DivisionByZeroError</code>). Apply 5b together with Change 5c, or as part of Change 6, whose <code>calcula_cruces()</code> already handles that case.</p>
+<h3 id="fix-change-5c-no-coverage">Change 5c — levels without coverage (fixes X4, adds O7)</h3>
+<p class="done">✓ <strong>Applied in the code</strong> (branch <code>review-checker</code>). The checker reports M5, X4 and O7 as fixed.</p>
+<p>Fixes <a class="code-ref" href="#issue-X4">X4</a>. When the range can't reach the flight level, the above-radar branch used to return an empty ring <code>[[]]</code> instead of "no coverage". It was cached, and the multi-radar run then crashed in <code>ramer_douglas_peucker()</code>. Rule from now on: <strong>a level without coverage produces no KML, above or below the radar</strong> (checker item O7).</p>
+<p><strong>1. <code>inc.calculos.php</code>, <code>create_matriz_obstaculos()</code>:</strong> no wall when only the radar is inside the range. The 30,000 m check now uses the last obstacle kept, not the first one dropped. The docblock now lists the three possible results per azimuth and why each happens.</p>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>        $xa = $xb = $yb = $alt = $altUltimo = 0.0;
+        ...
+            $matriz_obstaculos[$azimut][$i] = [$xb, $yb];
+            $altUltimo = $alt; // altitud del último obstáculo conservado (dentro del alcance)
+        ...
+        // Sin obstáculos dentro del alcance (sólo el radar, xb = 0) no hay recta para el muro: caso 1, sin cobertura.
+        if ($altUltimo &lt;= 30000 &amp;&amp; $xb &gt; 0.0) {
+            $ret = create_muro($radar, $xa, $ya, $xb, $yb, $m);</code></pre></div>
+<p><strong>2. <code>inc.calculos.php</code>, <code>create_muro()</code>:</strong> extra guard before computing <code>$t</code>.</p>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>    if (0.0 == ($dy - $m * $dx)) { // recta paralela a la de alcance máximo (o segmento nulo): no hay muro
+        return false;
+    }</code></pre></div>
+<p><strong>3. <code>inc.auxiliares.php</code>:</strong> new helper. <code>false</code>, <code>null</code>, <code>[]</code> and <code>[[]]</code> mean "no coverage".</p>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>function tieneCobertura($polygons): bool
+{
+    if (!is_array($polygons)) {
+        return false;
+    }
+    foreach ($polygons as $anillo) {
+        if (is_array($anillo) &amp;&amp; count($anillo) &gt;= 3) {
+            return true;
+        }
+    }
+    return false;
+}</code></pre></div>
+<p><strong>4. <code>main.php</code>, <code>calculosFL()</code>:</strong> the same check above and below the radar. Above the radar it runs before the cone is subtracted; a final check also catches a cone that removes everything. The old below-radar-only <code>0 == count($polygons)</code> check is replaced.</p>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>        $polygons = calculosFLencimaRadar2($radar, $flm);
+        // sin ningún anillo de al menos 3 puntos no hay cobertura (p. ej. alcance que no llega al nivel):
+        // se devuelve false antes de restar el cono
+        if (!tieneCobertura($polygons)) {
+            logger(&quot; I&gt; No existe cobertura para el sensor {$radar[&#x27;radar&#x27;]} a FL{$nivelVuelo}&quot;);
+            return false;
+        }
+        ...
+    // Igual por encima que por debajo del radar: sin anillos con área no hay cobertura y se devuelve
+    // false (también si el cono lo ha eliminado todo). Un nivel sin cobertura no genera KML.
+    if (!tieneCobertura($polygons)) {
+        logger(&quot; I&gt; No existe cobertura para el sensor {$radar[&#x27;radar&#x27;]} a FL{$nivelVuelo}&quot;);
+        return false;
+    }
+
+    return $polygons;</code></pre></div>
+<p><strong>5. <code>main.php</code>, main loop:</strong> before writing the mono KML, whether the polygons came from the cache or were just computed. This also covers old caches containing <code>[]</code> or <code>[[]]</code>, and an unreadable cache (<code>json_decode</code> returns <code>null</code>).</p>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>            // Un nivel sin cobertura no genera KML, esté por encima o por debajo del radar. Cubre también
+            // cachés antiguas con [] o [[]] y una caché ilegible (json_decode devuelve null).
+            if (!tieneCobertura($coberturas[$sensor][&#x27;polygons&#x27;])) {
+                logger(&quot; N&gt; Sin cobertura para el sensor &gt;{$sensor}&lt; en FL{$nivelVuelo}, no se genera KML&quot;);
+                $coberturas[$sensor][&#x27;polygons&#x27;] = false;
+                continue;
+            }</code></pre></div>
+<p><strong>6. <code>inc.multiCalculos.php</code>, <code>init_polygons()</code>:</strong> empty or degenerate rings are skipped, and a sensor left without rings is ignored. <code>$sensores[] = $sensor;</code> moves after the check.</p>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>		foreach ($contornos_por_sensor[&#x27;polygons&#x27;] as $indice =&gt; $polygon) {
+			if (!is_array($polygon) || count($polygon) &lt; 3) {
+				continue; // anillo vacío o degenerado (p. ej. cachés antiguas con [[]])
+			}
+			$p = ramer_douglas_peucker($polygon, BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION);
+			$polygons[] = $p;
+		}
+		if (0 == count($polygons)) {
+			logger(&quot; N&gt; El sensor {$sensor} no tiene cobertura válida a este nivel, se ignora&quot;);
+			continue;
+		}
+		$sensores[] = $sensor;</code></pre></div>
+<p><strong>Verify:</strong> <code>php tests/verify_fixes.php --only=M5,X4,O7</code>. The tests use a radar with a 1 NM range at FL300 (above the radar), barajas at FL5 (below the radar, no coverage), a multi-radar run that includes the 1 NM radar, and an old cache containing <code>[[]]</code>. None may crash or write a KML. The documentation of <code>calculaAnguloMaximaCobertura()</code> now also explains what each return value means: 0 means the range doesn't reach the level, values between 0 and π are the normal case, and π can't happen.</p>
 <h3 id="fix-change-6-inc-calculos-php-replacement-block-part-a">Change 6 — inc.calculos.php: replacement block, part A <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-6-inc-calculos-php-replacement-block-part-a"> applied</label></h3>
 <p>Change 6 replaces <strong>lines 156–784</strong> of <code>inc.calculos.php</code> with parts A–E pasted in order. It removes <code>create_matriz_obstaculos()</code>, <code>create_matriz_intersecciones()</code>, <code>create_poligonos_cobertura()</code> and <code>calcula_vertices_interseccion()</code>; nothing else calls them. <code>calculaCoordenadasCono()</code>, <code>polarToLatLon()</code> and everything from the Ramer–Douglas–Peucker comment down stay as they are.</p>
 <p>What the new block does:</p>

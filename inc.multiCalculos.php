@@ -26,13 +26,20 @@ function init_polygons(array $coberturas)
 	foreach ($coberturas as $sensor => $contornos_por_sensor) {
 		if (false === $contornos_por_sensor['polygons'])
 			continue;
-		$sensores[] = $sensor;
 		$polygons = array();
 
 		foreach ($contornos_por_sensor['polygons'] as $indice => $polygon) {
+			if (!is_array($polygon) || count($polygon) < 3) {
+				continue; // anillo vacío o degenerado (p. ej. cachés antiguas con [[]])
+			}
 			$p = ramer_douglas_peucker($polygon, BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION);
 			$polygons[] = $p;
 		}
+		if (0 == count($polygons)) {
+			logger(" N> El sensor {$sensor} no tiene cobertura válida a este nivel, se ignora");
+			continue;
+		}
+		$sensores[] = $sensor;
 		// print "RADAR:{$sensor} POLYCUENTA:" . count($contornos_por_sensor['polygons']) . PHP_EOL;
 		// print json_encode($contornos_por_sensor['polygons']) . PHP_EOL;
 		$mr_polygons[$sensor] = MR\Polygon::create()->fillFromArray($polygons);

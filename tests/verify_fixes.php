@@ -58,6 +58,7 @@ $ITEMS = [
     ['O4', 'Output/options', 'Help lists options that do not work (--rascal, --no-rascal, -p)', 'not in patch', 'check_O4', false],
     ['O5', 'Output/options', 'Dead code (functions never called, EtaEstimator)', 'partly (Change 6 removes old functions)', 'check_O5', false],
     ['O6', 'Output/options', 'Radar data: .rdb pointing to a missing .scr (sesolles)', 'data, not code', 'check_O6', false],
+    ['O7', 'Output/options', 'A level without coverage must not produce a KML (above or below the radar, or from an old cache)', 'Change 5c', 'check_O7', false],
     ['E3', 'Maths', 'Fragile polygon union (20 m overlap, rounding): wrong points below the radar (= S1)', 'Change 6D', 'check_E3', false],
     ['E4', 'Maths', 'Terrain-shadow floor (staircase) — flag BERTA_PERFIL_ESCALONADO', 'Change 6B (flag)', 'check_E4', false],
     ['E5', 'Maths', 'Feet constant 1/3.2808 instead of 0.3048', 'Change 1', 'check_E5', false],
@@ -619,6 +620,29 @@ function check_O6(): array {
         if (preg_match('/^screening: "(.*)"/m', (string) file_get_contents($f), $m) && !is_file("$ROOT/" . preg_replace('#^\./#', '', $m[1]))) $missing[] = basename($f) . ' → ' . basename($m[1]);
     }
     return $missing ? res('OPEN', 'missing screening files: ' . implode(', ', $missing)) : res('FIXED', 'every .rdb points to an existing screening file');
+}
+
+function check_O7(): array {
+    $ws = workspace('O7', true);
+    $d = "$ws/spain.tsk/radar_data.rbk";
+    rdb_variant("$d/barajas.rdb", "$d/zshort.rdb", ['radarIdentifier' => 'zshort', 'secondaryMaximumRange' => '1']);
+    $bad = [];
+    // por encima del radar: alcance de 1 NM a FL300
+    $r = berta($ws, ['-r', 'zshort', '-s', '300', '-z', '-f']);
+    if (crashed($r)) $bad[] = 'crash above the radar (zshort FL300)';
+    elseif (mono_kml($ws, 'zshort', 300) !== null) $bad[] = 'KML written above the radar (zshort FL300)';
+    // por debajo del radar: barajas a FL5 no tiene cobertura
+    $r = berta($ws, ['-r', 'barajas', '-s', '5', '-z', '-f']);
+    if (crashed($r)) $bad[] = 'crash below the radar (barajas FL5)';
+    elseif (mono_kml($ws, 'barajas', 5) !== null) $bad[] = 'KML written below the radar (barajas FL5)';
+    // caché antigua con un anillo vacío
+    rmtree("$ws/RESULTADOS");
+    @mkdir("$ws/cache/zshort", 0775, true);
+    file_put_contents("$ws/cache/zshort/zshort-FL300.json", '[[]]'); touch("$ws/cache/zshort/zshort-FL300.json", time() + 60); clearstatcache();
+    $r = berta($ws, ['-r', 'zshort', '-s', '300', '-z']);
+    if (crashed($r)) $bad[] = 'crash with an old [[]] cache';
+    elseif (mono_kml($ws, 'zshort', 300) !== null) $bad[] = 'KML written from an old [[]] cache';
+    return $bad ? res('OPEN', implode('; ', $bad)) : res('FIXED', 'no KML for levels without coverage (above, below, old [[]] cache)');
 }
 
 function check_E3(): array {

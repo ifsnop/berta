@@ -12,7 +12,7 @@ const BERTA_MALLA_TOO_SMALL_CHECK = 22500; // Si la malla es menor que este núm
 const BERTA_INTERSECTION_CACHE_TOLERANCE = 5; // Número de decimales a los que se redondean los ángulos para cachear los cosenos y senos de los azimuths. Más precisión = más memoria y más tiempo de cálculo, menos precisión = menos memoria y menos tiempo de cálculo.
 
 /**
- * Calcula el ángulo de máxima cobertura del radar sobre la superficie terrestre.
+ * Calcula el ángulo de máxima cobertura del radar para un nivel de vuelo, limitado sólo por el alcance.
  *
  * Se modela un triángulo cuyos tres vértices son:
  *   - El centro de la Tierra
@@ -21,20 +21,32 @@ const BERTA_INTERSECTION_CACHE_TOLERANCE = 5; // Número de decimales a los que 
  *   - El objetivo, situado a una distancia del centro igual al radio terrestre
  *     aumentado + el flight level en metros ($earthToFl)
  *
- * El tercer lado del triángulo es el alcance máximo del radar convertido a metros.
+ * El tercer lado del triángulo es el alcance máximo (oblicuo) del radar convertido a metros.
  *
  * Aplicando la ley de cosenos:
  *
  *   cos(α) = (earthToRadar² + earthToFl² - range²) / (2 · earthToRadar · earthToFl)
  *
  * Se despeja α, que es el ángulo geocéntrico (en el vértice del centro de la Tierra)
- * entre el radar y el punto más lejano alcanzable en el flight level indicado.
- * Este ángulo representa la separación angular máxima sobre la superficie esférica
- * terrestre que el radar es capaz de cubrir para ese nivel de vuelo.
+ * entre el radar y el punto más lejano del nivel de vuelo que queda dentro del alcance.
+ * Multiplicado por el radio terrestre aumentado da la distancia sobre la Tierra aumentada.
+ * El terreno no interviene aquí: lo limita después el screening (create_matriz_obstaculos).
  *
- * @param array $radar   Datos del radar, incluyendo geometría de emplazamiento y alcance
+ * Valores que puede devolver (radianes):
+ *   - 0: el alcance no llega al nivel de vuelo. Ocurre cuando el alcance es menor o igual que la
+ *        diferencia de altura entre el radar y el nivel, |earthToFl - earthToRadar| (por ejemplo,
+ *        1 NM de alcance a FL300). El coseno sale >= 1 y se limita a 1 para no devolver NaN.
+ *        Con α = 0 ningún obstáculo queda dentro del alcance y el nivel no tiene cobertura.
+ *        Con igualdad exacta sólo se alcanza el punto en la vertical del radar, que tampoco tiene área.
+ *   - entre 0 y π: caso normal. Con los alcances y niveles habituales α es pequeño: 250 NM con
+ *        k = 4/3 son unos 0,055 rad (3,1º).
+ *   - π: el alcance es mayor o igual que earthToRadar + earthToFl (más de 17.000 km). No es posible
+ *        con radares reales; el coseno sale <= -1 y se limita a -1 por la misma razón.
+ * Nunca devuelve NaN.
+ *
+ * @param array $radar   Datos del radar, incluyendo geometría de emplazamiento y alcance (range, en NM)
  * @param float $flm     Flight level objetivo en metros
- * @return float         Ángulo de máxima cobertura en radianes
+ * @return float         Ángulo de máxima cobertura en radianes, en [0, π]
  */
 function calculaAnguloMaximaCobertura($radar, $flm){
 
@@ -48,10 +60,10 @@ function calculaAnguloMaximaCobertura($radar, $flm){
     // Ley de cosenos aplicada al triángulo geocéntrico:
     // vértices en el centro de la Tierra, el radar y el objetivo al flight level dado.
     // El ángulo resultante es la separación angular geocéntrica máxima alcanzable.
-    $anguloMaxCob = acos(
-        (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range'] * BERTA_MILLA_NAUTICA_EN_METROS,2))
-        / (2 * $earthToRadar * $earthToFl)
-    );
+    $cosAngulo = (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range'] * BERTA_MILLA_NAUTICA_EN_METROS,2))
+        / (2 * $earthToRadar * $earthToFl);
+    // > 1: el alcance no llega al nivel de vuelo (ángulo 0, sin cobertura); < -1 no es posible geométricamente
+    $anguloMaxCob = acos(max(-1.0, min(1.0, $cosAngulo)));
     if ( $debug ) {
         print "radioTerrestreAumentado: " . $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
         print "flm: " . $flm . PHP_EOL;
@@ -236,6 +248,9 @@ function create_muro(array &$radar, float $xa, float $ya, float $xb, float $yb, 
      */
     $dx = $xb - $xa;
     $dy = $yb - $ya;
+    if (0.0 == ($dy - $m * $dx)) { // recta paralela a la de alcance máximo (o segmento nulo): no hay muro
+        return false;
+    }
     $t = ($m * $xa - $ya) / ($dy - $m * $dx);
     if ($t >= 1) { // Más allá del último obstáculo
         $xi = $xa + $t * $dx;   // Punto de intersección
@@ -493,11 +508,35 @@ function create_poligonos_cobertura(array &$radar, array &$intersec/* , array &$
 }
 
 /*
- * Convierte el fichero de screening en una matriz de obstáculos teniendo en cuenta el radio terrestre
+ * Convierte el screening en una polilínea por acimut, en coordenadas cartesianas respecto al centro de la
+ * Tierra aumentada (x horizontal, y vertical, en metros), recortada al alcance y cerrada con el muro final.
+ * Después se buscan los cruces de esta polilínea con la circunferencia del nivel de vuelo
+ * (create_matriz_intersecciones). Los obstáculos con ángulo central mayor que el ángulo de máxima
+ * cobertura α (calculaAnguloMaximaCobertura) se descartan: están más allá del alcance.
+ *
  * @param array $radar Datos del sensor
  * @param float $flm Nivel de vuelo en metros
- * @return array matriz de obstáculos con respecto al centro de la tierra
+ * @return array [acimut => [i => [x, y]]]. Para cada acimut la lista es uno de estos tres casos:
  *
+ *   1. Sólo el radar: [0 => [0, Rk + terreno + torre]].
+ *      Ningún obstáculo del screening queda dentro de α: o el alcance no llega al nivel (α = 0), o el
+ *      primer punto del screening está más lejos que el alcance horizontal a ese nivel (decenas o
+ *      cientos de metros). Sin obstáculos no hay recta con la que construir el muro, así que no se añade;
+ *      la polilínea no corta el nivel y el acimut no tiene cobertura.
+ *
+ *   2. Radar + obstáculos, sin muro. No ocurre con los screenings habituales; dos causas posibles:
+ *      a) el último obstáculo conservado está por encima de 30.000 m: el screening ya termina por
+ *         encima de cualquier nivel de vuelo y no hace falta muro;
+ *      b) create_muro() no encuentra intersección útil: la recta radar -> último obstáculo es paralela
+ *         a la recta de alcance máximo, o la corta antes de ese obstáculo (t < 1), lo que exigiría una
+ *         línea de visión casi vertical.
+ *
+ *   3. Radar + obstáculos + 2 puntos de muro (caso normal).
+ *      Más allá del último obstáculo, lo más bajo que el radar ve es la recta que va del radar a ese
+ *      obstáculo. El primer punto del muro es donde esa recta corta la recta de alcance máximo; el
+ *      segundo está sobre la recta de alcance a BERTA_MAX_WALL_HEIGHT, por encima de cualquier nivel de
+ *      vuelo. Así la polilínea termina siempre por encima del nivel y la cobertura se cierra en el
+ *      alcance máximo. (Si el primer punto ya está más alto que ese tope, el segundo toma su altura.)
  */
 function create_matriz_obstaculos(array &$radar, float $flm)
 {
@@ -516,7 +555,7 @@ function create_matriz_obstaculos(array &$radar, float $flm)
 
     $matriz_obstaculos = []; // la estructura es [numero de azimuth][numero de obstaculo]
     foreach ($radar['screening']['listaAzimuths'] as $azimut => $listaObstaculos) {
-        $xa = $xb = $yb = $alt = 0.0;
+        $xa = $xb = $yb = $alt = $altUltimo = 0.0;
         $ya = $radar['screening']['towerHeight'] +
             $radar['screening']['terrainHeight'] +
             $radar['screening']['radioTerrestreAumentado'];
@@ -543,12 +582,14 @@ function create_matriz_obstaculos(array &$radar, float $flm)
                 print "[" . ($i + 1) . ",$azimut] alt: $alt, ang: $ang, r: $r => $xb,$yb" . PHP_EOL;
 
             $matriz_obstaculos[$azimut][$i] = [$xb, $yb];
+            $altUltimo = $alt; // altitud del último obstáculo conservado (dentro del alcance)
         }
 
         $i++;
         // Si no existe muro final, se calcula el muro: el primer punto será la intersección
         // entre la línea que forman el radar y el último punto con la línea de máximo rango.
-        if ($alt <= 30000) {
+        // Sin obstáculos dentro del alcance (sólo el radar, xb = 0) no hay recta para el muro: caso 1, sin cobertura.
+        if ($altUltimo <= 30000 && $xb > 0.0) {
             $ret = create_muro($radar, $xa, $ya, $xb, $yb, $m);
             if ( $ret !== false ) { // no es necesario insertarlo porque el muro queda detrás del último obstáculo
                 [$xi, $yi, $xil, $yil] = $ret;
