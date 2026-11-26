@@ -74,9 +74,9 @@ function printHelp()
     print "-1 (default)             | --monoradar (default)" . PHP_EOL;
     print "-2                       | --multiradar" . PHP_EOL;
     print "   -u                    | --unica (multicobertura como una sola suma de todas)" . PHP_EOL;
-    print "   -r (default)          | --rascal (multicobertura estilo rascal)" . PHP_EOL;
-    print "                         | --no-rascal" . PHP_EOL;
-    print "   -p                    | --parcial (multicobertura por radar y tipo->mono,doble,triple...)" . PHP_EOL;
+//    print "   -r (default)          | --rascal (multicobertura estilo rascal)" . PHP_EOL;
+//    print "                         | --no-rascal" . PHP_EOL;
+//    print "   -p                    | --parcial (multicobertura por radar y tipo->mono,doble,triple...)" . PHP_EOL;
     print "-f                       | --force (ignora cache)" . PHP_EOL;
     print "-l                       | --list (lista radares disponibles)" . PHP_EOL;
     print "-d                       | --radar-data (path of radar_data.rbk, default ./spain.tsk)" . PHP_EOL;
