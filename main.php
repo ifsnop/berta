@@ -105,7 +105,7 @@ function programaPrincipal(array $config)
     $shortopts .= "c"; // cálculo del cono
     $shortopts .= "z"; // desactiva kmz y genera kml
     $shortopts .= "k:"; // lee directamente un fichero de screening sin usar radar database
-    $longopts = array("radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "cone", "disable-kmz", "screening-file");
+    $longopts = array("radar-list:", "max-range:", "monoradar", "multiradar", "unica", "parcial", "rascal", "no-rascal", "force", "list", "radar-data:", "help", "steps:", "cone", "disable-kmz", "screening-file:");
     $options = getopt($shortopts, $longopts);
     if (0 == count($options)) {
         printHelp();
