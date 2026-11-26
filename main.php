@@ -335,10 +335,6 @@ function programaPrincipal(array $config)
                             "NM / " . ($coberturas[$sensor]['terreno']['range'] * BERTA_MILLA_NAUTICA_EN_METROS) . "m");
                     }
                     logger(" V> Información del terreno procesada (" . round(microtime(true) - $timer, 3) . "s)");
-                    if (false) {
-                        // para la herramienta de cálculo de kmz de matlab
-                        generateMatlabFiles($coberturas[$sensor]['terreno'], false); // $rutaResultados);
-                    }
                 }
 
                 $coberturas[$sensor]['polygons'] = calculosFL($coberturas[$sensor]['terreno'], $fl, $nivelVuelo, $config['cone']);
