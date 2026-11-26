@@ -438,7 +438,12 @@ function populate_cache(array $vsr, int $vsr_count, array &$mr_polygons, array &
 
 function cache_operation(array|MR\Polygon $polygon1, ?MR\Polygon $polygon2, string $nombre_grupo_sensores, string $operation, string $nivelVuelo): MR\Polygon
 {
-	$sha1 = sha1($nombre_grupo_sensores . $nivelVuelo);
+	// La clave depende de la operación, del nivel y del CONTENIDO de los polígonos de entrada, no del nombre:
+	// otro conjunto de radares, un -m, el cono o un screening nuevo dan polígonos distintos y, por tanto,
+	// otra clave, así que nunca se reutiliza un resultado que no corresponde (X1, X2). El nombre sólo
+	// sirve para los logs.
+	$sha1 = sha1($operation . '|' . $nivelVuelo . '|' . sha1(serialize($polygon1)) . '|' .
+		(null === $polygon2 ? '-' : sha1(serialize($polygon2))));
 	$pathname = "cache" . DIRECTORY_SEPARATOR . "polygons" . DIRECTORY_SEPARATOR . $sha1[0] . $sha1[1] . DIRECTORY_SEPARATOR;
 	$filename = $pathname . $sha1 . ".json";
 	if (is_file($filename)) {
