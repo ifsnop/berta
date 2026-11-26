@@ -1,0 +1,1379 @@
+diff --git a/inc.calculos.php b/inc.calculos.php
+index abb665e..8e4c9ff 100644
+--- a/inc.calculos.php
++++ b/inc.calculos.php
+@@ -3,14 +3,6 @@ declare(strict_types=1);
+ 
+ use Ifsnop\MartinezRueda as MR;
+ 
+-// Más velocidad y menos precisión aumentando INTERSECTION_SUBDIVISION_LIMIT
+-// Más precisión y menos velocidad disminuyendo INTERSECTION_SUBDIVISION_LIMIT
+-const BERTA_INTERSECTION_TOLERANCE_LIMIT_NM = 20; // Tolerancia para asegurar solape entre azimuths (NM)
+-const BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM / BERTA_RADIO_TERRESTRE;
+-const BERTA_INTERSECTION_TOLERANCE_LIMIT_M = BERTA_INTERSECTION_TOLERANCE_LIMIT_NM * BERTA_MILLA_NAUTICA_EN_METROS; // Distancia máxima entre subdivisiones entre vértices
+-const BERTA_MALLA_TOO_SMALL_CHECK = 22500; // Si la malla es menor que este número de celdas, se considera demasiado pequeña y se vuelve a intentar con más precisión
+-const BERTA_INTERSECTION_CACHE_TOLERANCE = 5; // Número de decimales a los que se redondean los ángulos para cachear los cosenos y senos de los azimuths. Más precisión = más memoria y más tiempo de cálculo, menos precisión = menos memoria y menos tiempo de cálculo.
+-
+ /**
+  * Calcula el ángulo de máxima cobertura del radar sobre la superficie terrestre.
+  *
+@@ -48,10 +40,10 @@ function calculaAnguloMaximaCobertura($radar, $flm){
+     // Ley de cosenos aplicada al triángulo geocéntrico:
+     // vértices en el centro de la Tierra, el radar y el objetivo al flight level dado.
+     // El ángulo resultante es la separación angular geocéntrica máxima alcanzable.
+-    $anguloMaxCob = acos(
+-        (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range'] * BERTA_MILLA_NAUTICA_EN_METROS,2))
+-        / (2 * $earthToRadar * $earthToFl)
+-    );
++    $cosAngulo = (pow($earthToRadar,2) + pow($earthToFl,2) - pow($radar['range'] * BERTA_MILLA_NAUTICA_EN_METROS,2))
++        / (2 * $earthToRadar * $earthToFl);
++    // > 1: el alcance no llega al nivel de vuelo (ángulo 0, sin cobertura); < -1 no es posible geométricamente
++    $anguloMaxCob = acos(max(-1.0, min(1.0, $cosAngulo)));
+     if ( $debug ) {
+         print "radioTerrestreAumentado: " . $radar['screening']['radioTerrestreAumentado'] . PHP_EOL;
+         print "flm: " . $flm . PHP_EOL;
+@@ -155,632 +147,448 @@ function polarToLatLon(
+ 
+ /**
+  * CASO A
+- * Funcion que calcula las distancias a las que hay cobertura y los angulos de apantallamiento cuando el FL esta por encima del radar
+- *  
++ * Cobertura cuando el nivel de vuelo está por encima del radar.
++ * Si todos los acimuts tienen un único cruce, se devuelve un polígono en estrella que une el alcance de cada
++ * acimut (interpolación lineal entre acimuts). Si algún acimut tiene varios cruces (el haz vuelve a quedar por
++ * encima del nivel tras una sierra), se construye la cobertura por intervalos, igual que en el CASO B.
++ *
+  * @param array $radar (ENTRADA)
+  * @param float $flm nivel de vuelo en metros (ENTRADA)
+- * @return array distancias a los alcances máximos por cada azimut (SALIDA)
++ * @return array lista de anillos [[lat, lon], ...] (SALIDA)
+  */
+ function calculosFLencimaRadar2(array $radar, float $flm): array
+ {
+-    // hay dos calculos de alpha_max, simplemente el angulo que salga al dividir entre radioterrestre aumentado (que serán radianes)
+-    // o bien calcular la distancia teniendo en cuenta el nivel de vuelo y que la distancia es oblicua. así que saldrán menos 
+-    // radianes que el método anterior.
+-    $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
+-    $matriz_obstaculos = create_matriz_obstaculos($radar , $flm);
+-    $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
+-    $W += 0.01;                     // Suma 10 cm para evitar errores numéricos
+-    logger(" D> Radio Terrestre Aumentado: {$radar['screening']['radioTerrestreAumentado']}m");
+-    logger(" D> Radio Circunferencia al Nivel de Vuelo: {$W}m");
+-    // Esto es porque a veces el screening da dos valores de
+-    // altitud consecutivos iguales. Si además coinciden con el
+-    // FL, da lugar a errores al calcular la intersección ya que
+-    // línea y circunferencia son tangentes.
+-    $intersec = create_matriz_intersecciones($radar, $matriz_obstaculos, $W, $max_distancia_nm);
+-    
+-    $lat_rad = $radar['lat_rad'];
+-    $lon_rad = $radar['lon_rad'];
+-    $lat90_rad = M_PI_2 - $lat_rad; // Ángulo complementario en radianes
+-    $cos_lat90 = cos($lat90_rad);
+-    $sin_lat90 = sin($lat90_rad);
+-    $azimuth_step = 360.0 / $radar['screening']['totalAzimuths'];
+-
+-    $polygons = array();
+-
+-    $count_intersec = count($intersec);
+-    for ($azimuth = 0; $azimuth < $count_intersec; $azimuth++) {
+-        $azimuth_real = $azimuth * $azimuth_step;
+-        $a_rad = deg2rad($azimuth_real); //* $azimuth_step - ($azimuth_step / 2) );  // Primer ángulo [rad]
+-        
+-        // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
+-        $p = array(); // Esquina del polígono
+-        $r = 0; // Radio de las esquina del polígono
+-        $count_intersec_azi = count($intersec[$azimuth]) - 1;
+-        // print "azimuth: {$azimuth} azimuth_real: {$azimuth_real} a_rad: {$a_rad} count_intersec_azi: {$count_intersec_azi}" . PHP_EOL;
+-        for ($i = $count_intersec_azi; $i >= 0; $i--) {
+-            $r = $intersec[$azimuth][$i] * BERTA_MILLA_NAUTICA_EN_METROS; // Último radio [m]
+-            [$p] = calcula_vertices_interseccion(
+-                $r,
+-                $a_rad,
+-                null,
+-                $cos_lat90,
+-                $sin_lat90,
+-                $lat_rad,
+-                $lon_rad
+-            );
+-            $polygons[] = $p;
+-            // print json_encode($p) . PHP_EOL;
++    $cruces = calcula_cruces($radar, $flm);
++
++    foreach ($cruces as $lista) {
++        if (1 != count($lista)) {
++            logger(" D> Acimuts con varios cruces por encima del radar, se usa la construcción por intervalos");
++            return poligonos_desde_intervalos($radar, intervalos_desde_cruces($cruces, true));
+         }
+     }
+-    return [$polygons];
+-}
+ 
+-function create_muro(array &$radar, float $xa, float $ya, float $xb, float $yb, float $m) {
++    $azimuth_step = 360.0 / count($cruces);
++    $anillo = array();
++    foreach (array_values($cruces) as $j => $lista) {
++        $anillo[] = destino($radar['lat_rad'], $radar['lon_rad'], $lista[0] * BERTA_MILLA_NAUTICA_EN_METROS, deg2rad($j * $azimuth_step));
++    }
++    return [$anillo];
++}
+ 
+-    // coordenadas del radar en $xa, $ya
+-    // coordenadas del último obstáculo en $x, $y
+-    // línea de rango máximo en $m
++/**
++ * Muro final de cobertura: intersección de la recta radar -> último obstáculo con la recta de alcance máximo
++ * (y = m·x), más el punto de la recta de alcance a BERTA_MAX_WALL_HEIGHT si la intersección queda por debajo.
++ *
++ * @return array lista de puntos [x, y] a añadir tras el último obstáculo (vacía si no hay muro)
++ */
++function create_muro(array &$radar, float $xa, float $ya, float $xb, float $yb, float $m): array
++{
+     /* Intersección segmento - línea
+-     * Segmento:
+-     *   x = xa + t*(xb-xa)
+-     *   y = ya + t*(yb-ya)
+-     *   t [0,1]
+-     *
+-     * Línea:
++     *   x = xa + t*(xb-xa), y = ya + t*(yb-ya)
+      *   y = m*x
+-     *
+-     * Intersección:
+-     *                m*xa - ya
+-     *   ti = - ---------------------
+-     *           m*(xb-xa) - (yb-ya)
++     *   t = (m*xa - ya) / ((yb-ya) - m*(xb-xa))
+      */
+     $dx = $xb - $xa;
+     $dy = $yb - $ya;
+-    $t = ($m * $xa - $ya) / ($dy - $m * $dx);
+-    if ($t >= 1) { // Más allá del último obstáculo
+-        $xi = $xa + $t * $dx;   // Punto de intersección
+-        $yi = $ya + $t * $dy;   // Punto de intersección
+-
+-        $alpha_m = atan($m);
+-        $xil = (BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado']) * cos($alpha_m); // Punto límite del muro
+-        $yil = (BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado']) * sin($alpha_m); // Punto límite del muro
+-
+-        if ($yi > $yil) $yil = $yi; // Punto de intersección por encima del límite del muro
+-        return array(
+-            $xi,
+-            $yi,
+-            $xil,
+-            $yil,
+-        );
++    $den = $dy - $m * $dx;
++    if (0.0 == $den) {
++        return array();
+     }
+-    return false;
++    $t = ($m * $xa - $ya) / $den;
++    if ($t < 1) { // la recta de alcance queda antes del último obstáculo
++        return array();
++    }
++    $xi = $xa + $t * $dx;
++    $yi = $ya + $t * $dy;
++    $radioTope = BERTA_MAX_WALL_HEIGHT + $radar['screening']['radioTerrestreAumentado'];
++    if (hypot($xi, $yi) >= $radioTope) {
++        // la intersección ya está por encima del tope del muro: basta con ella (antes se movía fuera de la recta)
++        return array([$xi, $yi]);
++    }
++    $alpha_m = atan($m);
++    return array([$xi, $yi], [$radioTope * cos($alpha_m), $radioTope * sin($alpha_m)]);
+ }
+ 
+ /*
+  * CASO B
+- * Funcion que calcula las coberturas cuando el nivel de vuelo FL, esta por debajo del radar
++ * Cobertura cuando el nivel de vuelo está por debajo del radar.
+  *
+- * @param array $radar (ENTRADA / SALIDA)
++ * @param array $radar (ENTRADA)
+  * @param float $flm nivel de vuelo en metros (ENTRADA)
+- * @return array malla[i][j] = array(lat,lon,cobertura)
++ * @return array lista de anillos [[lat, lon], ...]; vacía si no hay cobertura
+  */
+-function calculosFLdebajoRadar2(array &$radar, float $flm) {
+-
+-    $max_distancia_nm = 0; // distancia al obstáculo más lejano, en millas náuticas
+-    $matriz_obstaculos = create_matriz_obstaculos($radar, $flm);
+-
+-    /*******************************
+-    * INTERSECCIONES POR ACIMUT
+-    *******************************/
+-    $W = $flm +  $radar['screening']['radioTerrestreAumentado'];  // Radio de circunferencia del nivel de vuelo
+-    $W += 0.01;                     // Suma 10 cm para evitar errores numéricos
+-    // Esto es porque a veces el screening da dos valores de altitud consecutivos
+-    // iguales. Si además coinciden con el FL, da lugar a errores al calcular
+-    //la intersección ya que línea y circunferencia son tangentes.
+-    logger(" D> Radio Terrestre Aumentado: {$radar['screening']['radioTerrestreAumentado']}m");
+-    logger(" D> Radio Circunferencia al Nivel de Vuelo: {$W}m");
+-
+-    $intersec = create_matriz_intersecciones($radar, $matriz_obstaculos, $W, $max_distancia_nm);
+-
+-    /*******************************
+-     * MALLA DE COBERTURA
+-     ******************************/
+-    // Este paso ha quedado obsoleto. Desde que unimos los polígonos usando martinez-rueda, ya no es necesario
+-    // crear la malla de cobertura. Antes se preguntaban que celdas de la malla caían dentro de los polígonos, y
+-    // se rellenaban rasterizando los polígonos en la malla.Se mantiene el código comentado por
+-    // si se quiere volver a usar en el futuro.
+-    /*
+-     * esta configuración (precision = 2, resolucion = 0.01
+-     * produce una malla de 395x529
+-     * 43.74 -0.2    43.74 -0.19    43.74 -0.18    
+-     * 43.73 -0.2    43.73 -0.19    43.73 -0.18    
+-     * 43.72 -0.2    43.72 -0.19    43.72 -0.18  
+-     */
+-    // $precision_malla = 2;
+-    // $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
+-    // $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla);
+-    // if ( 0 == count($malla) ) {
+-    //     $precision_malla++;
+-    //     $resolucion_malla = pow(10, -$precision_malla);  // Resolución vertical [º] -> 0.01º  que equivale a 1.11 km
+-    //     $malla = create_malla($radar, $max_distancia_nm, $precision_malla, $resolucion_malla, true);
+-    // }
+-
+-    // [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw] = $malla;
+-    // Código de depuración (imprime la esquina sup izq de la malla en 3x3)
+-    // for($i=0;$i<3; $i++) { for($j=0; $j<3; $j++) {
+-    //    print $malla_lat_lon[$i][$j][0] . " " . $malla_lat_lon[$i][$j][1] . "    ";
+-    // } print PHP_EOL; }
+-
+-    /*******************************
+-     * POLÍGONO DE COBERTURA
+-     *******************************/
+-
+-    $polygons = create_poligonos_cobertura($radar, $intersec/*, $malla*/);
+-    return $polygons;
+-
+-    // for($i=0; $i<count($malla_lat_lon); $i++) {
+-    //    for($j=0;$j<count($malla_lat_lon[$i]); $j++) {
+-    //        print $malla_lat_lon[$i][$j][2];
+-    //    }
+-    //    print PHP_EOL;
+-    // }
+-    // $segments = marchingSquares($malla_lat_lon);
+-    // $polygons = buildPolygonsFromSegments($segments);
++function calculosFLdebajoRadar2(array &$radar, float $flm): array
++{
++    $cruces = calcula_cruces($radar, $flm);
++    return poligonos_desde_intervalos($radar, intervalos_desde_cruces($cruces, false));
+ }
+ 
+ /**
+- * Genera polígonos de cobertura que cubren las intersecciones y modifica la malla para marcar
+- * con 1's y 0's las zonas donde hay cobertura.
+- * Se tiene en cuenta el número de azimuts que existen en el screening, dado que la precisión
+- * de PREDICT es configurable.
+- * @param array $radar parámetros de radar
+- * @param array $intersec lista de intersecciones para cada azimut
+- * //param array $malla malla inicializada a 0's del tamaño de la cobertura (desde que unimos con martinz rueda, no se usa la malla)
++ * Perfil de cada acimut en coordenadas cartesianas respecto al centro de la Tierra aumentada, independiente
++ * del nivel de vuelo. Se calcula una vez por radar y se guarda en una caché estática.
++ * Para cada acimut: x, y, ang (ángulo central), r2 (x²+y²) por punto y min2 (mínimo de x²+y² sobre el
++ * segmento k -> k+1), que permite descartar segmentos que no pueden cortar la circunferencia del nivel.
+  *
+- * @return array malla de cobertura (malla_lat_lon)
++ * Con BERTA_PERFIL_ESCALONADO el suelo de visibilidad sigue la línea de visión más alta hasta cada punto:
++ * los puntos ocultos se descartan y, antes de cada nuevo horizonte, se añade la esquina sobre la línea de
++ * visión anterior.
+  */
+-function create_poligonos_cobertura(array &$radar, array &$intersec/* , array &$malla */) {
+-    // Cada celda es un polígono de 4 esquinas (sector anular)
+-    // Se comprueba qué puntos de la malla están contenidos en cada polígono
+-    // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
++function perfil_cartesiano(array &$radar): array
++{
++    static $cache = array();
++    $clave = $radar['radar'] . '|' . ($radar['screening_file'] ?? '') . '|' . (BERTA_PERFIL_ESCALONADO ? 1 : 0);
++    if (isset($cache[$clave])) {
++        return $cache[$clave];
++    }
+ 
+-    $debug = false;
+-    $start_time = microtime(true);
+-
+-    $time_malla_coverage_total = 0;
+-    $time_calcula_vertices_interseccion_total = 0;
+-
+-    // [$malla_lat_lon, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw, $resolucion_malla] = $malla;
+-
+-    $polygons = array();
+-
+-    $lat_rad = $radar['lat_rad'];
+-    $lon_rad = $radar['lon_rad'];
+-    $lat90_rad = M_PI_2 - $lat_rad;  // Ángulo complementario en radianes
+-    $cos_lat90 = cos($lat90_rad);
+-    $sin_lat90 = sin($lat90_rad);
+-    $azimuth_step = 360.0 / $radar['screening']['totalAzimuths']; 
+-    
+-    logger("[00%]", false); $countPct_old = 0;
+-    $count_intersec = count($intersec);
+-    for ($azimuth = 0; $azimuth < $count_intersec; $azimuth++) {
+-        $countPct = $azimuth / $count_intersec;
+-        if ( ($countPct - $countPct_old) >= 0.10 ) { logger("[" . round($countPct*100) . "%]", false); $countPct_old = $countPct; }
+-
+-        // transformar azimuth en un azimuth real
+-        $azimuth_real = $azimuth * $azimuth_step; // MAL
+-
+-        $last = 1; // se empieza en la última fila con cobertura del polígono
+-
+-        // Para un punto [R=20NM, A=5º], la celda se define a partir de R en adelante y entre 4,5º y 5,5º
+-        $a1_rad = deg2rad( $azimuth_real - ($azimuth_step / 2) );  // Primer ángulo [rad]
+-        $a2_rad = deg2rad( $azimuth_real + ($azimuth_step / 2) );  // Segundo ángulo [rad]
+-
+-        // Cada lista de obstáculos se recorre hacia atrás empezando sin cobertura
+-        $p1 = $p2 = $p3 = $p4 = array(); // Esquinas del polígono
+-        $r1 = $r2 = 0; // Radios de las esquinas del polígono
+-        $count_intersec_azi = count($intersec[$azimuth])-1;
+-        for ($i = $count_intersec_azi; $i >= 0; $i--) {
+-
+-            if ($intersec[$azimuth][$i] != 0 && $last == 1) {     // Última fila con cobertura del polígono
+-
+-                // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
+-                // Ùltimo radio [m]
+-                $r2 = $intersec[$azimuth][$i] * BERTA_MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+-                $time_calcula_vertices_interseccion = microtime(true);
+-                [$p1, $p2] = calcula_vertices_interseccion(
+-                    $r2,
+-                    $a1_rad,
+-                    $a2_rad,
+-                    $cos_lat90,
+-                    $sin_lat90,
+-                    $lat_rad,
+-                    $lon_rad
+-                );
+-                $time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
+-                $last = 0; // marcamos que en esta intersección ya no hay cobertura del polígono
++    $Rk = $radar['screening']['radioTerrestreAumentado'];
++    $ya = $Rk + $radar['screening']['towerHeight'] + $radar['screening']['terrainHeight'];
++    $perfil = array();
++    foreach ($radar['screening']['listaAzimuths'] as $azimut => $listaObstaculos) {
++        $x = [0.0]; $y = [$ya]; $ang = [0.0]; // el radar es el primer punto
++        $hx = null; $hy = null; $emax = -INF;
++        foreach ($listaObstaculos as $i => $obstaculo) {
++            if (0 == $i) {
++                continue; // obstáculo 0 = el propio radar, insertado al cargar el screening
+             }
+-            elseif ($last == 0) {   // Primera fila con cobertura del polígono
+-
+-                // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
+-                $r1 = $intersec[$azimuth][$i] * BERTA_MILLA_NAUTICA_EN_METROS;             // Último radio [m]
+-                $time_calcula_vertices_interseccion = microtime(true);
+-                [$p4, $p3] = calcula_vertices_interseccion(
+-                    $r1,
+-                    $a1_rad,
+-                    $a2_rad,
+-                    $cos_lat90,
+-                    $sin_lat90,
+-                    $lat_rad,
+-                    $lon_rad
+-                );
+-                $time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
+-
+-                // Aumento de resolución
+-                if (($r2 - $r1) >= BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD) {   // Polígono demasiado largo
+-                    $n_subdivisiones = (int)floor(2 * ($r2 - $r1) / (BERTA_INTERSECTION_TOLERANCE_LIMIT_M)) - 1;
+-                    $poly = [$p1, $p2];
+-
+-                    // Subdivisiones
+-                    $subdivisiones = array();
+-                    for ($s = 1; $s <= $n_subdivisiones; $s++) {
+-                        // Para un punto [R=20NM, A=5º], la celda se define a partir de R y entre 4,5º y 5,5º
+-                        $r_subd  = $r2 - $s * ($r2 - $r1) / ($n_subdivisiones+1);    // Radio de subdivisión s [m]
+-                        $time_calcula_vertices_interseccion = microtime(true);
+-                        [$ps1, $ps2] = calcula_vertices_interseccion(
+-                            $r_subd,
+-                            $a1_rad,
+-                            $a2_rad,
+-                            $cos_lat90,
+-                            $sin_lat90,
+-                            $lat_rad,
+-                            $lon_rad
+-                        );
+-                        $time_calcula_vertices_interseccion_total += microtime(true) - $time_calcula_vertices_interseccion;
+-                        // apuntamos las soluciones del azimut derecho, y guardamos las del izquierdo
+-
+-                        $subdivisiones[] = $ps1;
+-                        $poly[] = $ps2;
+-                    }
+-                    $poly[] = $p3;
+-                    $poly[] = $p4;
+-                    // $poly = ordenarVerticesHorario($poly); // no es necesario, los vértices ya se introducen ordenados
+-                    // acabamos de copiar las soluciones del izquierdo que habíamos guardado, para
+-                    // cerrar el polígono. Es el equivalente a apuntarlos todos y ordenar los vértices
+-                    // en sentido horario (realmente anti-horario, pero da igual porque el algoritmo de 
+-                    // punto en polígono no distingue entre ambos sentidos)
+-                    $count_subdivisiones = count($subdivisiones) - 1;
+-                    for ($s = $count_subdivisiones; $s >= 0; $s--) {
+-                        $poly[] = $subdivisiones[$s];
++            $r = $Rk + $obstaculo['altura'];
++            $a = $obstaculo['angulo'];
++            $px = $r * sin($a);
++            $py = $r * cos($a);
++            if (BERTA_PERFIL_ESCALONADO) {
++                $e = atan2($py - $ya, $px); // ángulo de elevación visto desde el radar
++                if ($e <= $emax) {
++                    continue; // oculto tras el horizonte actual
++                }
++                if (null !== $hx) {
++                    // esquina: línea de visión del horizonte actual evaluada en el ángulo central de este punto
++                    $den = $hx * cos($a) - ($hy - $ya) * sin($a);
++                    if (0.0 != $den) {
++                        $s = $ya * sin($a) / $den;
++                        $x[] = $s * $hx; $y[] = $ya + $s * ($hy - $ya); $ang[] = $a;
+                     }
+-
+-                } else {
+-                 // Polígono sin aumento de resolución y sin cerrar (no es necesario repetir el primer punto) [lat,lon] [º]
+-                    $poly = [ $p1, $p2, $p3, $p4 ]; 
+                 }
+-                $polygons[] = $poly;
+-                // Se hallan los puntos del mallado contenidos en el polígono
+-                // $timer_malla_coverage = microtime(true);
+-                // set_malla_coverage($malla_lat_lon, $poly, $resolucion_malla, $malla_lat_lon_rows, $malla_lat_lon_cols, $malla_lat_nw, $malla_lon_nw);
+-                // $time_malla_coverage_total += microtime(true) - $timer_malla_coverage;
+-                $last = 1;
++                $hx = $px; $hy = $py; $emax = $e;
+             }
++            $x[] = $px; $y[] = $py; $ang[] = $a;
+         }
++        $n = count($x);
++        $r2 = array(); $min2 = array();
++        for ($k = 0; $k < $n; $k++) {
++            $r2[$k] = $x[$k] * $x[$k] + $y[$k] * $y[$k];
++        }
++        for ($k = 0; $k < $n - 1; $k++) {
++            $dx = $x[$k + 1] - $x[$k]; $dy = $y[$k + 1] - $y[$k];
++            $A = $dx * $dx + $dy * $dy;
++            $t = ($A > 0) ? -($x[$k] * $dx + $y[$k] * $dy) / $A : 0.0;
++            $min2[$k] = ($t > 0 && $t < 1)
++                ? (($x[$k] + $t * $dx) ** 2 + ($y[$k] + $t * $dy) ** 2)
++                : min($r2[$k], $r2[$k + 1]);
++        }
++        $perfil[$azimut] = array('x' => $x, 'y' => $y, 'ang' => $ang, 'r2' => $r2, 'min2' => $min2);
+     }
+-
+-    logger("[100%]" . PHP_EOL, false);
+-    logger(" D> Tiempo total generación malla: " . round(microtime(true) - $start_time, 3) . "s");
+-    // logger(" I> Tiempo en set_malla_coverage: " . round($time_malla_coverage_total,3) . "s");
+-    logger(" D> Tiempo en calcula_vertices_interseccion: " . round($time_calcula_vertices_interseccion_total,3) . "s");
+-    logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+-        "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+-    $n_polygons = count($polygons);
+-    logger(" V> Número de polígonos para la unión: " . $n_polygons);
+-    if ( $n_polygons == 0) {
+-        logger(" D> No hay polígonos de cobertura, se devuelve un polígono vacío");
+-        return array();
+-    }
+-    $time_union = microtime(true);
+-    $mr_polygons = array();
+-    foreach($polygons as $polygon) {
+-        $mr_polygons[] = MR\Polygon::create()->fillFromArray($polygon);
+-    }
+-    $p_mr1 = MR\Algorithm::unionMany($mr_polygons);
+-    logger(" D> Tiempo en union: " . round(microtime(true) - $time_union,3) . "s");
+-    logger(" D> " . "Info memory_usage(" . convertBytes(memory_get_usage(false)) . ") " .
+-        "Memory_peak_usage(" . convertBytes(memory_get_peak_usage(false)) . ")");
+-    return $p_mr1->getArray();
++    return $cache[$clave] = $perfil;
+ }
+ 
+-/*
+- * Convierte el fichero de screening en una matriz de obstáculos teniendo en cuenta el radio terrestre
+- * @param array $radar Datos del sensor
+- * @param float $flm Nivel de vuelo en metros
+- * @return array matriz de obstáculos con respecto al centro de la tierra
++/**
++ * Cruces entre la circunferencia del nivel de vuelo y el perfil (más el muro final) de cada acimut.
++ * Sustituye a create_matriz_obstaculos() + create_matriz_intersecciones().
++ * Cada punto se clasifica una sola vez como dentro (r² < W²) o fuera, así que la paridad de los cruces
++ * es siempre correcta sin sumar 10 cm a W ni usar épsilon.
+  *
++ * @return array [acimut => lista de distancias en NM, en orden desde el radar]
+  */
+-function create_matriz_obstaculos(array &$radar, float $flm)
++function calcula_cruces(array &$radar, float $flm): array
+ {
+-    $debug = false;
+-
+-    // Ángulo central máximo según rango en millas (sin tener en cuenta el nivel de vuelo)
+-    // $alpha_max = ($radar['screening']['range'] * BERTA_MILLA_NAUTICA_EN_METROS) / $radar['screening']['radioTerrestreAumentado'];
+-
+-    // este si tiene en cuenta el nivel de vuelo
++    $perfil = perfil_cartesiano($radar);
++    $Rk = $radar['screening']['radioTerrestreAumentado'];
++    $W = $Rk + $flm; // radio de la circunferencia del nivel de vuelo
++    $W2 = $W * $W;
+     $alpha_max = calculaAnguloMaximaCobertura($radar, $flm);
+-    logger(" V> Ángulo central máximo según rango en fichero screening: " . round($alpha_max,3) . "rad / " .
+-         round(rad2deg($alpha_max),3) . "º / " .
+-         round($alpha_max*$radar['screening']['radioTerrestreAumentado']/BERTA_MILLA_NAUTICA_EN_METROS,3) .  "NM");
+-    // línea de rango máximo
+-    $m = tan(pi() / 2 - $alpha_max); // pi()/2 = 90º en radianes
+-
+-    $matriz_obstaculos = []; // la estructura es [numero de azimuth][numero de obstaculo]
+-    foreach ($radar['screening']['listaAzimuths'] as $azimut => $listaObstaculos) {
+-        $xa = $xb = $yb = $alt = 0.0;
+-        $ya = $radar['screening']['towerHeight'] +
+-            $radar['screening']['terrainHeight'] +
+-            $radar['screening']['radioTerrestreAumentado'];
+-        // se añade el radar como primer obstáculo (ojo porque ya estaba añadido al cargar screening)
+-        // $matriz_obstaculos[$azimut][0] = [$xa, $ya];
+-        if ($debug)
+-            print "[0,$azimut] alt: $alt => $xa,$ya" . PHP_EOL;
+-
+-        $i = 0;
+-        foreach ($listaObstaculos as $i => $obstaculo) {
+-            $alt = $obstaculo['altura']; // Altitud del obstáculo i
+-            $ang = $obstaculo['angulo']; // Ángulo central del obstáculo i
+-            if ( $ang > $alpha_max ) { // generar muro
+-                // print "Generando muro en azimut $azimut, obstáculo $i, altitud $alt, ángulo $ang" . PHP_EOL;
+-                $i--; // el muro siempre se añade a continuación del obstáculo, pero
+-                // en este caso lo añadimos en lugar del actual.
+-                break;
++    $m = tan(M_PI_2 - $alpha_max); // recta de alcance máximo
++
++    $cruces = array();
++    foreach ($perfil as $azimut => $p) {
++        // número de puntos con ángulo central <= alpha_max (los ángulos son crecientes)
++        $lo = 0; $hi = count($p['ang']);
++        while ($lo < $hi) {
++            $mid = ($lo + $hi) >> 1;
++            if ($p['ang'][$mid] <= $alpha_max) $lo = $mid + 1; else $hi = $mid;
++        }
++        $n = $lo;
++        $lista = array();
++        for ($k = 0; $k < $n - 1; $k++) {
++            $dentro1 = $p['r2'][$k] < $W2;
++            $dentro2 = $p['r2'][$k + 1] < $W2;
++            if ($dentro1 === $dentro2 && ($dentro1 || $p['min2'][$k] >= $W2)) {
++                continue; // el segmento no puede cortar la circunferencia
+             }
++            cruces_segmento($p['x'][$k], $p['y'][$k], $p['x'][$k + 1], $p['y'][$k + 1],
++                $p['r2'][$k] - $W2, $p['r2'][$k + 1] - $W2, $Rk, $lista);
++        }
++        // muro final, si el último punto conservado no es ya un muro
++        if ($n >= 2) {
++            $xb = $p['x'][$n - 1]; $yb = $p['y'][$n - 1];
++            if (sqrt($p['r2'][$n - 1]) - $Rk <= 30000) {
++                $fprev = $p['r2'][$n - 1] - $W2;
++                foreach (create_muro($radar, 0.0, $p['y'][0], $xb, $yb, $m) as [$xm, $ym]) {
++                    $fm = $xm * $xm + $ym * $ym - $W2;
++                    cruces_segmento($xb, $yb, $xm, $ym, $fprev, $fm, $Rk, $lista);
++                    $xb = $xm; $yb = $ym; $fprev = $fm;
++                }
++            }
++        }
++        $cruces[$azimut] = $lista;
++    }
++    return $cruces;
++}
+ 
+-            $r = $radar['screening']['radioTerrestreAumentado'] + $alt; // Radio del obstáculo
+-            $xb = $r * sin($ang); // Coordenada horizontal del obstáculo
+-            $yb = $r * cos($ang); // Coordenada vertical del obstáculo
+-            if ($debug)
+-                print "[" . ($i + 1) . ",$azimut] alt: $alt, ang: $ang, r: $r => $xb,$yb" . PHP_EOL;
+-
+-            $matriz_obstaculos[$azimut][$i] = [$xb, $yb];
++/**
++ * Cruces de un segmento con la circunferencia de radio W. $f1 y $f2 son x²+y²-W² en los extremos,
++ * calculados una sola vez por punto para que dos segmentos contiguos clasifiquen igual el punto común.
++ * Añade a $lista la distancia (NM, sobre la Tierra aumentada) de cada cruce.
++ */
++function cruces_segmento(float $x1, float $y1, float $x2, float $y2, float $f1, float $f2, float $Rk, array &$lista): void
++{
++    $dx = $x2 - $x1;
++    $dy = $y2 - $y1;
++    $A = $dx * $dx + $dy * $dy;
++    if (0.0 == $A) {
++        return;
++    }
++    $B = 2 * ($x1 * $dx + $y1 * $dy);
++    $C = $f1;
++    $ts = array();
++    if (($f1 < 0) !== ($f2 < 0)) {
++        // un extremo dentro y otro fuera: exactamente un cruce en [0,1]
++        $s = sqrt(max(0.0, $B * $B - 4 * $A * $C));
++        $q = -0.5 * ($B + ($B >= 0 ? $s : -$s)); // fórmula estable
++        $t1 = $q / $A;
++        $t2 = (0.0 != $q) ? $C / $q : $t1;
++        $e1 = ($t1 < 0) ? -$t1 : (($t1 > 1) ? $t1 - 1 : 0.0);
++        $e2 = ($t2 < 0) ? -$t2 : (($t2 > 1) ? $t2 - 1 : 0.0);
++        $ts[] = max(0.0, min(1.0, ($e1 <= $e2) ? $t1 : $t2));
++    } elseif ($f1 >= 0) {
++        // los dos extremos fuera: dos cruces si el segmento entra en el círculo
++        $tv = -$B / (2 * $A);
++        if ($tv > 0 && $tv < 1 && ($C - $B * $B / (4 * $A)) < 0) {
++            $s = sqrt($B * $B - 4 * $A * $C);
++            $ts[] = (-$B - $s) / (2 * $A);
++            $ts[] = (-$B + $s) / (2 * $A);
+         }
++    } // los dos dentro: un segmento dentro de un círculo no puede salir de él
++    foreach ($ts as $t) {
++        $xi = $x1 + $t * $dx;
++        $yi = $y1 + $t * $dy;
++        $lista[] = $Rk * atan2($xi, $yi) / BERTA_MILLA_NAUTICA_EN_METROS; // ángulo central desde el eje y
++    }
++}
+ 
+-        $i++;
+-        // Si no existe muro final, se calcula el muro: el primer punto será la intersección
+-        // entre la línea que forman el radar y el último punto con la línea de máximo rango.
+-        if ($alt <= 30000) {
+-            $ret = create_muro($radar, $xa, $ya, $xb, $yb, $m);
+-            if ( $ret !== false ) { // no es necesario insertarlo porque el muro queda detrás del último obstáculo
+-                [$xi, $yi, $xil, $yil] = $ret;
+-                // Se añaden los dos nuevos puntos
+-                $matriz_obstaculos[$azimut][$i++] = [$xi, $yi];
+-                $matriz_obstaculos[$azimut][$i++] = [$xil, $yil];
+-                // print "[$azimut, $i] => $xi,$yi" . PHP_EOL;
+-                // print "[$azimut, $i] => $xil,$yil" . PHP_EOL;
++/**
++ * Convierte los cruces de cada acimut en intervalos cubiertos [inicio, fin] en NM.
++ * Por debajo del radar el perfil empieza por encima del nivel: (c0,c1), (c2,c3)...
++ * Por encima del radar empieza por debajo: [0,c0], (c1,c2)...
++ */
++function intervalos_desde_cruces(array $cruces, bool $encima): array
++{
++    $intervalos = array();
++    foreach (array_values($cruces) as $j => $lista) {
++        if ($encima) {
++            array_unshift($lista, 0.0);
++        }
++        $iv = array();
++        for ($i = 0; $i + 1 < count($lista); $i += 2) {
++            if ($lista[$i + 1] > $lista[$i]) {
++                $iv[] = [$lista[$i], $lista[$i + 1]];
+             }
+         }
++        $intervalos[$j] = $iv;
+     }
+-    return $matriz_obstaculos;
++    return $intervalos;
+ }
+ 
+-/*
+- * Calcula intersecciones a partir de la matriz de obstáculos
+- * @param array $radar parámetros del radar 
+- * @param array $matriz_obstaculos
+- * @param float $W radio de la circunferencia del nivel de vuelo
+- * @param float $max_distancia_nm se actualiza la máxima distancia de cobertura en NM después de los cálculos
+- * @return array matriz intersecciones
++/**
++ * Contorno de la cobertura a partir de los intervalos de cada acimut, sin unión de polígonos.
++ * El acimut j cubre [j·paso - paso/2, j·paso + paso/2]. Se generan las aristas del borde (arcos en cada
++ * intervalo y tramos radiales donde sólo un acimut vecino tiene cobertura) y se encadenan en anillos.
++ * Sustituye a create_poligonos_cobertura(): sin solape de 20 m, sin redondeo de ángulos y sin Martinez-Rueda.
++ *
++ * @param array $intervalos [j => [[inicio_nm, fin_nm], ...]]
++ * @return array lista de anillos [[lat, lon], ...] (sin repetir el primer punto), mismo formato que getArray()
+  */
+-function create_matriz_intersecciones(array &$radar, array &$matriz_obstaculos, float $W, float &$max_distancia_nm) {
+-    $debug = false;
++function poligonos_desde_intervalos(array $radar, array $intervalos): array
++{
++    $N = count($intervalos);
++    if (0 == $N) {
++        return array();
++    }
++    $paso = 360.0 / $N;
++
++    // ordenar y fusionar intervalos que se tocan dentro de cada acimut
++    $bins = array();
++    for ($j = 0; $j < $N; $j++) {
++        $iv = $intervalos[$j] ?? array();
++        usort($iv, fn($a, $b) => $a[0] <=> $b[0]);
++        $fusion = array();
++        foreach ($iv as [$s, $e]) {
++            if ($e <= $s) continue;
++            $u = count($fusion) - 1;
++            if ($u >= 0 && $s <= $fusion[$u][1]) $fusion[$u][1] = max($fusion[$u][1], $e);
++            else $fusion[] = [$s, $e];
++        }
++        $bins[$j] = $fusion;
++    }
+ 
+-    // Intersección entre nivel de vuelo (arco de circunferencia) y polilínea de screening para acimuth a
+-    $intersec = array();
+-    for ($azimuth = 0; $azimuth < count($matriz_obstaculos); $azimuth++) {
+-        $count = 0;
+-        $intersec[$azimuth] = array();
+-        for ($obs = 0; $obs < count($matriz_obstaculos[$azimuth]) - 1; $obs++) {
+-
+-            $x1 = $matriz_obstaculos[$azimuth][$obs][0];
+-            $y1 = $matriz_obstaculos[$azimuth][$obs][1];
+-            $x2 = $matriz_obstaculos[$azimuth][$obs + 1][0];
+-            $y2 = $matriz_obstaculos[$azimuth][$obs + 1][1];
+-
+-            $dx = $x2 - $x1;
+-            $dy = $y2 - $y1;
+-            /* Segmento:
+-             *   x = x1 + t*dx
+-             *   y = y1 + t*dy
+-             * Circunferencia:
+-             *   x^2 + y^2 = W^2
+-            */
+-            // Coeficientes At^2 + Bt + C=0
+-            $A = $dx * $dx + $dy * $dy;
+-            $B = 2 * ($x1 * $dx + $y1 * $dy);
+-            $C = $x1 * $x1 + $y1 * $y1 - $W * $W;
+-
+-            // Discriminante
+-            $D = $B * $B - 4 * $A * $C;
+-            //print "$azimuth,$obs: " . json_encode($matriz_obstaculos[$azimuth][$obs]) . PHP_EOL;
+-            //print "rowsX: $obs Azimut: $azimuth x1: $x1 y1: $y1 x2: $x2 y2: $y2" . PHP_EOL;
+-            //print "A: $A B: $B C: $C D: $D" . PHP_EOL;
+-            $epsilon = 1e-12 * max(1.0, abs($B), abs($C));
+-
+-            // $A suficientemente distinto de 0 → sí es cuadrática
+-            // $D no claramente negativo → hay raíces reales o casi reales
+-            if ((abs($A) > $epsilon) && $D >= -$epsilon) {
+-                //if (($D >= 0) && ($A != 0)) {       // Hay intersección
+-
+-                $sqrt_d = sqrt($D);
+-                $A2 = $A * 2;
+-                $t1 = (-$B - $sqrt_d) / $A2;
+-                $t2 = (-$B + $sqrt_d) / $A2;
+-
+-                // Asegurarse de que la primera solución es la menor
+-                if ($t1 > $t2)
+-                    [$t1, $t2] = [$t2, $t1];
+-                // print "t1: $t1 t2: $t2" . PHP_EOL;
+-                foreach ([$t1, $t2] as $t) {
+-                    if ($t >= 0 && $t <= 1) {   // Límites del segmento
+-                        // print "t1: $t1 t2: $t2 DENTRO SEGMENTO" . PHP_EOL;
+-
+-                        $xi = $x1 + $t * $dx;   // Punto de intersección
+-                        $yi = $y1 + $t * $dy;   // Punto de intersección
+-
+-                        // Distancia del radar a la intersección, un acimut por columna [nm]
+-                        $alpha = M_PI / 2 - atan2($yi, $xi);    // atan2() pone el ángulo 0º en x=1, y=0, en sentido antihorario
+-                        $dist_nm = ($radar['screening']['radioTerrestreAumentado'] * $alpha) / BERTA_MILLA_NAUTICA_EN_METROS;
+-                        if ($dist_nm > $max_distancia_nm)
+-                            $max_distancia_nm = $dist_nm;
+-                        $intersec[$azimuth][$count] = $dist_nm;
+-
+-                        if ($debug)
+-                            print "intersec count: $count obs: $obs azimut: $azimuth => dist_nm: $dist_nm" . PHP_EOL;
+-
+-                        $count++;
++    // aristas dirigidas en el plano (u = índice de frontera de acimut, v = distancia), región a la izquierda
++    // dirección: 0 = +u, 1 = +v, 2 = -u, 3 = -v
++    $salidas = array();
++    $puntos = array();
++    $arista = function (int $k1, float $r1, int $k2, float $r2, int $dir) use (&$salidas, &$puntos, $N): void {
++        $k1 %= $N; $k2 %= $N;
++        $a = $k1 . '|' . $r1; $b = $k2 . '|' . $r2;
++        $puntos[$a] = [$k1, $r1]; $puntos[$b] = [$k2, $r2];
++        $salidas[$a][] = [$b, $dir];
++    };
++    for ($j = 0; $j < $N; $j++) {
++        foreach ($bins[$j] as [$s, $e]) {
++            $arista($j, $s, $j + 1, $s, 0);   // arco inferior
++            $arista($j + 1, $e, $j, $e, 2);   // arco superior
++        }
++    }
++    $cubre = function (array $set, float $x): bool {
++        foreach ($set as [$s, $e]) if ($x > $s && $x < $e) return true;
++        return false;
++    };
++    for ($k = 0; $k < $N; $k++) { // frontera k, entre el acimut k-1 y el k
++        $L = $bins[($k - 1 + $N) % $N];
++        $R = $bins[$k];
++        $cortes = array();
++        foreach ([$L, $R] as $set) foreach ($set as [$s, $e]) { $cortes[(string) $s] = $s; $cortes[(string) $e] = $e; }
++        $cortes = array_values($cortes);
++        sort($cortes);
++        for ($i = 0; $i < count($cortes) - 1; $i++) {
++            $a = $cortes[$i]; $b = $cortes[$i + 1]; $medio = 0.5 * ($a + $b);
++            $l = $cubre($L, $medio); $r = $cubre($R, $medio);
++            if ($l && !$r) $arista($k, $a, $k, $b, 1);      // región a la izquierda de la frontera
++            elseif ($r && !$l) $arista($k, $b, $k, $a, 3);  // región a la derecha de la frontera
++        }
++    }
++
++    // encadenar aristas en anillos; en un vértice con varias salidas se prefiere girar a la izquierda
++    $preferencia = array(0 => [1, 0, 3], 1 => [2, 1, 0], 2 => [3, 2, 1], 3 => [0, 3, 2]);
++    $anillos = array();
++    foreach (array_keys($salidas) as $inicio) {
++        while (!empty($salidas[$inicio])) {
++            $anillo = array($inicio);
++            [$actual, $dir] = array_pop($salidas[$inicio]);
++            while ($actual !== $inicio) {
++                $anillo[] = $actual;
++                $opciones = $salidas[$actual] ?? array();
++                if (empty($opciones)) {
++                    logger(" E> Contorno abierto en poligonos_desde_intervalos (vértice {$actual})");
++                    break;
++                }
++                $elegida = array_key_first($opciones);
++                foreach ($preferencia[$dir] as $quiero) {
++                    foreach ($opciones as $i => $o) {
++                        if ($o[1] === $quiero) { $elegida = $i; break 2; }
+                     }
+                 }
++                [$siguiente, $dir] = $opciones[$elegida];
++                unset($salidas[$actual][$elegida]);
++                $actual = $siguiente;
++            }
++            $anillos[] = $anillo;
++        }
++    }
++
++    // a lat/lon, subdividiendo los lados radiales largos
++    $latlon = array();
++    $aLatLon = function (int $k, float $r) use ($radar, $paso, &$latlon): array {
++        $clave = $k . '|' . $r;
++        if (!isset($latlon[$clave])) {
++            $latlon[$clave] = ($r <= 0.0)
++                ? [rad2deg($radar['lat_rad']), rad2deg($radar['lon_rad'])]
++                : destino($radar['lat_rad'], $radar['lon_rad'], $r * BERTA_MILLA_NAUTICA_EN_METROS, deg2rad($k * $paso - $paso / 2));
++        }
++        return $latlon[$clave];
++    };
++    $resultado = array();
++    foreach ($anillos as $anillo) {
++        $poly = array();
++        $n = count($anillo);
++        for ($i = 0; $i < $n; $i++) {
++            [$k1, $r1] = $puntos[$anillo[$i]];
++            [$k2, $r2] = $puntos[$anillo[($i + 1) % $n]];
++            $p = $aLatLon($k1, $r1);
++            if (empty($poly) || $poly[count($poly) - 1] != $p) $poly[] = $p;
++            if ($k1 === $k2 && abs($r2 - $r1) > BERTA_SUBDIVISION_RADIAL_NM) {
++                $ns = (int) ceil(abs($r2 - $r1) / BERTA_SUBDIVISION_RADIAL_NM);
++                for ($s = 1; $s < $ns; $s++) {
++                    $poly[] = $aLatLon($k1, $r1 + ($r2 - $r1) * $s / $ns);
++                }
+             }
+         }
++        if (count($poly) > 1 && $poly[0] == $poly[count($poly) - 1]) array_pop($poly);
++        if (count($poly) >= 3) $resultado[] = $poly;
+     }
+-    return $intersec;
++    return $resultado;
+ }
+ 
+-/*
+- * Función que calcula los vértices de intersección entre el círculo definido por el radio r y el sector anular definido por los ángulos a1 y a2
+- * Se optimiza para no calcular sin(a1), cos(a1), sin(a2), cos(a2)
+- * Se corrige el azimuth con una tolerancia para asegurar solape entre polígonos
+- * @param float $cos_lat90 depende del radar, no cambia
+- * @param float $sin_lat90 depende del radar, no cambia
+- * @param float $lat_rad depende del radar, no cambia
+- * @param float $lon_rad depende del radar, no cambia
+- * 
+- * @return array con los vértices de intersección [lat, lon] [º]
++/**
++ * Problema directo: punto a $dist_m metros del radar con rumbo $az_rad.
++ * Esfera de radio BERTA_RADIO_TERRESTRE (fórmula exacta) o, con BERTA_ELIPSOIDE_WGS84, geodésica de Vincenty.
++ * Sustituye a calcula_vertices_interseccion(), cuya fórmula de longitud era aproximada.
++ *
++ * @return array [lat, lon] en grados
+  */
+-function calcula_vertices_interseccion(
+-    float $r,
+-    float $a1_rad,
+-    ?float $a2_rad,
+-    float $cos_lat90,
+-    float $sin_lat90,
+-    float $lat_rad,
+-    float $lon_rad
+-) {
+-
+-    $debug = false;
++function destino(float $lat_rad, float $lon_rad, float $dist_m, float $az_rad): array
++{
++    if (BERTA_ELIPSOIDE_WGS84) {
++        return destinoVincenty($lat_rad, $lon_rad, $dist_m, $az_rad);
++    }
++    $d = $dist_m / BERTA_RADIO_TERRESTRE;
++    $sinLat = sin($lat_rad); $cosLat = cos($lat_rad);
++    $cosD = cos($d); $sinD = sin($d);
++    $sinLat2 = $sinLat * $cosD + $cosLat * $sinD * cos($az_rad);
++    $lat2 = asin(max(-1.0, min(1.0, $sinLat2)));
++    $lon2 = $lon_rad + atan2(sin($az_rad) * $sinD * $cosLat, $cosD - $sinLat * $sinLat2);
++    return [rad2deg($lat2), rad2deg($lon2)];
++}
+ 
+-    static $a1a2_cache = [];
+-    // static $called = 0;
+-
+-    $a1_rad  = round($a1_rad, BERTA_INTERSECTION_CACHE_TOLERANCE);
+-
+-    if ( $debug )
+-        printf("INFO r: %.20f, a1_rad: %.20f, cos_lat90: %.20f, sin_lat90: %.20f, lat_rad: %.20f, lon_rad: %.20f" . PHP_EOL,
+-            $r, $a1_rad, $cos_lat90, $sin_lat90, $lat_rad, $lon_rad);
+-
+-    $alpha = $r / BERTA_RADIO_TERRESTRE;
+-    $cos_alpha = cos($alpha);
+-    $sin_alpha = sin($alpha);
+-    
+-    if ( $debug )
+-        print "cos_alpha: {$cos_alpha} sin_alpha: {$sin_alpha}" . PHP_EOL;
+-
+-    
+-    [$cos_a1, $sin_a1] = getCached($a1a2_cache, (string) $a1_rad, function () use ($a1_rad) {
+-        return [
+-            cos($a1_rad),
+-            sin($a1_rad),
+-        ];
+-    });
+-    
+-/*
+-    $cos_a1 = cos($a1_rad);
+-    $sin_a1 = sin($a1_rad);
+-*/
+-    if ( $debug )
+-        print "cos_a1: {$cos_a1} sin_a1: {$sin_a1}" . PHP_EOL;
+-
+-    $cos_lat90xcos_alpha2 = $cos_lat90 * $cos_alpha;
+-    $sin_lat90xsin_alpha2 = $sin_lat90 * $sin_alpha;
+-
+-    // Teorema del Coseno Esférico - Latitud
+-    $cos_lat1 = $cos_lat90xcos_alpha2 +
+-        $sin_lat90xsin_alpha2 * $cos_a1;
+-    $cos_lat1 = max(-1.0, min(1.0, $cos_lat1)); // clamp
+-    $asin_lat1_rad = asin($cos_lat1);
+-    $lat1_rad = $asin_lat1_rad - $lat_rad;
+-
+-    // Teorema del Coseno Esférico - Longitud (optimizada para no usar cos(asin_lat1_rad))
+-    $cos_par1 = cos($lat1_rad) * $cos_alpha +
+-        sin($lat1_rad) * $sin_alpha * $cos_a1;
+-    $cos_par1 = max(-1.0, min(1.0, $cos_par1));  // clamp    
+-    
+-    $cos_lat_abs1 = sqrt(1.0 - $cos_lat1 * $cos_lat1);
+-    $lon1_d = acos($cos_par1) / $cos_lat_abs1;
+- 
+-    if ( $debug )
+-        print "cos_lat_abs1: {$cos_lat_abs1} cos_par1: {$cos_par1} lon1_d: {$lon1_d}" . PHP_EOL;
+-
+-    // Signo según sin(ángulo)
+-    $lon1_d = $lon_rad + (($sin_a1 >= 0) ? $lon1_d : -$lon1_d);
+-
+-    if ( $debug )
+-        print "lon1_d: {$lon1_d}" . PHP_EOL;
+-
+-    // Corrección al acimut (+ x metros para asegurar solape entre polígonos)
+-    // a1
+-    $asin_lat1_rad += BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $sin_a1;
+-    $lon1_d -= BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $cos_a1;
+-
+-    if ( $debug )
+-        print "asin_lat1_rad: {$asin_lat1_rad} lon1_d: {$lon1_d}" . PHP_EOL;
+-
+-    $p1 = [rad2deg($asin_lat1_rad), rad2deg($lon1_d)];
+-    
+-    //print "INFO " . serialize($p1) . PHP_EOL; exit(0);
+-    
+-    if ( !is_null($a2_rad) ) {
+-        
+-        $a2_rad  = round($a2_rad, BERTA_INTERSECTION_CACHE_TOLERANCE);
+-        [$cos_a2, $sin_a2] = getCached($a1a2_cache, (string) $a2_rad, function () use ($a2_rad) {
+-            return [
+-                cos($a2_rad),
+-                sin($a2_rad),
+-            ];
+-        });
+-        /*
+-        $cos_a2 = cos($a2_rad);
+-        $sin_a2 = sin($a2_rad);
+-        */
+-        $cos_lat2 = $cos_lat90xcos_alpha2 +
+-            $sin_lat90xsin_alpha2 * $cos_a2;
+-        $cos_lat2 = max(-1.0, min(1.0, $cos_lat2)); // clamp
+-        $asin_lat2_rad = asin($cos_lat2);
+-        $lat2_rad = $asin_lat2_rad - $lat_rad;
+-
+-        $cos_par2 = cos($lat2_rad) * $cos_alpha +
+-            sin($lat2_rad) * $sin_alpha * $cos_a2;
+-        $cos_par2 = max(-1.0, min(1.0, $cos_par2)); // clamp
+-
+-        $cos_lat_abs2 = sqrt(1.0 - $cos_lat2 * $cos_lat2);
+-        $lon2_d = acos($cos_par2) / $cos_lat_abs2;
+-
+-        $lon2_d = $lon_rad + (($sin_a2 >= 0) ? $lon2_d : -$lon2_d);
+-
+-        // a2
+-        $asin_lat2_rad -= BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $sin_a2;
+-        $lon2_d += BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD * $cos_a2;
+-        $p2 = [rad2deg($asin_lat2_rad), rad2deg($lon2_d)];
+-
+-        //if ( $debug ) 
+-        //    print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
+-        // print json_encode([$p1, $p2]) . PHP_EOL;
+-        return [$p1, $p2];
++/**
++ * Problema directo de Vincenty sobre el elipsoide WGS84.
++ * @return array [lat, lon] en grados
++ */
++function destinoVincenty(float $lat_rad, float $lon_rad, float $dist_m, float $az_rad): array
++{
++    $a = 6378137.0; $f = 1 / 298.257223563; $b = $a * (1 - $f);
++    $U1 = atan((1 - $f) * tan($lat_rad));
++    $sigma1 = atan2(tan($U1), cos($az_rad));
++    $sinAlpha = cos($U1) * sin($az_rad);
++    $cos2Alpha = 1 - $sinAlpha * $sinAlpha;
++    $u2 = $cos2Alpha * ($a * $a - $b * $b) / ($b * $b);
++    $A = 1 + $u2 / 16384 * (4096 + $u2 * (-768 + $u2 * (320 - 175 * $u2)));
++    $B = $u2 / 1024 * (256 + $u2 * (-128 + $u2 * (74 - 47 * $u2)));
++    $sigma = $dist_m / ($b * $A);
++    $cos2SigmaM = cos(2 * $sigma1 + $sigma);
++    for ($i = 0; $i < 100; $i++) {
++        $cos2SigmaM = cos(2 * $sigma1 + $sigma);
++        $sinSigma = sin($sigma);
++        $deltaSigma = $B * $sinSigma * ($cos2SigmaM + $B / 4 * (cos($sigma) * (-1 + 2 * $cos2SigmaM ** 2)
++            - $B / 6 * $cos2SigmaM * (-3 + 4 * $sinSigma ** 2) * (-3 + 4 * $cos2SigmaM ** 2)));
++        $anterior = $sigma;
++        $sigma = $dist_m / ($b * $A) + $deltaSigma;
++        if (abs($sigma - $anterior) < 1e-12) break;
+     }
+-    //if ( $debug )
+-    //    print "CACHE: " . $called++ . " " . /* count($alpha_cache) . " " . */ count($a1a2_cache) . PHP_EOL;
+-    // print json_encode($p1) . PHP_EOL;
+-    return [$p1];
++    $sinSigma = sin($sigma); $cosSigma = cos($sigma);
++    $cos2SigmaM = cos(2 * $sigma1 + $sigma);
++    $tmp = sin($U1) * $sinSigma - cos($U1) * $cosSigma * cos($az_rad);
++    $lat2 = atan2(sin($U1) * $cosSigma + cos($U1) * $sinSigma * cos($az_rad), (1 - $f) * sqrt($sinAlpha * $sinAlpha + $tmp * $tmp));
++    $lambda = atan2($sinSigma * sin($az_rad), cos($U1) * $cosSigma - sin($U1) * $sinSigma * cos($az_rad));
++    $C = $f / 16 * $cos2Alpha * (4 + $f * (4 - 3 * $cos2Alpha));
++    $L = $lambda - (1 - $C) * $f * $sinAlpha * ($sigma + $C * $sinSigma * ($cos2SigmaM + $C * $cosSigma * (-1 + 2 * $cos2SigmaM ** 2)));
++    return [rad2deg($lat2), rad2deg($lon_rad + $L)];
+ }
+ 
+ /*
+diff --git a/inc.cargarScreening.php b/inc.cargarScreening.php
+index c871f38..a5943ec 100644
+--- a/inc.cargarScreening.php
++++ b/inc.cargarScreening.php
+@@ -238,8 +238,8 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
+ 	if ($forzarAlcance > 0) {
+ 		// utiliza el alcance que pasamos a la función
+ 		$radar['range'] = $forzarAlcance;
+-		logger(" I> Se ha forzado un alcance de " . ($radar['range'] / BERTA_MILLA_NAUTICA_EN_METROS) .
+-			"NM / " . $radar['range'] . "m");
++		logger(" I> Se ha forzado un alcance de " . $radar['range'] .
++			"NM / " . ($radar['range'] * BERTA_MILLA_NAUTICA_EN_METROS) . "m");
+ 	} else {
+ 		// utiliza el alcance definido en el .rdb para un radar secundario
+ 		$radar['range'] = $radar['secondaryMaximumRange'];
+diff --git a/inc.multiCalculos.php b/inc.multiCalculos.php
+index e456a60..a11aa99 100644
+--- a/inc.multiCalculos.php
++++ b/inc.multiCalculos.php
+@@ -116,144 +116,39 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
+     $flWithPad = str_pad((string) $fl, 3, "0", STR_PAD_LEFT);
+     $radarWithFl = implode(',', $sensores) . "-" . $flWithPad;
+ 
++	// celdas = zonas cubiertas exactamente por un conjunto de radares, más la unión de todos
++	$refinado = multi_refinamiento($mr_polygons, $flWithPad);
++
+ 	logger(" I> Creando cobertura única/suma");
+-	$normalized = create_unica($mr_polygons, implode(',', $sensores), $flWithPad);
+-	$kml = KML_normalized2KML($normalized, 0, $sensores, $fl);
+-	$kml = KML_create_folder('unica', $kml);
+-		
++	$normalized = KML_normalizePolygonsForKML($refinado['union']->getArray());
++	$kml_unica = KML_normalized2KML($normalized, 0, $sensores, $fl);
++	$kml_unica = KML_create_folder('unica', $kml_unica);
++
+ 	// si se selecciona única, sólo se genera la única y se vuelve.
+ 	if (isset($calculoMode['multiradar_unica']) && true === $calculoMode['multiradar_unica']) {
+-		return $kml;
++		return $kml_unica;
+ 	}
+ 
+-	$vsr = array(); // variaciones sin repetición
+-	$vsr_count = 0;
+-	for ($i = 1; $i <= count($sensores); $i++) {
+-		$combinations = new Combinations($sensores);
+-		$vsr[$i] = $combinations->getCombinations($i, false);
+-		$vsr_count += count($vsr[$i]);
++	// agrupar las celdas por número de radares que las cubren (mono, doble, triple...)
++	$celdas_por_nivel = array();
++	foreach ($refinado['celdas'] as $nombre_grupo_sensores => $poligono) {
++		$celdas_por_nivel[count(explode(',', $nombre_grupo_sensores))][$nombre_grupo_sensores] = $poligono;
+ 	}
+-	logger(" D> " . $vsr_count . " estructuras generadas en " . round(microtime(true) - $timer, 3) . " segundos");
+-
+-	$sensores_interseccion_cache = array();
+-	$sensores_suma_cache = array();
+-
+-	// cacheo de intersecciones y sumas
+-	$ret = populate_cache($vsr, $vsr_count, $mr_polygons, $sensores_interseccion_cache, $sensores_suma_cache, $flWithPad);
+-
+-	logger(" D> count sensores_suma_cache: " . implode(',', array_keys($sensores_suma_cache)));
+-	logger(" D> count sensores_interseccion_cache: " . implode(',', array_keys($sensores_interseccion_cache)));
+-
+-	// ejecución
+-	$count = 1;
+-	foreach ($vsr as $numero_solape => $grupo_solape) { // numero_solape = 1, 2, 3...
+-		// $grupo_solape en la primera iteración serán los sensores individuales
+-		if ($numero_solape >= count($coverageNames)) {
+-			$coverageNames_fixed = "de más de {$numero_solape}";
+-		} else {
+-			$coverageNames_fixed = $coverageNames[$numero_solape];
+-		}
+-		logger(" N> == Calculando cobertura $coverageNames_fixed"); // mono, doble, triple, etc...
+-		$coverages_per_level_KML[$numero_solape] = array();
+-		$mr_polygons[$numero_solape] = array();
+-	
+-		foreach ($grupo_solape as $grupo_sensores) { // primera iteración, sensores individuales
+-
+-			logger(" V> $count/$vsr_count");
+-			$count++;
+-
+-			// extraemos los sensores que van a intervenir en esta iteración
+-			// mono cobertura del primer radar es el primer radar menos todos los demás
+-			//$count_grupo_sensores = count($grupo_sensores);
+-			$nombre_grupo_sensores = implode(',', $grupo_sensores);
+-			$nombre_grupo_sensores_interseccion = implode('^', $grupo_sensores);
+-			$grupo_sensores_suma = array_values(array_diff($sensores, $grupo_sensores));
+-			// $count_grupo_sensores_suma = count($grupo_sensores_suma);
+-			$nombre_grupo_sensores_suma = implode('+', $grupo_sensores_suma);
+-
+-			/** @var MR\Polygon $result_interseccion */
+-			if ( !isset($sensores_interseccion_cache[$nombre_grupo_sensores_interseccion]) ) {
+-				logger(" N> Intersección no existe, no hay resultado. Se buscó {$nombre_grupo_sensores_interseccion}");
+-				continue;
+-			}
+-			$result_interseccion =  $sensores_interseccion_cache[$nombre_grupo_sensores_interseccion];
+-			logger(" V> Intersección: $nombre_grupo_sensores_interseccion Polygon_count: " . ($result_interseccion !== false ? $result_interseccion->numPoints : 0));
+-			if (0 == $result_interseccion->numPoints) {
+-				logger(" N> Intersección vacia, no hay resultado. Se buscó: {$nombre_grupo_sensores_interseccion}");
+-				continue;
+-			}
+-
+-			/** @var MR\Polygon|bool $result_suma */
+-			$result_suma = false;
+-			if (isset($sensores_suma_cache[$nombre_grupo_sensores_suma])) {
+-				$result_suma = $sensores_suma_cache[$nombre_grupo_sensores_suma];
+-				logger(" D> Suma: $nombre_grupo_sensores_suma Polygon_count: " . ($result_suma !== false ? $result_suma->numPoints : 0));
+-			} else {
+-				logger(" D> Suma no existe, no hay resultado. Se buscó: {$nombre_grupo_sensores_suma}");
+-				// pero no es un error
+-			}
+-
+-			// ahora calculamos la diferencia de intersección - suma (para sacar la cobertura sólo del tipo $numero_solape)
+-			$timer_difference = microtime(true);
+-			/** @var MR\Polygon|bool $result_resta */
+-			$result_resta = false;
+-			if (false === $result_suma) {
+-				$result_resta = $result_interseccion;
+-			} else {
+-				logger(" D> Calculando diferencia: {$nombre_grupo_sensores_interseccion} - {$nombre_grupo_sensores_suma}");
+-				// $nombre_grupo_sensores_interseccion
+-				// $nombre_grupo_sensores_suma
+-				// CACHE AQUI
+-				// $result_resta = MR\Algorithm::difference(
+-				//	$result_interseccion,
+-				//	$result_suma
+-				//);
+-				$result_resta = cache_operation($result_interseccion, $result_suma, "{$nombre_grupo_sensores_interseccion} - {$nombre_grupo_sensores_suma}", 'difference', $flWithPad);
+-			}
+-			logger(" D> Tiempo de resta: " . round(microtime(true) - $timer_difference, 3) . " segundos");
+-
+-			if ( false === $result_resta || 0 == $result_resta->numPoints ) {
+-				logger(" V> Resta vacía, no hay resultado");
+-				continue;
+-			}
+-			
+-			// en mr_polygons guardamos para cada nivel de cobertura (mono, doble, triple) todos los polígonos que forman
+-			// ese nivel
+-			logger(" D> Polígono resultante: " . $result_resta->numPoints . " nivel: {$numero_solape}");
+-			$mr_polygons[$numero_solape][$nombre_grupo_sensores_interseccion . "-" . $nombre_grupo_sensores_suma] = $result_resta;
+-			$normalized = KML_normalizePolygonsForKML($result_resta->getArray());
+-			$kml = KML_normalized2KML($normalized, $numero_solape , $grupo_sensores, $fl);
+-
+-			logger(" D> Calculada: nivel {$numero_solape} {$nombre_grupo_sensores} => {$nombre_grupo_sensores_interseccion} - ( {$nombre_grupo_sensores_suma} )");
+-			// guardamos el kml para luego juntarlo en uno global, que contenga todos los niveles de cobertura
+-			// y todos los radares
+-			if (false !== $kml) {
+-				$coverages_per_level_KML[$numero_solape][$nombre_grupo_sensores] = $kml;
+-				// print json_encode(array_keys($coverages_per_level_KML[$numero_solape])) . PHP_EOL;
+-				// print_r($coverages_per_level_KML[$numero_solape][$nombre_grupo_radares]);
+-			}
+-			/*
+-			if ( $numero_solape==3) {
+-				print json_encode($normalized);
+-				print $kml . PHP_EOL;
+-				exit(0);
+-			}
+-			*/
++	ksort($celdas_por_nivel);
++
++	foreach ($celdas_por_nivel as $numero_solape => $celdas) {
++		$coverageNames_fixed = ($numero_solape >= count($coverageNames)) ? "de más de {$numero_solape}" : $coverageNames[$numero_solape];
++		logger(" N> == Cobertura $coverageNames_fixed: " . count($celdas) . " zonas");
++		ksort($celdas);
++		foreach ($celdas as $nombre_grupo_sensores => $poligono) {
++			$normalized = KML_normalizePolygonsForKML($poligono->getArray());
++			$coverages_per_level_KML[$numero_solape][$nombre_grupo_sensores] =
++				KML_normalized2KML($normalized, $numero_solape, explode(',', $nombre_grupo_sensores), $fl);
+ 		}
+-
+-	 	// sumar todos los polígonos de este nivel para generar un polígono único que represente la cobertura de este nivel
+-		if ( !isset($mr_polygons[$numero_solape]) || (count($mr_polygons[$numero_solape]) < 1) ) {
+-			logger(" D> No hay polígonos para el nivel {$numero_solape}, no se genera cobertura unificada");
+-			continue;
+-		}
+-		// print_r($mr_polygons);
+-		// print "numero_solape: $numero_solape" . PHP_EOL;
+-		// print "count: " . count($mr_polygons[$numero_solape]) . PHP_EOL;
+-		// print "listado: " . implode(',', array_keys($mr_polygons[$numero_solape])) . PHP_EOL;
+-		$normalized = create_unica($mr_polygons[$numero_solape], (string) $numero_solape, $flWithPad);
+-		$kml = KML_normalized2KML($normalized, $numero_solape, [(string)$numero_solape], $fl);
+-		$union_coverage_per_level_KML[$numero_solape] = $kml;
+-
++		// polígono único del nivel: las celdas de un mismo nivel no se solapan
++		$union_nivel = (1 == count($celdas)) ? reset($celdas) : MR\Algorithm::unionMany(array_values($celdas));
++		$normalized = KML_normalizePolygonsForKML($union_nivel->getArray());
++		$union_coverage_per_level_KML[$numero_solape] = KML_normalized2KML($normalized, $numero_solape, [(string) $numero_solape], $fl);
+ 	}
+ 
+ 	// Estructura para meter los kml de los polígonos en carpetas
+@@ -278,7 +173,6 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
+ 	foreach ($coverages_per_level_KML as $numero_solape => $solapes) {
+ 		$kml_per_level = ""; // para cada tipo (mono, doble, triple) guardamos todos los kml
+ 		foreach($solapes as $nombre_grupos_radares => $kml_group) {
+-			print "\t" . $nombre_grupos_radares . PHP_EOL;
+ 			$kml_per_level .= $kml_group;
+ 		}
+ 		if ( !empty($kml_per_level) ) {
+@@ -287,7 +181,7 @@ function multicobertura(array &$coberturas, int $fl, array $calculoMode): false|
+ 		}
+ 	}
+ 
+-	$kml = KML_create_folder('multiradar-directa', $kml_directa);
++	$kml = $kml_unica . KML_create_folder('multiradar-directa', $kml_directa);
+ 
+ 	// multiradar-inversa: por ejemplo, todas las coberturas en las que esté paracuellos1 ordenadas por niveles
+  	$kml_inversa = "";
+@@ -456,3 +350,70 @@ function cache_operation(array|MR\Polygon $polygon1, ?MR\Polygon $polygon2, stri
+ 	file_put_contents($filename, serialize($result));
+ 	return $result;
+ }
++
++
++/**
++ * Cobertura multiradar por refinamiento incremental.
++ * Al añadir el radar S, cada celda P se parte en P∩S (pasa a tener S) y P−S (se queda igual), y se añade
++ * S−(unión de los anteriores). Las celdas vacías se descartan, así que el trabajo depende del número de zonas
++ * de solape que existen y no de las 2^N−1 combinaciones de radares.
++ * El resultado se guarda en disco con una clave que incluye el nivel de vuelo, los radares y el contenido de
++ * sus polígonos, de modo que un cambio en cualquier cobertura monoradar invalida la caché.
++ *
++ * @param array<string, MR\Polygon> $mr_polygons polígono de cada sensor
++ * @return array{celdas: array<string, MR\Polygon>, union: MR\Polygon} celdas: "a,b" => zona cubierta exactamente por a y b
++ */
++function multi_refinamiento(array $mr_polygons, string $flWithPad): array
++{
++	ksort($mr_polygons);
++	$clave = sha1($flWithPad . '|' . implode(',', array_keys($mr_polygons)) . '|' . serialize($mr_polygons));
++	$ruta = "cache" . DIRECTORY_SEPARATOR . "multi" . DIRECTORY_SEPARATOR . $clave[0] . $clave[1] . DIRECTORY_SEPARATOR;
++	$fichero = $ruta . $clave . ".ser";
++	if (is_file($fichero)) {
++		$cacheado = unserialize(
++			(string) file_get_contents($fichero),
++			['allowed_classes' => [MR\Polygon::class, MR\Point::class]]
++		);
++		if (is_array($cacheado) && isset($cacheado['celdas'], $cacheado['union'])) {
++			logger(" D> Multicobertura recuperada de la caché {$fichero}");
++			return $cacheado;
++		}
++	}
++
++	$timer = microtime(true);
++	$operaciones = 0;
++	$celdas = array();
++	$union = null;
++	foreach ($mr_polygons as $sensor => $S) {
++		$nuevas = array();
++		foreach ($celdas as $nombre => $P) {
++			$interseccion = MR\Algorithm::intersect($P, $S); $operaciones++;
++			if ($interseccion->numPoints > 0) {
++				$nuevas[$nombre . ',' . $sensor] = $interseccion;
++				$resta = MR\Algorithm::difference($P, $S); $operaciones++;
++				if ($resta->numPoints > 0) {
++					$nuevas[$nombre] = $resta;
++				}
++			} else {
++				$nuevas[$nombre] = $P; // S no toca esta celda
++			}
++		}
++		if (null === $union) {
++			$solo = $S;
++			$union = $S;
++		} else {
++			$solo = MR\Algorithm::difference($S, $union); $operaciones++;
++			$union = MR\Algorithm::union($union, $S); $operaciones++;
++		}
++		if ($solo->numPoints > 0) {
++			$nuevas[$sensor] = $solo;
++		}
++		$celdas = $nuevas;
++	}
++	logger(" V> Refinamiento multiradar: " . count($celdas) . " zonas, {$operaciones} operaciones, " . round(microtime(true) - $timer, 3) . "s");
++
++	$resultado = array('celdas' => $celdas, 'union' => $union);
++	crearCarpetaResultados($ruta);
++	file_put_contents($fichero, serialize($resultado));
++	return $resultado;
++}
+diff --git a/main.php b/main.php
+index bcbf115..1c0f40b 100644
+--- a/main.php
++++ b/main.php
+@@ -11,8 +11,15 @@ const BERTA_GUARDAR_POR_NIVEL = 0; // puntero para el array de resultados
+ const BERTA_GUARDAR_POR_RADAR = 1; // puntero para el array de resultados
+ const BERTA_ANGULO_CONO = 45.0; // ángulo del cono de silencio (si no hay cono, sería 0º)
+ const BERTA_MAX_WALL_HEIGHT = 32714.4; // máxima altitud de la pared que marca final de cobertura
+-CONST BERTA_FEET_TO_METERS = 0.30480370641307;
++const BERTA_FEET_TO_METERS = 0.3048; // pie internacional (antes 0.30480370641307 = 1/3.2808)
+ const BERTA_RAMER_DOUGLAS_PEUCKER_PRECISION = 0.000001;
++// El suelo de visibilidad entre puntos del screening sigue la línea de visión más alta hasta ese punto
++// (máximo acumulado del ángulo de elevación). Activar tras confirmar la semántica del screening de PREDICT.
++const BERTA_PERFIL_ESCALONADO = false;
++// Posiciones sobre el elipsoide WGS84 (Vincenty) en lugar de una esfera de radio BERTA_RADIO_TERRESTRE.
++// Activar tras confirmar contra una cobertura exportada de PREDICT.
++const BERTA_ELIPSOIDE_WGS84 = false;
++const BERTA_SUBDIVISION_RADIAL_NM = 10.0; // longitud máxima de un lado radial antes de subdividirlo (NM)
+ 
+ // INCLUSIÓN DE FICHEROS
+ require_once('inc.cargarScreening.php');
+@@ -320,11 +327,13 @@ function programaPrincipal(array $config)
+                 // ¿tenemos datos del terreno cargados? vamos a cargarlos una sola vez
+                 if (!isset($coberturas[$sensor]['terreno'])) {
+                     $coberturas[$sensor]['terreno'] = cargarDatosTerreno($infoCoral[$sensor], $config['max-range']); /*  !== -1 ? $config['max-range'] : $infoCoral[$sensor]['secondaryMaximumRange']); */
+-                    if (false !== strpos($sensor, "-psr")) {
++                    if ((false !== strpos($sensor, "-psr")) && (-1 == $config['max-range'])) {
+                         logger(" V> Detectado PSR, ajustando alcance");
+-                        $coberturas[$sensor]['terreno']['range'] = $infoCoral[$sensor]['primaryMaximumRange'] * BERTA_MILLA_NAUTICA_EN_METROS;
+-                        logger(" I>  El alcance definido para el PSR es de " . ($coberturas[$sensor]['terreno']['range'] / BERTA_MILLA_NAUTICA_EN_METROS) .
+-                            "NM / " . $coberturas[$sensor]['terreno']['range'] . "m");
++                        // el alcance se guarda en NM, igual que en cargarDatosTerreno()
++                        $coberturas[$sensor]['terreno']['range'] = (float) $infoCoral[$sensor]['primaryMaximumRange'];
++                        $coberturas[$sensor]['terreno']['screening']['range'] = $coberturas[$sensor]['terreno']['range'];
++                        logger(" I>  El alcance definido para el PSR es de " . $coberturas[$sensor]['terreno']['range'] .
++                            "NM / " . ($coberturas[$sensor]['terreno']['range'] * BERTA_MILLA_NAUTICA_EN_METROS) . "m");
+                     }
+                     logger(" V> Información del terreno procesada (" . round(microtime(true) - $timer, 3) . "s)");
+                     if (false) {
+@@ -426,7 +435,12 @@ function calculosFL(array $radar, float $fl, string $nivelVuelo, bool $calculoCo
+         $polygons = calculosFLencimaRadar2($radar, $flm);
+         
+         if ($calculoCono) {
+-            $radioConom = ($flm - $hA) * tan(deg2rad(BERTA_ANGULO_CONO));
++            // ángulo de elevación del cono definido en el .rdb (primario para PSR, secundario si no)
++            $claveCono = (false !== strpos($radar['radar'], "-psr")) ? 'primaryConeOfSilence' : 'secondaryConeOfSilence';
++            $anguloCono = (isset($radar[$claveCono]) && is_numeric($radar[$claveCono]) && (float) $radar[$claveCono] > 0)
++                ? (float) $radar[$claveCono] : BERTA_ANGULO_CONO;
++            // por encima de este ángulo de elevación no hay detección: radio = altura / tan(elevación)
++            $radioConom = ($flm - $hA) / tan(deg2rad($anguloCono));
+             $radioCono = $radioConom / BERTA_MILLA_NAUTICA_EN_METROS; // convertimos metros en millas
+             logger(" N> Radio del Cono: " . round($radioCono, 2) . "NM / " . round($radioConom, 2) . "m");
+ 
