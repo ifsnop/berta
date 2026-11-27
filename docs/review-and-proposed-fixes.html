@@ -92,28 +92,31 @@ h3:has(label.applied input:checked)::after { content: " ✓"; color: #3a8f45; }
 </head>
 <body>
 <div class="layout">
-<nav class="toc"><div class="toc-title">Contents</div><ul><li class="l1"><a href="#part-problems">Part I — Problems found</a></li><li class="l2"><a href="#resolved-problems">Resolved problems</a></li><li class="l2"><a href="#code-review">Pending — code review</a></li><li class="l3"><a href="#review-how-it-was-checked">How it was checked</a></li><li class="l3"><a href="#review-mono-radar-coverage">Mono-radar coverage</a></li><li class="l3"><a href="#review-multi-radar-coverage">Multi-radar coverage</a></li><li class="l3"><a href="#review-output-files-and-options">Output files and options</a></li><li class="l3"><a href="#review-suggested-priorities">Suggested priorities</a></li><li class="l2"><a href="#maths-review">Pending — mathematics review</a></li><li class="l3"><a href="#maths-errors">Errors</a></li><li class="l3"><a href="#maths-precision">Precision</a></li><li class="l3"><a href="#maths-speed">Speed</a></li><li class="l1"><a href="#part-fixes">Part II — Proposed fixes</a></li><li class="l3"><a href="#fix-results">Results</a></li><li class="l3"><a href="#fix-how-to-apply-and-verify">How to apply and verify</a></li><li class="l3"><a href="#fix-change-1-main-php-constants-and-flags">Change 1 — main.php: constants and flags</a></li><li class="l3"><a href="#fix-change-2-main-php-psr-range-in-nm">Change 2 — main.php: PSR range in NM</a></li><li class="l3"><a href="#fix-change-3-main-php-cone-of-silence-radius">Change 3 — main.php: cone of silence radius</a></li><li class="l3"><a href="#fix-change-4-inc-cargarscreening-php-forced-range-log">Change 4 — inc.cargarScreening.php: forced-range log</a></li><li class="l3"><a href="#fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp">Change 5 — inc.calculos.php: obsolete constants and acos clamp</a></li><li class="l3"><a href="#fix-change-5c-no-coverage">Change 5c — levels without coverage (X4, O7)</a></li><li class="l3"><a href="#fix-change-6-inc-calculos-php-replacement-block-part-a">Change 6 — inc.calculos.php: replacement block, part A</a></li><li class="l3"><a href="#fix-change-6-part-b-perfil-cartesiano">Change 6, part B — perfil_cartesiano</a></li><li class="l3"><a href="#fix-change-6-part-c-calcula-cruces-and-cruces-segmento">Change 6, part C — calcula_cruces and cruces_segmento</a></li><li class="l3"><a href="#fix-change-6-part-d-intervals-and-outline-tracing">Change 6, part D — intervals and outline tracing</a></li><li class="l3"><a href="#fix-change-6-part-e-destino-and-destinovincenty">Change 6, part E — destino and destinoVincenty</a></li><li class="l3"><a href="#fix-change-9-content-keyed-cache">Change 9 — content-keyed polygon cache (X1, X2)</a></li><li class="l3"><a href="#fix-change-7-inc-multicalculos-php-multicobertura-body">Change 7 — inc.multiCalculos.php: multicobertura body</a></li><li class="l3"><a href="#fix-change-8-inc-multicalculos-php-multi-refinamiento">Change 8 — inc.multiCalculos.php: multi_refinamiento</a></li><li class="l3"><a href="#fix-left-out-dead-code-and-open-questions">Left out, dead code and open questions</a></li></ul></nav>
+<nav class="toc"><div class="toc-title">Contents</div><ul><li class="l1"><a href="#part-problems">Part I — Problems found</a></li><li class="l2"><a href="#resolved-problems">Resolved problems</a></li><li class="l2"><a href="#code-review">Pending — code review</a></li><li class="l3"><a href="#review-how-it-was-checked">How it was checked</a></li><li class="l3"><a href="#review-mono-radar-coverage">Mono-radar coverage</a></li><li class="l3"><a href="#review-multi-radar-coverage">Multi-radar coverage</a></li><li class="l3"><a href="#review-output-files-and-options">Output files and options</a></li><li class="l3"><a href="#review-suggested-priorities">Suggested priorities</a></li><li class="l2"><a href="#maths-review">Pending — mathematics review</a></li><li class="l3"><a href="#maths-errors">Errors</a></li><li class="l3"><a href="#maths-precision">Precision</a></li><li class="l3"><a href="#maths-speed">Speed</a></li><li class="l1"><a href="#part-fixes">Part II — Proposed fixes</a></li><li class="l3"><a href="#fix-results">Results</a></li><li class="l3"><a href="#fix-how-to-apply-and-verify">How to apply and verify</a></li><li class="l3"><a href="#fix-change-1-main-php-constants-and-flags">Change 1 — main.php: constants and flags</a></li><li class="l3"><a href="#fix-change-2-main-php-psr-range-in-nm">Change 2 — main.php: PSR range in NM</a></li><li class="l3"><a href="#fix-change-3-main-php-cone-of-silence-radius">Change 3 — main.php: cone of silence radius</a></li><li class="l3"><a href="#fix-change-4-inc-cargarscreening-php-forced-range-log">Change 4 — inc.cargarScreening.php: forced-range log</a></li><li class="l3"><a href="#fix-change-10-screening-validation">Change 10 — reject malformed screenings (M6a)</a></li><li class="l3"><a href="#fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp">Change 5 — inc.calculos.php: obsolete constants and acos clamp</a></li><li class="l3"><a href="#fix-change-5c-no-coverage">Change 5c — levels without coverage (X4, O7)</a></li><li class="l3"><a href="#fix-change-6-inc-calculos-php-replacement-block-part-a">Change 6 — inc.calculos.php: replacement block, part A</a></li><li class="l3"><a href="#fix-change-6-part-b-perfil-cartesiano">Change 6, part B — perfil_cartesiano</a></li><li class="l3"><a href="#fix-change-6-part-c-calcula-cruces-and-cruces-segmento">Change 6, part C — calcula_cruces and cruces_segmento</a></li><li class="l3"><a href="#fix-change-6-part-d-intervals-and-outline-tracing">Change 6, part D — intervals and outline tracing</a></li><li class="l3"><a href="#fix-change-6-part-e-destino-and-destinovincenty">Change 6, part E — destino and destinoVincenty</a></li><li class="l3"><a href="#fix-change-9-content-keyed-cache">Change 9 — content-keyed polygon cache (X1, X2)</a></li><li class="l3"><a href="#fix-change-7-inc-multicalculos-php-multicobertura-body">Change 7 — inc.multiCalculos.php: multicobertura body</a></li><li class="l3"><a href="#fix-change-8-inc-multicalculos-php-multi-refinamiento">Change 8 — inc.multiCalculos.php: multi_refinamiento</a></li><li class="l3"><a href="#fix-left-out-dead-code-and-open-questions">Left out, dead code and open questions</a></li></ul></nav>
 <main>
 <header class="top">
 <h1>BERTA — code review and proposed fixes</h1>
 <div class="meta">Review of commit <code>ba079d8</code> · 24 November 2026 · bundled <code>spain.tsk</code> radar data</div>
 <p class="intro">Part I lists the problems found: the code review (caching, output, options) and the review of the coverage maths (errors, precision, speed). Part II gives every proposed change with its exact location, the code before and after, and how to check it. Issue codes link to their definition; “applied” boxes and checklist items are saved in this browser so you can track manual changes.</p>
-<div class="status-box"><h2>Status — 26 November 2026</h2>
-<p style="margin:0">9 items fixed; the resolved problems are listed separately in <a href="#resolved-problems">Resolved problems</a>, and the tables in Part I now show only pending ones. The live list is <code>tests/fix-status.md</code>, regenerated by <code>php tests/verify_fixes.php</code>.</p>
+<div class="status-box"><h2>Status — 27 November 2026</h2>
+<p style="margin:0">13 items fixed; the resolved problems are listed separately in <a href="#resolved-problems">Resolved problems</a>, and the tables in Part I now show only pending ones. The live list is <code>tests/fix-status.md</code>, regenerated by <code>php tests/verify_fixes.php</code>.</p>
 <ul>
-<li>Applied changes: 1, 2, 3, 5b, 5c and 9.</li>
+<li>Applied changes: 1, 2, 3, 4, 5b, 5c, 9 and 10; O3 and O4 fixed in your commits <code>161aa2b</code> and <code>f2f3bb1</code>.</li>
 <li>Pending changes: 5a, 6 (parts A–E), 7 and 8.</li>
+<li>O1 (KMZ names) can now be tested, since the PHP zip extension is installed: it is open.</li>
 <li>Still need a decision: E7, Q1, Q2 (Q3 answered: the cone angle is a half-angle from the vertical).</li>
 </ul></div>
 <div class="legend">Issue codes: <a class="code-ref" href="#issue-M1">M1</a> <a class="code-ref" href="#issue-M2">M2</a> <a class="code-ref" href="#issue-M3">M3</a> <a class="code-ref" href="#issue-M4">M4</a> <a class="code-ref" href="#issue-M5">M5</a> <a class="code-ref" href="#issue-M6">M6</a> <a class="code-ref" href="#issue-X1">X1</a> <a class="code-ref" href="#issue-X2">X2</a> <a class="code-ref" href="#issue-X3">X3</a> <a class="code-ref" href="#issue-X4">X4</a> <a class="code-ref" href="#issue-X5">X5</a> <a class="code-ref" href="#issue-X6">X6</a> <a class="code-ref" href="#issue-O1">O1</a> <a class="code-ref" href="#issue-O2">O2</a> <a class="code-ref" href="#issue-O3">O3</a> <a class="code-ref" href="#issue-O4">O4</a> <a class="code-ref" href="#issue-O5">O5</a> <a class="code-ref" href="#issue-O6">O6</a> <a class="code-ref" href="#issue-E1">E1</a> <a class="code-ref" href="#issue-E2">E2</a> <a class="code-ref" href="#issue-E3">E3</a> <a class="code-ref" href="#issue-E4">E4</a> <a class="code-ref" href="#issue-E5">E5</a> <a class="code-ref" href="#issue-E6">E6</a> <a class="code-ref" href="#issue-E7">E7</a> <a class="code-ref" href="#issue-E8">E8</a> <a class="code-ref" href="#issue-P1">P1</a> <a class="code-ref" href="#issue-P2">P2</a> <a class="code-ref" href="#issue-P3">P3</a> <a class="code-ref" href="#issue-S1">S1</a> <a class="code-ref" href="#issue-S2">S2</a> <a class="code-ref" href="#issue-S3">S3</a></div>
 </header>
 <section class="part" id="part-problems"><h1 class="part-title">Part I — Problems found</h1>
 <h2 id="resolved-problems" class="doc-title">Resolved problems</h2>
-<p>These problems are fixed in the code and confirmed by <code>php tests/verify_fixes.php</code>. They were moved here from the tables below, which now list only what is still pending. The checker also enforces a new rule added along the way, O7: a level without coverage produces no KML, above or below the radar (Change 5c).</p>
+<p>These problems are fixed in the code and confirmed by <code>php tests/verify_fixes.php</code>. They were moved here from the tables below, which now list only what is still pending. O3 and O4 were fixed directly in your own commits, outside the proposed changes. The checker also enforces a new rule added along the way, O7: a level without coverage produces no KML, above or below the radar (Change 5c).</p>
 <h3 id="resolved-review-mono-radar-coverage">Mono-radar</h3>
-<div class="table"><table><thead><tr><th>#</th><th>Bug</th><th>Where</th><th>Effect</th><th>Evidence</th><th>Fixed by</th></tr></thead><tbody><tr id="issue-M1"><td class="issue-code">M1</td><td>PSR range converted to metres twice: set as <code>primaryMaximumRange * 1852</code>, then multiplied by 1852 again, so <code>acos</code> returns NaN</td><td><code>main.php:325</code>, <code>inc.calculos.php:52</code></td><td>Every <code>*-psr</code> radar gets an empty polygon <code>[[]]</code>, cached, with no error</td><td>Reproduced on paracuellos1-psr</td><td>Change 2 · <code>920416b</code></td></tr><tr id="issue-M5"><td class="issue-code">M5</td><td>Range too short to reach the flight level gives a NaN angle</td><td><code>inc.calculos.php:51</code></td><td>Result (no coverage) is right by accident; not handled explicitly</td><td>Reproduced with <code>-m 5</code> at FL400</td><td>Changes 5b + 5c · <code>a3a0207</code></td></tr></tbody></table></div>
+<div class="table"><table><thead><tr><th>#</th><th>Bug</th><th>Where</th><th>Effect</th><th>Evidence</th><th>Fixed by</th></tr></thead><tbody><tr id="issue-M1"><td class="issue-code">M1</td><td>PSR range converted to metres twice: set as <code>primaryMaximumRange * 1852</code>, then multiplied by 1852 again, so <code>acos</code> returns NaN</td><td><code>main.php:325</code>, <code>inc.calculos.php:52</code></td><td>Every <code>*-psr</code> radar gets an empty polygon <code>[[]]</code>, cached, with no error</td><td>Reproduced on paracuellos1-psr</td><td>Change 2 · <code>920416b</code></td></tr><tr id="issue-M5"><td class="issue-code">M5</td><td>Range too short to reach the flight level gives a NaN angle</td><td><code>inc.calculos.php:51</code></td><td>Result (no coverage) is right by accident; not handled explicitly</td><td>Reproduced with <code>-m 5</code> at FL400</td><td>Changes 5b + 5c · <code>a3a0207</code></td></tr><tr id="issue-M6"><td class="issue-code">M6</td><td>Minor parsing issues: <code>preg_match</code> returning 0 treated as success; azimuth keys assumed to run 0..N-1; forced-range log divides NM by 1852</td><td><code>inc.cargarScreening.php</code></td><td>Silent bad data on malformed screening files</td><td>Read in code</td><td>Changes 4 + 10</td></tr></tbody></table></div>
 <h3 id="resolved-review-multi-radar-coverage">Multi-radar</h3>
 <div class="table"><table><thead><tr><th>#</th><th>Bug</th><th>Where</th><th>Effect</th><th>Evidence</th><th>Fixed by</th></tr></thead><tbody><tr id="issue-X1"><td class="issue-code">X1</td><td>Polygon cache key is <code>sha1(name . FL)</code>; for the per-level union the name is just <code>&quot;1&quot;</code>, <code>&quot;2&quot;</code>… with no radar set</td><td><code>inc.multiCalculos.php:434</code>, <code>:253</code></td><td>Running {barajas, paracuellos1, alcolea} after {barajas, paracuellos1, valladolid}: 53% of points on the wrong level in <code>multiradar-union</code></td><td>Reproduced; 0% with a cold cache</td><td>Change 9</td></tr><tr id="issue-X2"><td class="issue-code">X2</td><td>Polygon cache never invalidated: key ignores <code>-m</code>, cone, radar file dates and operation type; <code>-f</code> does not clear it</td><td><code>inc.multiCalculos.php:432–457</code></td><td><code>-m 60</code> with a warm cache gives different output from a cold one</td><td>Reproduced</td><td>Change 9</td></tr><tr id="issue-X4"><td class="issue-code">X4</td><td>An empty single-radar result reaches <code>ramer_douglas_peucker</code></td><td><code>inc.multiCalculos.php:33</code></td><td>Fatal <code>InvalidArgumentException</code>; process still exits 0. Hit by every PSR because of <a class="code-ref" href="#issue-M1">M1</a></td><td>Reproduced</td><td>Change 5c · <code>a3a0207</code></td></tr></tbody></table></div>
+<h3 id="resolved-review-output-files-and-options">Output files and options</h3>
+<div class="table"><table><thead><tr><th>#</th><th>Issue</th><th>Where</th><th>Effect</th><th>Fixed by</th></tr></thead><tbody><tr id="issue-O3"><td class="issue-code">O3</td><td><code>--screening-file</code> is missing its <code>:</code> in the long options</td><td><code>main.php:102</code></td><td>Long option unusable; only <code>-k</code> works</td><td>your commit <code>161aa2b</code></td></tr><tr id="issue-O4"><td class="issue-code">O4</td><td>Help lists <code>--rascal</code>, <code>--no-rascal</code> and <code>-p</code></td><td><code>main.php:64–81</code></td><td>Using them exits with "Parámetro no esperado"</td><td>your commit <code>f2f3bb1</code></td></tr></tbody></table></div>
 <h3 id="resolved-maths-errors">Maths: errors</h3>
 <div class="table"><table><thead><tr><th>#</th><th>Error</th><th>Measured effect</th><th>Fix</th><th>Fixed by</th></tr></thead><tbody><tr id="issue-E1"><td class="issue-code">E1</td><td>PSR range is converted to metres twice, so the angle is NaN (same bug as <a class="code-ref" href="#issue-M1">M1</a>)</td><td>Every <code>-psr</code> radar gets empty coverage</td><td>Pass the range in NM</td><td>Change 2 · <code>920416b</code></td></tr><tr id="issue-E2"><td class="issue-code">E2</td><td><code>acos</code> has no domain clamp</td><td>NaN whenever the range can't reach the flight level</td><td>Clamp the argument to [−1, 1]</td><td>Change 5b · <code>a3a0207</code></td></tr><tr id="issue-E5"><td class="issue-code">E5</td><td><code>0.30480370641307</code> is 1/3.2808, not 0.3048</td><td>0.15 m at FL400</td><td>Use 0.3048</td><td>Change 1 · <code>920416b</code></td></tr><tr id="issue-E8"><td class="issue-code">E8</td><td>Cone of silence radius is computed as height × tan(45°), using a fixed constant</td><td>Correct only at 45°. The <code>.rdb</code> already stores the cone angle</td><td>radius = height × tan(angle), the angle being the half-angle from the vertical read from the <code>.rdb</code> (0° = no cone). Done in <code>af810d4</code></td><td>Change 3 · <code>af810d4</code></td></tr></tbody></table></div>
 <h2 id="code-review" class="doc-title">Pending — code review: mono-radar and multi-radar coverage</h2>
@@ -126,8 +129,8 @@ h3:has(label.applied input:checked)::after { content: " ✓"; color: #3a8f45; }
 <p><strong>What holds up</strong></p>
 <ul><li><strong>Positions:</strong> vertices sit within ~20 m of the exact spherical position. The error grows to ~80 m at 250 NM in Spain and ~300 m at 60°N.</li><li><strong>Area above the radar:</strong> within 0.0–0.5% of the shadow-aware reference at every flight level tested (paracuellos1, valdespina, erillas, alcolea).</li><li><strong>Speed:</strong> about 1 s per radar per flight level below the radar, well under that above it.</li></ul>
 <p><strong>Bugs found</strong></p>
-<div class="table"><table><thead><tr><th>#</th><th>Bug</th><th>Where</th><th>Effect</th><th>Evidence</th></tr></thead><tbody><tr id="issue-M2"><td class="issue-code">M2</td><td>Mono cache key is only radar + flight level</td><td><code>main.php:282</code></td><td>With a warm cache <code>-c</code> does nothing; after one <code>-c -f</code> run, later runs without the cone still show the hole</td><td>Byte-identical output reproduced</td></tr><tr id="issue-M3"><td class="issue-code">M3</td><td>Cache only invalidated when the <code>.rdb</code> changes, not the <code>.scr</code></td><td><code>main.php:291</code>, <code>inc.cargarCoordenadas.php:144</code></td><td>Re-running PREDICT without touching the <code>.rdb</code> gives old coverage</td><td>Read in code</td></tr><tr id="issue-M4"><td class="issue-code">M4</td><td><code>BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD</code> is 20 NM ÷ Earth radius in metres (≈ 20 m, not 20 NM); line 420 compares metres with it</td><td><code>inc.calculos.php:9</code>, <code>:420</code></td><td>Check is always true; harmless today but misleading</td><td>Measured</td></tr><tr id="issue-M6"><td class="issue-code">M6</td><td>Minor parsing issues: <code>preg_match</code> returning 0 treated as success; azimuth keys assumed to run 0..N-1; forced-range log divides NM by 1852</td><td><code>inc.cargarScreening.php</code></td><td>Silent bad data on malformed screening files</td><td>Read in code</td></tr></tbody></table></div>
-<p class="moved">Resolved and moved to <a href="#resolved-problems">Resolved problems</a>: M1, M5.</p>
+<div class="table"><table><thead><tr><th>#</th><th>Bug</th><th>Where</th><th>Effect</th><th>Evidence</th></tr></thead><tbody><tr id="issue-M2"><td class="issue-code">M2</td><td>Mono cache key is only radar + flight level</td><td><code>main.php:282</code></td><td>With a warm cache <code>-c</code> does nothing; after one <code>-c -f</code> run, later runs without the cone still show the hole</td><td>Byte-identical output reproduced</td></tr><tr id="issue-M3"><td class="issue-code">M3</td><td>Cache only invalidated when the <code>.rdb</code> changes, not the <code>.scr</code></td><td><code>main.php:291</code>, <code>inc.cargarCoordenadas.php:144</code></td><td>Re-running PREDICT without touching the <code>.rdb</code> gives old coverage</td><td>Read in code</td></tr><tr id="issue-M4"><td class="issue-code">M4</td><td><code>BERTA_INTERSECTION_TOLERANCE_LIMIT_RAD</code> is 20 NM ÷ Earth radius in metres (≈ 20 m, not 20 NM); line 420 compares metres with it</td><td><code>inc.calculos.php:9</code>, <code>:420</code></td><td>Check is always true; harmless today but misleading</td><td>Measured</td></tr></tbody></table></div>
+<p class="moved">Resolved and moved to <a href="#resolved-problems">Resolved problems</a>: M1, M5, M6.</p>
 <p><strong>Latent issue:</strong> <code>calculosFLencimaRadar2</code> joins every crossing of the flight level into one ring. If the line of sight dropped back below the flight level beyond a ridge, the shadow would be filled in and replaced by notches. The bundled profiles only ever rise (zero azimuths with more than one crossing), so it does not trigger today. The below-radar sector builder already handles this case and could be reused.</p>
 <h3 id="review-multi-radar-coverage">Multi-radar coverage</h3>
 <p>The breakdown is exactly right, and since Change 9 the polygon cache can no longer return results from another radar set or from stale inputs (X1, X2 fixed). Still pending: the missing “unica” layer, name matching in the “inversa” view and the 2^N cost. Code: <code>inc.multiCalculos.php</code>.</p>
@@ -139,7 +142,8 @@ h3:has(label.applied input:checked)::after { content: " ✓"; color: #3a8f45; }
 <p>For <a class="code-ref" href="#issue-X6">X6</a>, the per-level union layer alone could be built incrementally with about N² boolean operations; only the per-group breakdown truly needs 2^N.</p>
 <h3 id="review-output-files-and-options">Output files and options</h3>
 <p>KMZ output, the default whenever the PHP zip extension is installed, overwrites itself on every flight level.</p>
-<div class="table"><table><thead><tr><th>#</th><th>Issue</th><th>Where</th><th>Effect</th></tr></thead><tbody><tr id="issue-O1"><td class="issue-code">O1</td><td><code>.kmz</code> name leaves out the flight level; the entry inside the zip holds the whole relative path; the <code>! $res</code> check can never catch an error</td><td><code>inc.guardar.php:384–389</code></td><td>Mono writes <code>sensor-FL.kmz</code>, multi writes <code>RESULTADOS/MULTI/.kmz</code>, each replaced every FL. From reading the code; not run (no zip extension on the test machine)</td></tr><tr id="issue-O2"><td class="issue-code">O2</td><td>Multi output is <code>RESULTADOS/MULTI/&lt;FL&gt;.kml</code> with no radar set in the name</td><td><code>main.php:409</code></td><td>Each run replaces the last; an empty <code>MULTI/&lt;FL&gt;/</code> folder is also created</td></tr><tr id="issue-O3"><td class="issue-code">O3</td><td><code>--screening-file</code> is missing its <code>:</code> in the long options</td><td><code>main.php:102</code></td><td>Long option unusable; only <code>-k</code> works</td></tr><tr id="issue-O4"><td class="issue-code">O4</td><td>Help lists <code>--rascal</code>, <code>--no-rascal</code> and <code>-p</code></td><td><code>main.php:64–81</code></td><td>Using them exits with "Parámetro no esperado"</td></tr><tr id="issue-O5"><td class="issue-code">O5</td><td>Dead code: ~220 lines in <code>inc.calculos.php</code> (marching squares, polygon tracer, all ending in <code>die()</code>); <code>countSetBits</code> (would crash on its <code>global</code> line); <code>EtaEstimator.php</code> loaded but unused</td><td>several</td><td>Noise for readers and PHPStan</td></tr><tr id="issue-O6"><td class="issue-code">O6</td><td><code>sesolles.rdb</code> points to <code>sesolles_EGM96_k.scr</code>, which is not in the data folder</td><td><code>spain.tsk</code></td><td>Selecting sesolles exits</td></tr></tbody></table></div>
+<div class="table"><table><thead><tr><th>#</th><th>Issue</th><th>Where</th><th>Effect</th></tr></thead><tbody><tr id="issue-O1"><td class="issue-code">O1</td><td><code>.kmz</code> name leaves out the flight level; the entry inside the zip holds the whole relative path; the <code>! $res</code> check can never catch an error</td><td><code>inc.guardar.php:384–389</code></td><td>Mono writes <code>sensor-FL.kmz</code>, multi writes <code>RESULTADOS/MULTI/.kmz</code>, each replaced every FL. From reading the code; not run (no zip extension on the test machine)</td></tr><tr id="issue-O2"><td class="issue-code">O2</td><td>Multi output is <code>RESULTADOS/MULTI/&lt;FL&gt;.kml</code> with no radar set in the name</td><td><code>main.php:409</code></td><td>Each run replaces the last; an empty <code>MULTI/&lt;FL&gt;/</code> folder is also created</td></tr><tr id="issue-O5"><td class="issue-code">O5</td><td>Dead code: ~220 lines in <code>inc.calculos.php</code> (marching squares, polygon tracer, all ending in <code>die()</code>); <code>countSetBits</code> (would crash on its <code>global</code> line); <code>EtaEstimator.php</code> loaded but unused</td><td>several</td><td>Noise for readers and PHPStan</td></tr><tr id="issue-O6"><td class="issue-code">O6</td><td><code>sesolles.rdb</code> points to <code>sesolles_EGM96_k.scr</code>, which is not in the data folder</td><td><code>spain.tsk</code></td><td>Selecting sesolles exits</td></tr></tbody></table></div>
+<p class="moved">Resolved and moved to <a href="#resolved-problems">Resolved problems</a>: O3, O4.</p>
 <h3 id="review-suggested-priorities">Suggested priorities</h3>
 <p>Fix the two bugs that crash or blank results first, then the caches that silently serve wrong maps.</p>
 <ul class="tasks"><li><label><input type="checkbox" checked disabled><strong>Fix the PSR unit bug and skip empty polygons</strong> (<a class="code-ref" href="#issue-M1">M1</a>, <a class="code-ref" href="#issue-X4">X4</a>).</label></li><li><label><input type="checkbox" data-persist><strong>Put everything that affects a result into the cache keys</strong> (<a class="code-ref" href="#issue-M2">M2</a>, <a class="code-ref" href="#issue-M3">M3</a>, <a class="code-ref" href="#issue-X1">X1</a>, <a class="code-ref" href="#issue-X2">X2</a>) — <em>polygon cache done (X1, X2, Change 9); mono cache (M2, M3) still pending</em>:</label><ul><li>Mono cache: add the cone flag, the max range and the <code>.scr</code> file date.</li><li>Polygon cache: add the full radar set, the operation type and the date of the single-radar results it was built from.</li><li>Make <code>-f</code> clear the polygon cache too.</li></ul></li><li><label><input type="checkbox" data-persist><strong>Fix the output files</strong> (<a class="code-ref" href="#issue-O1">O1</a>, <a class="code-ref" href="#issue-O2">O2</a>, <a class="code-ref" href="#issue-X3">X3</a>): flight level in KMZ names, radar set in the multi file name, stop the unica layer being overwritten.</label></li><li><label><input type="checkbox" data-persist><strong>Commit the checks as regression tests and delete the dead code</strong> (<a class="code-ref" href="#issue-O5">O5</a>). The geometry, area and point-sampling scripts used for this review can become the first test suite.</label></li></ul>
@@ -155,7 +159,7 @@ h3:has(label.applied input:checked)::after { content: " ✓"; color: #3a8f45; }
 <h3 id="maths-speed">Speed</h3>
 <div class="table"><table><thead><tr><th>#</th><th>Change</th><th>Before</th><th>After</th><th>Same result?</th></tr></thead><tbody><tr id="issue-S1"><td class="issue-code">S1</td><td>Outline tracing below the radar (fixes <a class="code-ref" href="#issue-E3">E3</a>)</td><td>0.85–1.7 s per level</td><td>0.05–0.15 s</td><td>Closer to the per-azimuth ground truth than today</td></tr><tr id="issue-S2"><td class="issue-code">S2</td><td>Terrain profile computed once per radar, plus fast skipping of segments that can't cross the level</td><td>paracuellos1 20 s, canchoblanco 88 s, alcolea 8 s (FL1–400)</td><td>7.5 s, 17 s, 2.6 s in the prototype; 2.0 s, 5.1 s, 0.6 s in the final patch</td><td>Identical crossing points</td></tr><tr id="issue-S3"><td class="issue-code">S3</td><td>Multi-radar by successive splitting instead of all 2^N − 1 groups</td><td>9 radars: 1,323 boolean operations, 68 s per level</td><td>328 operations, 9.2 s in the prototype; 327 operations, 9.3 s in the final patch</td><td>Per-group areas identical (0.000 km²)</td></tr></tbody></table></div>
 </section><section class="part" id="part-fixes"><h1 class="part-title">Part II — Proposed fixes</h1>
-<p class="done">Applied in the code: Changes 1, 2, 3, 5b, 5c and 9. Pending: 5a, 6 (A–E), 7 and 8. Change 9 was added after the original plan, which is why it is numbered out of order.</p>
+<p class="done">Applied in the code: Changes 1, 2, 3, 4, 5b, 5c, 9 and 10. Pending: 5a, 6 (A–E), 7 and 8. Changes 9 and 10 were added after the original plan, which is why they are numbered out of order. O3 and O4 were fixed in your own commits, outside these changes.</p>
 <p>Eight changes in four files fix the PSR, cone and multi-radar cache bugs and remove the fragile polygon union. A full 400-level single-radar run becomes 10–17× faster and a 9-radar multi run about 7× faster. Every change below was applied to a clean copy of commit <code>ba079d8</code> and tested end to end; each section gives the exact location, the code to paste and how to check it. Issue codes (<a class="code-ref" href="#issue-E1">E1</a>, <a class="code-ref" href="#issue-P1">P1</a>, <a class="code-ref" href="#issue-S1">S1</a>, <a class="code-ref" href="#issue-X1">X1</a>…) refer to the earlier code review and maths review.</p>
 <h3 id="fix-results">Results</h3>
 <p>Measured on the patched copy with the bundled <code>spain.tsk</code> data, both flags off (default). Timings are calculation only, same machine, same method before and after.</p>
@@ -217,6 +221,7 @@ const BERTA_SUBDIVISION_RADIAL_NM = 10.0; // longitud máxima de un lado radial 
 <p>The rest of the block (the <code>MR\Algorithm::difference</code> with the cone polygon) is unchanged. If you apply Changes 2–6 on top of <code>af810d4</code>, skip the old Change 3 code and keep the committed version.</p>
 <p><strong>Verify:</strong> the checker’s E8 test builds a radar with a 30° cone and one with a 0° cone. At FL150 the 30° cone must have radius h·tan 30° (2,220 m for paracuellos1), and the 0° cone must leave the coverage with no hole and no crash. Both pass on <code>af810d4</code>.</p>
 <h3 id="fix-change-4-inc-cargarscreening-php-forced-range-log">Change 4 — inc.cargarScreening.php: forced-range log <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-4-inc-cargarscreening-php-forced-range-log"> applied</label></h3>
+<p class="done">✓ <strong>Applied in the code</strong>, together with Change 10 below (branch <code>review-checker</code>).</p>
 <p>Cosmetic, part of <a class="code-ref" href="#issue-M6">M6</a>. <code>$radar[&#x27;range&#x27;]</code> is in NM, but the log divided it by 1852. Calculation is unaffected.</p>
 <p><strong>Where:</strong> <code>inc.cargarScreening.php</code>, lines 241–242, in <code>cargarDatosTerreno()</code>.</p>
 <div class="code before"><div class="code-head"><span>Before</span><button class="copy" type="button">Copy</button></div><pre><code>		logger(&quot; I&gt; Se ha forzado un alcance de &quot; . ($radar[&#x27;range&#x27;] / BERTA_MILLA_NAUTICA_EN_METROS) .
@@ -224,6 +229,131 @@ const BERTA_SUBDIVISION_RADIAL_NM = 10.0; // longitud máxima de un lado radial 
 <div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>		logger(&quot; I&gt; Se ha forzado un alcance de &quot; . $radar[&#x27;range&#x27;] .
 			&quot;NM / &quot; . ($radar[&#x27;range&#x27;] * BERTA_MILLA_NAUTICA_EN_METROS) . &quot;m&quot;);</code></pre></div>
 <p><strong>Verify:</strong> <code>php main.php -r paracuellos1 -s 100 -m 60 -z</code> logs <code>60NM / 111120m</code>.</p>
+<h3 id="fix-change-10-screening-validation">Change 10 — inc.cargarScreening.php: reject malformed screenings (M6a)</h3>
+<p class="done">✓ <strong>Applied in the code</strong> (branch <code>review-checker</code>). The checker reports M6a as fixed. Added after the original plan.</p>
+<p>Fixes <a class="code-ref" href="#issue-M6">M6</a> together with Change 4. The loader accepted or crashed on malformed screening files, each in a different way:</p>
+<div class="table"><table><thead><tr><th>Malformed screening</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>Obstacle line without <code>|</code></td><td>Accepted as obstacle (0, 0), exit 0</td><td><code>E&gt;</code> and stop</td></tr><tr><td>Non-numeric values <code>( abc | def )</code></td><td>Turned into 0 with no warning at all</td><td><code>E&gt;</code> and stop</td></tr><tr><td>Non-numeric obstacle count</td><td>Reads 1,417 lines too many, then PHP fatal error</td><td><code>E&gt;</code> and stop</td></tr><tr><td>Truncated file</td><td>PHP fatal error</td><td><code>E&gt;</code> and stop</td></tr><tr><td>Repeated azimuth</td><td>Confusing “gap between azimuths 4 and 6”</td><td><code>E&gt;</code> naming the expected azimuth</td></tr></tbody></table></div>
+<p>A malformed screening is rejected rather than repaired, because a silent correction would produce false coverage. Azimuths must now run 0, 1, 2… without gaps or repeats: the rest of the calculation already uses the azimuth number as an index. The message gives the file, the record (counted without empty lines, which is how BERTA reads the file), what was expected and the line’s content, for example:</p>
+<div class="code"><div class="code-head"><span>log</span><button class="copy" type="button">Copy</button></div><pre><code>E&gt; Screening &gt;./spain.tsk/radar_data.rbk/x.scr&lt; mal formado en el registro 315 (sin contar líneas vacías): se esperaba el número de obstáculos (entero mayor que 0) del acimut 5. Contenido: &gt;abc&lt;</code></pre></div>
+<p><strong>1. New function</strong>, before the <code>cargarDatosTerreno()</code> docblock:</p>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>/**
+ * Error de formato en un fichero de screening: informa del fichero, del registro y de su contenido, y termina.
+ * Un screening mal formado no se corrige ni se ignora en silencio, porque daría coberturas falsas.
+ *
+ * @param string $fichero ruta del screening
+ * @param array $lineas contenido del fichero (sin líneas vacías)
+ * @param int $indice registro en $lineas donde se detectó el problema (se muestra empezando en 1)
+ * @param string $motivo qué se esperaba
+ */
+function errorScreening(string $fichero, array $lineas, int $indice, string $motivo): never
+{
+	$contenido = $lineas[$indice] ?? &#x27;(fin de fichero)&#x27;;
+	logger(&quot; E&gt; Screening &gt;{$fichero}&lt; mal formado en el registro &quot; . ($indice + 1) .
+		&quot; (sin contar líneas vacías): {$motivo}. Contenido: &gt;&quot; . trim((string) $contenido) . &quot;&lt;&quot;);
+	exit(-1);
+}
+</code></pre></div>
+<p><strong>2. Azimuth loop in <code>cargarDatosTerreno()</code></strong>, from <code>$acimutOld = 0;</code> to the obstacle check (the <code>$acimutOld</code> variable and its update at the end of the loop are removed):</p>
+<div class="code before"><div class="code-head"><span>Before</span><button class="copy" type="button">Copy</button></div><pre><code>	$acimutOld = 0;
+	for ($i = 0; $i &lt; $screening[&#x27;totalAzimuths&#x27;]; $i++) {
+		$listaObstaculos = array();
+		// buscamos el bloque que comienza por AZIMUTH
+		while (&quot;AZIMUTH&quot; != substr($contenidoFichero[$lineaActual], 0, 7)) {
+			$lineaActual++;
+		}
+		// anotamos el acimut actual
+		$acimutActual = (int) substr($contenidoFichero[$lineaActual++], 8);
+
+		// comprobación de coherencia entre acimuts
+		if (($acimutActual - $acimutOld) &gt; 1) {
+			logger(&quot;E&gt; Problema leyendo el fichero &gt;&quot; . $radar[&#x27;screening&#x27;] .
+				&quot;&lt;, salto entre los acimut {$acimutOld} y {$acimutActual}&quot;);
+			exit(-1);
+		}
+		// anotamos el número de obstaculos para ese acimut
+		$contadorObstaculos = $contenidoFichero[$lineaActual++];
+
+		if (0 == $contadorObstaculos) {
+			logger(&quot; E&gt; El azimut $i no tiene obstáculos definidos&quot;);
+			exit(-1);
+		}
+
+		// insertamos el radar como primer obstaculo, para resolver el caso de que
+		// el primer obstaculo este muy alejado. 
+
+		$listaObstaculos[] = array(
+			&#x27;angulo&#x27; =&gt; 0,
+			&#x27;altura&#x27; =&gt; $screening[&#x27;towerHeight&#x27;] + $screening[&#x27;terrainHeight&#x27;]
+		);
+
+		// recorre el numero de obstaculos para cada azimut
+		$oldAngulo = false;
+		for ($j = 0; $j &lt; $contadorObstaculos; $j++) {
+			$pattern = &#x27;/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/&#x27;;
+			if (false === ($cuenta = preg_match($pattern, $contenidoFichero[$lineaActual], $salida))) {
+				// $salida tiene 3 posiciones, las dos ultimas contienen los strings que necesitamos
+				logger(&quot; E&gt; Error durante la comparacion linea($lineaActual) contenido(&quot; . $contenidoFichero[$lineaActual] . &quot;)&quot;);
+				debug_print_backtrace(); 
+				fwrite(STDERR, &quot;Unexpected error: &quot; . __FUNCTION__ . &quot; in &quot; . __FILE__ . &quot; at line &quot; . __LINE__ . PHP_EOL);
+				exit(-1);
+			}</code></pre></div>
+<div class="code after"><div class="code-head"><span>After</span><button class="copy" type="button">Copy</button></div><pre><code>	for ($i = 0; $i &lt; $screening[&#x27;totalAzimuths&#x27;]; $i++) {
+		$listaObstaculos = array();
+		// buscamos el bloque que comienza por AZIMUTH (sin salirnos del fichero)
+		while (isset($contenidoFichero[$lineaActual]) &amp;&amp; &quot;AZIMUTH&quot; != substr($contenidoFichero[$lineaActual], 0, 7)) {
+			$lineaActual++;
+		}
+		if (!isset($contenidoFichero[$lineaActual])) {
+			errorScreening($radar[&#x27;screening&#x27;], $contenidoFichero, $lineaActual,
+				&quot;el fichero termina tras {$i} de {$screening[&#x27;totalAzimuths&#x27;]} acimuts&quot;);
+		}
+		// anotamos el acimut actual: deben ir seguidos desde 0 (0, 1, 2... totalAzimuths-1),
+		// porque el resto del cálculo usa el número de acimut como índice
+		if (1 !== preg_match(&#x27;/^AZIMUTH\s+(\d+)\s*$/&#x27;, trim($contenidoFichero[$lineaActual]), $m)) {
+			errorScreening($radar[&#x27;screening&#x27;], $contenidoFichero, $lineaActual, &quot;se esperaba &#x27;AZIMUTH &lt;número&gt;&#x27;&quot;);
+		}
+		$acimutActual = (int) $m[1];
+		if ($acimutActual !== $i) {
+			errorScreening($radar[&#x27;screening&#x27;], $contenidoFichero, $lineaActual,
+				&quot;se esperaba el acimut {$i} y aparece el {$acimutActual}&quot;);
+		}
+		$lineaActual++;
+
+		// anotamos el número de obstaculos para ese acimut: entero positivo
+		$contadorObstaculos = trim((string) ($contenidoFichero[$lineaActual] ?? &#x27;&#x27;));
+		if (!ctype_digit($contadorObstaculos) || 0 == (int) $contadorObstaculos) {
+			errorScreening($radar[&#x27;screening&#x27;], $contenidoFichero, $lineaActual,
+				&quot;se esperaba el número de obstáculos (entero mayor que 0) del acimut {$acimutActual}&quot;);
+		}
+		$contadorObstaculos = (int) $contadorObstaculos;
+		$lineaActual++;
+
+		// insertamos el radar como primer obstaculo, para resolver el caso de que
+		// el primer obstaculo este muy alejado. 
+
+		$listaObstaculos[] = array(
+			&#x27;angulo&#x27; =&gt; 0,
+			&#x27;altura&#x27; =&gt; $screening[&#x27;towerHeight&#x27;] + $screening[&#x27;terrainHeight&#x27;]
+		);
+
+		// recorre el numero de obstaculos para cada azimut
+		$oldAngulo = false;
+		for ($j = 0; $j &lt; $contadorObstaculos; $j++) {
+			$pattern = &#x27;/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/&#x27;;
+			// la línea debe existir, tener la forma &quot;( ángulo | altura )&quot; y ambos valores deben ser numéricos;
+			// antes una línea que no encajaba (preg_match devuelve 0) se aceptaba como el obstáculo (0, 0)
+			if (!isset($contenidoFichero[$lineaActual])) {
+				errorScreening($radar[&#x27;screening&#x27;], $contenidoFichero, $lineaActual,
+					&quot;el fichero termina tras &quot; . $j . &quot; de {$contadorObstaculos} obstáculos del acimut {$acimutActual}&quot;);
+			}
+			if (1 !== preg_match($pattern, $contenidoFichero[$lineaActual], $salida)
+				|| !is_numeric($salida[1]) || !is_numeric($salida[2])) {
+				// $salida tiene 3 posiciones, las dos ultimas contienen los strings que necesitamos
+				errorScreening($radar[&#x27;screening&#x27;], $contenidoFichero, $lineaActual,
+					&quot;se esperaba un obstáculo &#x27;( ángulo | altura )&#x27; numérico (&quot; . ($j + 1) .
+					&quot; de {$contadorObstaculos} del acimut {$acimutActual})&quot;);
+			}</code></pre></div>
+<p><strong>Verify:</strong> <code>php tests/verify_fixes.php --only=M6a</code> builds the five malformed screenings from <code>barajas.scr</code>; each must stop with an <code>E&gt;</code> message, without a PHP crash or a hang. All nine real screenings still load (<code>php tests/measurements/screening_profile.php</code>).</p>
 <h3 id="fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp">Change 5 — inc.calculos.php: obsolete constants and acos clamp <label class="applied"><input type="checkbox" data-persist data-key="applied-fix-change-5-inc-calculos-php-obsolete-constants-and-acos-clamp"> applied</label></h3>
 <p class="done">✓ <strong>5b applied in the code</strong>, together with Change 5c below (branch <code>review-checker</code>). 5a (removing the obsolete constants) is still pending.</p>
 <p>Fixes <a class="code-ref" href="#issue-E2">E2</a> and removes constants that only the replaced code used (including the 20 NM ÷ metres unit mix, <a class="code-ref" href="#issue-M4">M4</a>, and the azimuth rounding behind the "FL22" commit).</p>

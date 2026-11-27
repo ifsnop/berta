@@ -112,6 +112,23 @@ comments: \"RADAR: \"
 }
 
 /**
+ * Error de formato en un fichero de screening: informa del fichero, del registro y de su contenido, y termina.
+ * Un screening mal formado no se corrige ni se ignora en silencio, porque daría coberturas falsas.
+ *
+ * @param string $fichero ruta del screening
+ * @param array $lineas contenido del fichero (sin líneas vacías)
+ * @param int $indice registro en $lineas donde se detectó el problema (se muestra empezando en 1)
+ * @param string $motivo qué se esperaba
+ */
+function errorScreening(string $fichero, array $lineas, int $indice, string $motivo): never
+{
+	$contenido = $lineas[$indice] ?? '(fin de fichero)';
+	logger(" E> Screening >{$fichero}< mal formado en el registro " . ($indice + 1) .
+		" (sin contar líneas vacías): {$motivo}. Contenido: >" . trim((string) $contenido) . "<");
+	exit(-1);
+}
+
+/**
  * Esta funcion se encarga de abrir el fichero de terrenos y leer la informacion para almacenarla en memoria.
  * @param array $radar información del radar que vamos a procesar
  * @param float $forzarAlcance Forzar un alcance en millas náuticas (que viene de la definición del radar) si no queremos usar el del screening
@@ -171,29 +188,36 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 	// recorremos los azimuths
 	logger(" V> Cargado contenido de >" . $radar['screening'] . "< totalAzimuths(" . $screening['totalAzimuths'] . ")");
 	$timer = microtime(true);
-	$acimutOld = 0;
 	for ($i = 0; $i < $screening['totalAzimuths']; $i++) {
 		$listaObstaculos = array();
-		// buscamos el bloque que comienza por AZIMUTH
-		while ("AZIMUTH" != substr($contenidoFichero[$lineaActual], 0, 7)) {
+		// buscamos el bloque que comienza por AZIMUTH (sin salirnos del fichero)
+		while (isset($contenidoFichero[$lineaActual]) && "AZIMUTH" != substr($contenidoFichero[$lineaActual], 0, 7)) {
 			$lineaActual++;
 		}
-		// anotamos el acimut actual
-		$acimutActual = (int) substr($contenidoFichero[$lineaActual++], 8);
-
-		// comprobación de coherencia entre acimuts
-		if (($acimutActual - $acimutOld) > 1) {
-			logger("E> Problema leyendo el fichero >" . $radar['screening'] .
-				"<, salto entre los acimut {$acimutOld} y {$acimutActual}");
-			exit(-1);
+		if (!isset($contenidoFichero[$lineaActual])) {
+			errorScreening($radar['screening'], $contenidoFichero, $lineaActual,
+				"el fichero termina tras {$i} de {$screening['totalAzimuths']} acimuts");
 		}
-		// anotamos el número de obstaculos para ese acimut
-		$contadorObstaculos = $contenidoFichero[$lineaActual++];
-
-		if (0 == $contadorObstaculos) {
-			logger(" E> El azimut $i no tiene obstáculos definidos");
-			exit(-1);
+		// anotamos el acimut actual: deben ir seguidos desde 0 (0, 1, 2... totalAzimuths-1),
+		// porque el resto del cálculo usa el número de acimut como índice
+		if (1 !== preg_match('/^AZIMUTH\s+(\d+)\s*$/', trim($contenidoFichero[$lineaActual]), $m)) {
+			errorScreening($radar['screening'], $contenidoFichero, $lineaActual, "se esperaba 'AZIMUTH <número>'");
 		}
+		$acimutActual = (int) $m[1];
+		if ($acimutActual !== $i) {
+			errorScreening($radar['screening'], $contenidoFichero, $lineaActual,
+				"se esperaba el acimut {$i} y aparece el {$acimutActual}");
+		}
+		$lineaActual++;
+
+		// anotamos el número de obstaculos para ese acimut: entero positivo
+		$contadorObstaculos = trim((string) ($contenidoFichero[$lineaActual] ?? ''));
+		if (!ctype_digit($contadorObstaculos) || 0 == (int) $contadorObstaculos) {
+			errorScreening($radar['screening'], $contenidoFichero, $lineaActual,
+				"se esperaba el número de obstáculos (entero mayor que 0) del acimut {$acimutActual}");
+		}
+		$contadorObstaculos = (int) $contadorObstaculos;
+		$lineaActual++;
 
 		// insertamos el radar como primer obstaculo, para resolver el caso de que
 		// el primer obstaculo este muy alejado. 
@@ -207,12 +231,18 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 		$oldAngulo = false;
 		for ($j = 0; $j < $contadorObstaculos; $j++) {
 			$pattern = '/\(\s+(\S+)\s+\|\s+(\S+)\s+\)/';
-			if (false === ($cuenta = preg_match($pattern, $contenidoFichero[$lineaActual], $salida))) {
+			// la línea debe existir, tener la forma "( ángulo | altura )" y ambos valores deben ser numéricos;
+			// antes una línea que no encajaba (preg_match devuelve 0) se aceptaba como el obstáculo (0, 0)
+			if (!isset($contenidoFichero[$lineaActual])) {
+				errorScreening($radar['screening'], $contenidoFichero, $lineaActual,
+					"el fichero termina tras " . $j . " de {$contadorObstaculos} obstáculos del acimut {$acimutActual}");
+			}
+			if (1 !== preg_match($pattern, $contenidoFichero[$lineaActual], $salida)
+				|| !is_numeric($salida[1]) || !is_numeric($salida[2])) {
 				// $salida tiene 3 posiciones, las dos ultimas contienen los strings que necesitamos
-				logger(" E> Error durante la comparacion linea($lineaActual) contenido(" . $contenidoFichero[$lineaActual] . ")");
-				debug_print_backtrace(); 
-				fwrite(STDERR, "Unexpected error: " . __FUNCTION__ . " in " . __FILE__ . " at line " . __LINE__ . PHP_EOL);
-				exit(-1);
+				errorScreening($radar['screening'], $contenidoFichero, $lineaActual,
+					"se esperaba un obstáculo '( ángulo | altura )' numérico (" . ($j + 1) .
+					" de {$contadorObstaculos} del acimut {$acimutActual})");
 			}
 			// convierte el string a numero y los almacena en el array
 			$angulo = doubleval($salida[1]);
@@ -226,8 +256,6 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 		}
 		// anadimos un obstaculo mas por que hemos insertado el radar como primer obstaculo
 		$screening['listaAzimuths'][$acimutActual] = $listaObstaculos;
-		// actualizamos el contador
-		$acimutOld = $acimutActual;
 	} // end for exterior
 
 	logger(" I> Cargado contenido de >" . $radar['screening'] . "< en " . round(microtime(true) - $timer, 3) . "s");
@@ -238,8 +266,8 @@ function cargarDatosTerreno($radar, float $forzarAlcance = -1.0)
 	if ($forzarAlcance > 0) {
 		// utiliza el alcance que pasamos a la función
 		$radar['range'] = $forzarAlcance;
-		logger(" I> Se ha forzado un alcance de " . ($radar['range'] / BERTA_MILLA_NAUTICA_EN_METROS) .
-			"NM / " . $radar['range'] . "m");
+		logger(" I> Se ha forzado un alcance de " . $radar['range'] .
+			"NM / " . ($radar['range'] * BERTA_MILLA_NAUTICA_EN_METROS) . "m");
 	} else {
 		// utiliza el alcance definido en el .rdb para un radar secundario
 		$radar['range'] = $radar['secondaryMaximumRange'];

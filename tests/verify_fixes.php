@@ -43,7 +43,7 @@ $ITEMS = [
     ['M3', 'Mono-radar', 'Mono cache not invalidated when the .scr screening changes', 'not in patch', 'check_M3', false],
     ['M4', 'Mono-radar', 'Tolerance constant mixes NM and metres (20 NM / R in m)', 'Change 5a', 'check_M4', false],
     ['M5', 'Mono-radar', 'Range too short for the level gives NaN (acos without clamp) (= E2)', 'Change 5b', 'check_M5', false],
-    ['M6a', 'Mono-radar', 'Malformed screening line silently accepted (preg_match 0 treated as success)', 'not in patch', 'check_M6a', false],
+    ['M6a', 'Mono-radar', 'Malformed screening silently accepted or PHP crash (bad line, non-numeric, count, azimuth order, truncated)', 'Change 10', 'check_M6a', false],
     ['M6b', 'Mono-radar', 'Forced-range log divides NM by 1852', 'Change 4', 'check_M6b', false],
     ['L1', 'Mono-radar', 'Above radar: several crossings per azimuth merged into one ring (latent)', 'Change 6A', 'check_L1', false],
     ['X1', 'Multi-radar', 'Polygon cache returns results from another radar set', 'Change 9', 'check_X1', false],
@@ -54,8 +54,8 @@ $ITEMS = [
     ['X6', 'Multi-radar', 'Multi-radar cost grows as 2^N (= S3)', 'Change 8', 'check_X6', true],
     ['O1', 'Output/options', 'KMZ file name without flight level (overwritten every level)', 'not in patch', 'check_O1', false],
     ['O2', 'Output/options', 'Multi output name without the radar set (overwritten every run)', 'not in patch', 'check_O2', false],
-    ['O3', 'Output/options', '--screening-file long option unusable (missing ":")', 'not in patch', 'check_O3', false],
-    ['O4', 'Output/options', 'Help lists options that do not work (--rascal, --no-rascal, -p)', 'not in patch', 'check_O4', false],
+    ['O3', 'Output/options', '--screening-file long option unusable (missing ":")', 'commit 161aa2b', 'check_O3', false],
+    ['O4', 'Output/options', 'Help lists options that do not work (--rascal, --no-rascal, -p)', 'commit f2f3bb1', 'check_O4', false],
     ['O5', 'Output/options', 'Dead code (functions never called, EtaEstimator)', 'partly (Change 6 removes old functions)', 'check_O5', false],
     ['O6', 'Output/options', 'Radar data: .rdb pointing to a missing .scr (sesolles)', 'data, not code', 'check_O6', false],
     ['O7', 'Output/options', 'A level without coverage must not produce a KML (above or below the radar, or from an old cache)', 'Change 5c', 'check_O7', false],
@@ -415,19 +415,33 @@ function check_M5(): array {
 }
 
 function check_M6a(): array {
+    // cinco screenings defectuosos derivados de barajas.scr; cada uno debe terminar con error (no seguir en silencio)
     $ws = workspace('M6a', true);
     $d = "$ws/spain.tsk/radar_data.rbk";
-    $scr = file("$d/barajas.scr", FILE_IGNORE_NEW_LINES); $done = false; $n = 0;
-    foreach ($scr as $i => $l) { if (str_starts_with($l, 'AZIMUTH 5')) $n = 1; elseif ($n > 0 && ++$n == 4) { $scr[$i] = ' ( abc def )'; $done = true; break; } }
-    file_put_contents("$d/zbad.scr", implode("\n", $scr) . "\n");
-    rdb_variant("$d/barajas.rdb", "$d/zbad.rdb", ['radarIdentifier' => 'zbad', 'screening' => './spain.tsk/radar_data.rbk/zbad.scr']);
-    if (!$done) return res('ERROR', 'could not build the malformed screening');
-    $clean = berta($ws, ['-r', 'barajas', '-s', '30', '-z', '-f']);
-    $bad = berta($ws, ['-r', 'zbad', '-s', '30', '-z', '-f']);
-    $msgs = fn($e) => array_map(fn($l) => preg_replace('/^\S+ \S+ /', '', $l), preg_grep('/\s[EW]>/', explode("\n", $e)));
-    $new = array_diff($msgs($bad[2]), $msgs($clean[2]));
-    if ($bad[0] !== 0 || count($new) > 0) return res('FIXED', 'malformed line reported' . ($new ? ': ' . trim(substr((string) reset($new), 0, 90)) : ' (non-zero exit)'));
-    return res('OPEN', 'a screening with a malformed obstacle line is accepted silently (exit 0, no error)');
+    $orig = file("$d/barajas.scr", FILE_IGNORE_NEW_LINES);
+    $az5 = null; foreach ($orig as $i => $l) if (str_starts_with($l, 'AZIMUTH 5')) { $az5 = $i; break; }
+    if ($az5 === null) return res('ERROR', 'AZIMUTH 5 not found in barajas.scr');
+    $casos = [
+        'nopipe'    => fn($L) => array_replace($L, [$az5 + 4 => ' ( abc def )']),        // sin "|"
+        'nonnum'    => fn($L) => array_replace($L, [$az5 + 4 => ' ( abc | def )']),      // valores no numéricos
+        'badcount'  => fn($L) => array_replace($L, [$az5 + 1 => 'abc']),                 // número de obstáculos
+        'dupaz'     => fn($L) => array_replace($L, [$az5 => 'AZIMUTH 4']),               // acimut repetido
+        'truncated' => fn($L) => array_slice($L, 0, $az5 + 5),                           // fichero cortado
+    ];
+    $silent = []; $crash = [];
+    foreach ($casos as $k => $f) {
+        file_put_contents("$d/zbad$k.scr", implode("\n", $f($orig)) . "\n");
+        rdb_variant("$d/barajas.rdb", "$d/zbad$k.rdb", ['radarIdentifier' => "zbad$k", 'screening' => "./spain.tsk/radar_data.rbk/zbad$k.scr"]);
+        $r = berta($ws, ['-r', "zbad$k", '-s', '30', '-z', '-f'], 60);
+        $msg = preg_match('/\sE>/', $r[2]) === 1;
+        if ($r[0] === 0 && !$msg) $silent[] = $k;
+        elseif (preg_match('/PHP Fatal|Uncaught/', $r[2]) || $r[0] === -2) $crash[] = $k . ($r[0] === -2 ? ' (hangs)' : '');
+    }
+    if (!$silent && !$crash) return res('FIXED', 'all 5 malformed screenings (no "|", non-numeric, bad count, repeated azimuth, truncated) stop with an E> message');
+    $parts = [];
+    if ($silent) $parts[] = 'accepted silently: ' . implode(', ', $silent);
+    if ($crash) $parts[] = 'PHP crash instead of a message: ' . implode(', ', $crash);
+    return res('OPEN', implode('; ', $parts));
 }
 
 function check_M6b(): array {
@@ -757,7 +771,7 @@ function check_Q(string $id): array {
 @mkdir($TMP, 0775, true);
 $results = []; $t0 = microtime(true);
 foreach ($ITEMS as [$id, $group, $title, $where, $fn, $slow]) {
-    if ($ONLY !== null && !in_array($id, $ONLY, true)) continue;
+    if ($ONLY !== null && !in_array(strtoupper($id), $ONLY, true)) continue;
     if ($QUICK && $slow) { $results[$id] = ['SKIPPED', 'slow test skipped (--quick)', $group, $title, $where]; continue; }
     $t = microtime(true);
     fwrite(STDERR, sprintf("%-4s %s ... ", $id, $title));
