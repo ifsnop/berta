@@ -38,6 +38,30 @@ function tieneCobertura($polygons): bool
 }
 
 /**
+ * Firma de los datos de los que depende la caché monoradar de un sensor: contenido del .rdb y del .scr,
+ * si se calcula el cono y la versión de la caché. Si cualquiera cambia, la firma cambia y la caché
+ * guardada deja de valer, aunque las fechas de los ficheros digan lo contrario (p. ej. un .scr
+ * restaurado de una copia con una fecha antigua). Se calcula una vez por sensor y ejecución.
+ *
+ * @param array $radar datos del sensor tal y como los devuelve parseRBKFile()
+ * @param bool $cono true si se calcula el cono de silencio (-c)
+ * @return string firma sha1
+ */
+function firmaCacheMono(array $radar, bool $cono): string
+{
+    static $firmas = array();
+    $clave = $radar['radar'] . '|' . ($cono ? 'cono' : 'sin-cono');
+    if (!isset($firmas[$clave])) {
+        $rdb = isset($radar['fichero_rdb']) ? @sha1_file($radar['fichero_rdb']) : false;
+        $scr = isset($radar['screening']) ? @sha1_file($radar['screening']) : false;
+        $firmas[$clave] = sha1(implode('|', array(
+            BERTA_VERSION_CACHE, $radar['radar'], $rdb ?: 'sin-rdb', $scr ?: 'sin-scr', $cono ? 'cono' : 'sin-cono',
+        )));
+    }
+    return $firmas[$clave];
+}
+
+/**
  * Express number with a byte prefix (byte, Kb, Mb, Gb...)
  * @param float $size number of bytes
  * @return string rounded number with prefix

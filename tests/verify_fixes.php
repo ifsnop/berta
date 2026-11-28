@@ -39,8 +39,8 @@ $STATUS_FILE = __DIR__ . '/fix-status.md';
 // id, grupo, título, dónde está el arreglo propuesto, función de comprobación, lenta
 $ITEMS = [
     ['M1', 'Mono-radar', 'PSR range converted to metres twice: PSR coverage always empty (= E1)', 'Change 2', 'check_M1', false],
-    ['M2', 'Mono-radar', 'Mono cache key ignores the cone flag (-c)', 'not in patch', 'check_M2', false],
-    ['M3', 'Mono-radar', 'Mono cache not invalidated when the .scr screening changes', 'not in patch', 'check_M3', false],
+    ['M2', 'Mono-radar', 'Mono cache key ignores the cone flag (-c)', 'Change 11', 'check_M2', false],
+    ['M3', 'Mono-radar', 'Mono cache not invalidated when the .scr screening changes', 'Change 11', 'check_M3', false],
     ['M4', 'Mono-radar', 'Tolerance constant mixes NM and metres (20 NM / R in m)', 'Change 5a', 'check_M4', false],
     ['M5', 'Mono-radar', 'Range too short for the level gives NaN (acos without clamp) (= E2)', 'Change 5b', 'check_M5', false],
     ['M6a', 'Mono-radar', 'Malformed screening silently accepted or PHP crash (bad line, non-numeric, count, azimuth order, truncated)', 'Change 10', 'check_M6a', false],
@@ -375,30 +375,35 @@ function check_M2(): array {
 }
 
 function check_M3(): array {
+    // dos casos: el .scr cambia con fecha más reciente que la caché, y el .scr cambia pero conserva una
+    // fecha anterior a la caché (p. ej. restaurado de una copia con cp -p); en los dos hay que recalcular
     $mk = function (string $name): string {
         $ws = workspace($name, true);
         $d = "$ws/spain.tsk/radar_data.rbk";
         foreach (['barajas.rdb', 'barajas.scr'] as $f) { unlink("$d/$f"); copy(realpath($GLOBALS['ROOT'] . "/spain.tsk/radar_data.rbk/$f"), "$d/$f"); }
         return $ws;
     };
-    $edit = function (string $ws): void {
+    $edit = function (string $ws, int $mtime): void {
         $f = "$ws/spain.tsk/radar_data.rbk/barajas.scr";
         file_put_contents($f, preg_replace('/^TowerHeight\s+\S+/m', 'TowerHeight 300', (string) file_get_contents($f), 1));
-        touch($f, time() + 10); clearstatcache();
+        touch($f, $mtime); clearstatcache();
     };
-    $ws = $mk('M3');
-    berta($ws, ['-r', 'barajas', '-s', '30', '-z']);
-    $before = mono_kml($ws, 'barajas', 30);
-    $edit($ws);
-    berta($ws, ['-r', 'barajas', '-s', '30', '-z']);
-    $after = mono_kml($ws, 'barajas', 30);
-    $ws2 = $mk('M3-fresh'); $edit($ws2);
+    $ws2 = $mk('M3-fresh'); $edit($ws2, time());
     berta($ws2, ['-r', 'barajas', '-s', '30', '-z', '-f']);
     $fresh = mono_kml($ws2, 'barajas', 30);
-    if ($fresh === null || $before === null) return res('ERROR', 'no KML produced for barajas FL30');
-    if ($fresh === $before) return res('ERROR', 'test edit (tower height) did not change coverage');
-    return $after === $fresh ? res('FIXED', 'after editing the .scr, a cached run recomputes the coverage')
-        : res('OPEN', 'after editing the .scr (newer mtime), BERTA still served the old cached coverage');
+    $fallos = [];
+    foreach (['newer' => +10, 'older' => -86400] as $caso => $delta) {
+        $ws = $mk("M3-$caso");
+        berta($ws, ['-r', 'barajas', '-s', '30', '-z']);
+        $before = mono_kml($ws, 'barajas', 30);
+        if ($fresh === null || $before === null) return res('ERROR', 'no KML produced for barajas FL30');
+        if ($fresh === $before) return res('ERROR', 'test edit (tower height) did not change coverage');
+        $edit($ws, time() + $delta);
+        berta($ws, ['-r', 'barajas', '-s', '30', '-z']);
+        if (mono_kml($ws, 'barajas', 30) !== $fresh) $fallos[] = $caso === 'newer' ? 'edited .scr with a newer date' : 'edited .scr keeping an older date than the cache';
+    }
+    return $fallos ? res('OPEN', 'BERTA served the old cached coverage after: ' . implode('; ', $fallos))
+        : res('FIXED', 'after editing the .scr (newer or older date than the cache), a cached run recomputes the coverage');
 }
 
 function check_M4(): array {

@@ -143,6 +143,7 @@ function parseRBKFile(string $radar_rbk_file, string $name, string $sassc_id = "
 	);
 	$radar[$name] = array_merge($radar[$name], $values);
 	$radar[$name]['fecha_modificado'] = $fechaUltimaModificacion;
+	$radar[$name]['fichero_rdb'] = $radar_rbk_file; // para la firma de la caché monoradar
 	$radar[$name]['coneOfSilence'] = doubleval($radar[$name]['secondaryConeOfSilence']);
 
 	// si en el fichero se definen dos radares (PSR y SSR, hay que devolver dos radares, no uno!)

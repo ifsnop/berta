@@ -19,6 +19,9 @@ const BERTA_PERFIL_ESCALONADO = false;
 // Activar tras confirmar contra una cobertura exportada de PREDICT.
 const BERTA_ELIPSOIDE_WGS84 = false;
 const BERTA_SUBDIVISION_RADIAL_NM = 10.0; // longitud máxima de un lado radial antes de subdividirlo (NM)
+// Versión del formato y del cálculo de la caché monoradar: incrementarla cuando cambie el cálculo de
+// coberturas invalida todas las cachés existentes (forma parte de la firma, ver firmaCacheMono()).
+const BERTA_VERSION_CACHE = 1;
 
 // INCLUSIÓN DE FICHEROS
 require_once('inc.cargarScreening.php');
@@ -285,32 +288,25 @@ function programaPrincipal(array $config)
         foreach ($config['sensores'] as $sensor) {
             logger(" V> Generando sensor {$sensor}");
             $coberturas[$sensor]['polygons'] = false;
-            $cache_file = $config['path']['cache'] . $sensor . DIRECTORY_SEPARATOR . "{$sensor}-FL{$nivelVuelo}.json";
+            // un fichero por sensor, nivel y cálculo del cono: con y sin -c conviven sin pisarse (M2)
+            $cache_file = $config['path']['cache'] . $sensor . DIRECTORY_SEPARATOR .
+                "{$sensor}-FL{$nivelVuelo}" . ($config['cone'] ? "-cono" : "") . ".json";
+            // la caché guarda la firma de los datos con los que se calculó (.rdb, .scr, cono, versión);
+            // si no coincide con la actual, se recalcula y se sobrescribe (M3)
+            $firma = firmaCacheMono($infoCoral[$sensor], $config['cone']);
             logger(" D> Evaluando si leer de la caché {$cache_file}");
             if (false === $config['force']) {
                 if (file_exists($cache_file)) {
-                    if (false === ($fecha_modificado_cache = filemtime($cache_file))) {
-                        logger(" E> Error leyendo fecha del fichero caché >{$cache_file}<");
-                        exit(-1);
-                    }
-
-                    if ($fecha_modificado_cache >= $infoCoral[$sensor]['fecha_modificado']) {
-                        $cache = file_get_contents($cache_file);
-                        if ((false !== $cache) && (0 != strlen($cache))) {
-                            $coberturas[$sensor]['polygons'] = json_decode($cache, $assoc = true);
-                            logger(" V> Leyendo caché del fichero >{$cache_file}<");
-                            if (false === $coberturas[$sensor]['polygons']) {
-                                logger(" D> La caché no contenía datos, no hay cobertura en FL{$nivelVuelo} para {$sensor}");
-                                continue;
-                            }
-                        } else {
-                            logger(" E> Error leyendo fichero caché >{$cache_file}<");
+                    $cache = json_decode((string) file_get_contents($cache_file), $assoc = true);
+                    if (is_array($cache) && ($cache['firma'] ?? null) === $firma && array_key_exists('poligonos', $cache)) {
+                        $coberturas[$sensor]['polygons'] = $cache['poligonos'];
+                        logger(" V> Leyendo caché del fichero >{$cache_file}<");
+                        if (false === $coberturas[$sensor]['polygons']) {
+                            logger(" D> La caché no contenía datos, no hay cobertura en FL{$nivelVuelo} para {$sensor}");
+                            continue;
                         }
                     } else {
-                        logger(" V> El caché ha quedado invalidado: la fecha de creación del caché (" .
-                            date("Y/m/d H:i:s", $fecha_modificado_cache) .
-                            ") es anterior a la última modificación del fichero radar (" .
-                            date("Y/m/d H:i:s", $infoCoral[$sensor]['fecha_modificado']) . ")");
+                        logger(" V> La caché >{$cache_file}< no corresponde a los datos actuales (.rdb, .scr, cono o versión), se recalcula");
                     }
                 } else {
                     logger(" V> No había datos en la caché {$cache_file}");
@@ -342,7 +338,7 @@ function programaPrincipal(array $config)
                 if (-1 == $config['max-range']) {
                     logger(" V> Guardando caché para el sensor >{$sensor}< en >{$cache_file}<");
                     crearCarpetaResultados($config['path']['cache'] . $sensor);
-                    file_put_contents($cache_file, json_encode($coberturas[$sensor]['polygons']));
+                    file_put_contents($cache_file, json_encode(array('firma' => $firma, 'poligonos' => $coberturas[$sensor]['polygons'])));
                 }
                 // contornos es false cuando no existe contorno. Eso sucede cuando hemos pedido un
                 // nivel de vuelo que está muy bajo.
